@@ -3,105 +3,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ Đối chiếu Dữ liệu BHYT Local (XML & Excel)</title>
+    <title>Công cụ Đối chiếu Dữ liệu BHYT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-        .container { max-width: 1200px; margin: 20px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #0056b3; margin-bottom: 30px; }
-        h2 { color: #0056b3; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .file-input-group { margin-bottom: 20px; background-color: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        /* General styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            margin-bottom: 35px;
+            font-size: 2.5em;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: #0056b3;
+            margin-top: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 12px;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        /* File input and buttons */
+        .file-input-group {
+            margin-bottom: 25px;
+            background-color: #f9fbfd;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e0e6ed;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        .file-input-group:hover {
+            border-color: #a0cbed;
+            box-shadow: 0 2px 10px rgba(0, 123, 255, 0.08);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            color: #444;
+            font-size: 1.1em;
+        }
+
         input[type="file"] {
             display: block;
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 12px;
+            border: 1px solid #cdd4da;
+            border-radius: 6px;
             box-sizing: border-box;
-            margin-top: 5px;
-            background-color: #fff;
+            background-color: #ffffff;
+            font-size: 1em;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
+        input[type="file"]:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+
         .button-group {
             display: flex;
-            gap: 15px;
-            margin-top: 20px;
+            gap: 20px;
+            margin-top: 30px;
+            justify-content: center;
         }
+
         button {
             background-color: #007bff;
             color: white;
-            padding: 12px 25px;
+            padding: 13px 30px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            flex-grow: 1; /* Allow buttons to grow */
-            transition: background-color 0.3s ease;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            flex-grow: 0;
+            min-width: 200px;
+            box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
         }
-        button:hover:not(:disabled) { background-color: #0056b3; }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
+        }
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
+
         #exportExcelButton {
             background-color: #28a745;
+            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.2);
         }
         #exportExcelButton:hover:not(:disabled) {
             background-color: #218838;
+            box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3);
         }
 
+        /* Status messages */
         .status-message {
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #666;
-            min-height: 20px; /* Keep space even if empty */
+            margin-top: 8px;
+            font-size: 0.95em;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
         }
         .status-message.success { color: #28a745; font-weight: bold; }
         .status-message.error { color: #dc3545; font-weight: bold; }
+        .status-message::before {
+            content: '✓ ';
+            margin-right: 5px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .status-message.error::before {
+            content: '✗ ';
+            color: #dc3545;
+        }
 
+        /* Loading and error messages */
         #loading {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 30px;
             font-style: italic;
-            color: #777;
+            color: #555;
             display: none;
             font-size: 1.1em;
+            padding: 15px;
+            background-color: #e6f7ff;
+            border-left: 5px solid #007bff;
+            border-radius: 8px;
+            animation: fadeIn 0.5s ease-out;
         }
+
         #error-message {
-            color: red;
+            color: #dc3545;
             text-align: center;
-            margin-top: 15px;
+            margin-top: 25px;
             font-weight: bold;
+            font-size: 1.1em;
+            padding: 15px;
+            background-color: #ffe6e6;
+            border-left: 5px solid #dc3545;
+            border-radius: 8px;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Filter and Search Section */
+        .controls-group {
+            display: none; /* Hidden by default */
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 40px;
+            margin-bottom: 30px;
+            padding: 25px;
+            background-color: #f9fbfd;
+            border-radius: 10px;
+            border: 1px solid #e0e6ed;
+            align-items: flex-end;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .controls-group div {
+            flex: 1;
+            min-width: 220px;
+        }
+        .controls-group label {
+            font-size: 1em;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .controls-group input[type="text"],
+        .controls-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cdd4da;
+            border-radius: 6px;
+            font-size: 1em;
+            box-sizing: border-box;
+            background-color: #ffffff;
+            transition: border-color 0.3s ease;
+        }
+        .controls-group input[type="text"]:focus,
+        .controls-group select:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        .controls-group button {
+            background-color: #6c757d;
+            min-width: 120px;
+            padding: 10px 15px;
+            font-size: 1em;
+            box-shadow: none; /* Reset shadow for smaller buttons */
+        }
+        .controls-group button:hover:not(:disabled) {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Results table */
         #result {
             margin-top: 40px;
-            border-top: 1px solid #eee;
+            border-top: 2px solid #e0e0e0;
             padding-top: 30px;
-            overflow-x: auto; /* Allow horizontal scroll for wide tables */
+            overflow-x: auto; /* Enable horizontal scrolling for the table */
         }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; min-width: 1000px; /* Ensure table doesn't shrink too much */ }
-        th, td { padding: 12px; text-align: left; border: 1px solid #ddd; font-size: 0.95em; vertical-align: top; }
-        th { background-color: #e9ecef; color: #495057; font-weight: bold; white-space: nowrap; }
-        td { white-space: nowrap; /* Prevent text wrap in cells for better overview */ }
-        td:nth-child(1) { width: 80px; } /* MA_LK */
-        td:nth-child(2), td:nth-child(3), td:nth-child(9), td:nth-child(10) { width: 150px; } /* Names */
-        td:nth-child(4), td:nth-child(11) { width: 100px; text-align: right; } /* Amounts */
-        td:nth-child(5), td:nth-child(6), td:nth-child(12), td:nth-child(13) { width: 120px; } /* Dates */
-        td:nth-child(7), td:nth-child(14) { width: 200px; } /* Diagnosis */
-        td:nth-child(15) { width: 180px; font-weight: bold; } /* Status */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            min-width: 1600px; /* Ensure table doesn't shrink too much */
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden; /* For rounded corners */
+        }
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+            font-size: 0.9em;
+            vertical-align: top;
+            white-space: nowrap; /* Prevent text wrap */
+        }
+        th {
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-transform: uppercase;
+        }
+        /* Specific column widths for better layout */
+        th:nth-child(1), td:nth-child(1) { width: 80px; } /* MA_LK */
+        th:nth-child(2), td:nth-child(2), th:nth-child(9), td:nth-child(9) { width: 140px; } /* Names */
+        th:nth-child(3), td:nth-child(3), th:nth-child(10), td:nth-child(10) { width: 120px; } /* Ma The */
+        th:nth-child(4), td:nth-child(4), th:nth-child(11), td:nth-child(11) { width: 100px; text-align: right; } /* Amounts */
+        th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6), th:nth-child(12), td:nth-child(12), th:nth-child(13), td:nth-child(13) { width: 120px; } /* Dates */
+        th:nth-child(7), td:nth-child(7), th:nth-child(14), td:nth-child(14) { width: 200px; } /* Diagnosis */
+        th:nth-child(15), td:nth-child(15) { width: 180px; font-weight: bold; } /* Status */
 
+
+        /* Row highlighting */
         .match { background-color: #e6ffe6; } /* Khớp */
         .mismatch { background-color: #ffe6e6; } /* Không khớp */
         .xml-only { background-color: #e6f7ff; } /* Chỉ có trên XML */
         .excel-only { background-color: #fff8e6; } /* Chỉ có trên Excel */
-        .no-data { text-align: center; color: #777; font-style: italic; }
-        .status-cell ul { margin: 0; padding-left: 15px; list-style-type: disc; }
-        .status-cell li { margin-bottom: 2px; color: #a52a2a; } /* Highlight specific mismatches */
+        .no-data {
+            text-align: center;
+            color: #777;
+            font-style: italic;
+            padding: 30px;
+            background-color: #fcfcfc;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px dashed #ddd;
+        }
+        .status-cell ul {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+            list-style-type: disc;
+            font-size: 0.8em;
+        }
+        .status-cell li {
+            margin-bottom: 3px;
+            color: #a52a2a; /* Darker red for specific mismatches */
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Công cụ Đối chiếu Dữ liệu BHYT Local</h1>
+        <h1>Công cụ Đối chiếu Dữ liệu BHYT</h1>
 
         <div class="file-input-group">
             <label for="xmlFile">Bước 1: Tải lên tệp XML BHYT:</label>
@@ -122,26 +329,56 @@
 
         <div id="loading">Đang xử lý dữ liệu, vui lòng chờ...</div>
         <div id="error-message"></div>
-        <div id="result">
+
+        <div id="controls" class="controls-group">
+            <div>
+                <label for="statusFilter">Lọc theo trạng thái:</label>
+                <select id="statusFilter">
+                    <option value="">Tất cả</option>
+                    <option value="1. Khớp">1. Khớp</option>
+                    <option value="2. Không khớp">2. Không khớp</option>
+                    <option value="3. Chỉ có trên XML (chưa gửi cổng GĐ)">3. Chỉ có trên XML (chưa gửi)</option>
+                    <option value="4. Chỉ có trên Excel (Đã gửi cổng GĐ)">4. Chỉ có trên Excel (Đã gửi)</option>
+                </select>
             </div>
+            <div>
+                <label for="maLkSearch">Tìm theo Mã LK:</label>
+                <input type="text" id="maLkSearch" placeholder="Nhập Mã LK...">
+            </div>
+            <div>
+                <label for="patientNameSearch">Tìm theo Tên bệnh nhân:</label>
+                <input type="text" id="patientNameSearch" placeholder="Nhập Họ tên...">
+            </div>
+            <button id="resetFiltersButton">Đặt lại bộ lọc</button>
+        </div>
+
+        <div id="result">
+            <p class="no-data">Chưa có dữ liệu đối chiếu. Vui lòng tải lên tệp XML và Excel, sau đó nhấn "Đối chiếu Dữ liệu".</p>
+        </div>
     </div>
 
     <script>
         let xmlData = null;
         let excelData = null;
-        let lastComparisonResults = []; // Lưu kết quả đối chiếu gần nhất để xuất Excel
+        let lastComparisonResults = []; // Stores the last comparison results
+        let filteredResults = [];       // Stores the currently filtered results
 
         const xmlFileInput = document.getElementById('xmlFile');
         const excelFileInput = document.getElementById('excelFile');
         const compareButton = document.getElementById('compareButton');
-        const exportExcelButton = document.getElementById('exportExcelButton'); // Nút xuất Excel
+        const exportExcelButton = document.getElementById('exportExcelButton');
         const xmlStatusDiv = document.getElementById('xmlStatus');
         const excelStatusDiv = document.getElementById('excelStatus');
         const loadingDiv = document.getElementById('loading');
         const errorDiv = document.getElementById('error-message');
         const resultDiv = document.getElementById('result');
+        const controlsGroup = document.getElementById('controls');
+        const statusFilter = document.getElementById('statusFilter');
+        const maLkSearch = document.getElementById('maLkSearch');
+        const patientNameSearch = document.getElementById('patientNameSearch');
+        const resetFiltersButton = document.getElementById('resetFiltersButton');
 
-        // Hàm kiểm tra và bật/tắt nút đối chiếu và xuất Excel
+        // Function to check and enable/disable buttons
         function checkAndEnableButtons() {
             if (xmlData && excelData) {
                 compareButton.disabled = false;
@@ -150,9 +387,9 @@
                 compareButton.disabled = true;
                 compareButton.style.backgroundColor = '#cccccc';
             }
-            // Chỉ bật nút xuất Excel nếu có kết quả đối chiếu và có dữ liệu để xuất
-            if (lastComparisonResults.length > 0 && 
-                lastComparisonResults.some(r => r.Status !== '1. Khớp' && r.Status !== 'Không có dữ liệu')) {
+            // Only enable export button if there are comparison results and mismatches exist
+            if (lastComparisonResults.length > 0 &&
+                lastComparisonResults.some(r => r.Status !== '1. Khớp')) {
                 exportExcelButton.disabled = false;
                 exportExcelButton.style.backgroundColor = '#28a745';
             } else {
@@ -161,13 +398,16 @@
             }
         }
 
-        // Xử lý khi tải tệp XML
+        // File input change handlers
         xmlFileInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             xmlStatusDiv.textContent = '';
             xmlData = null; // Reset data
             lastComparisonResults = []; // Reset results
-            checkAndEnableButtons(); // Disable buttons immediately
+            filteredResults = []; // Reset filtered results
+            resultDiv.innerHTML = '<p class="no-data">Chưa có dữ liệu đối chiếu. Vui lòng tải lên tệp XML và Excel, sau đó nhấn "Đối chiếu Dữ liệu".</p>';
+            controlsGroup.style.display = 'none'; // Hide filters
+            checkAndEnableButtons();
 
             if (file) {
                 xmlStatusDiv.textContent = 'Đang đọc tệp XML...';
@@ -176,10 +416,13 @@
                     xmlData = await readXmlFile(file);
                     xmlStatusDiv.textContent = `Đã tải và xử lý XML: ${Object.keys(xmlData).length} hồ sơ.`;
                     xmlStatusDiv.className = 'status-message success';
+                    errorDiv.style.display = 'none'; // Clear any previous error
                 } catch (error) {
                     xmlStatusDiv.textContent = `Lỗi đọc XML: ${error.message}`;
                     xmlStatusDiv.className = 'status-message error';
                     xmlData = null;
+                    errorDiv.textContent = `Lỗi: ${error.message}`;
+                    errorDiv.style.display = 'block';
                     console.error("Lỗi đọc XML:", error);
                 }
             } else {
@@ -188,13 +431,15 @@
             checkAndEnableButtons();
         });
 
-        // Xử lý khi tải tệp Excel
         excelFileInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             excelStatusDiv.textContent = '';
             excelData = null; // Reset data
             lastComparisonResults = []; // Reset results
-            checkAndEnableButtons(); // Disable buttons immediately
+            filteredResults = []; // Reset filtered results
+            resultDiv.innerHTML = '<p class="no-data">Chưa có dữ liệu đối chiếu. Vui lòng tải lên tệp XML và Excel, sau đó nhấn "Đối chiếu Dữ liệu".</p>';
+            controlsGroup.style.display = 'none'; // Hide filters
+            checkAndEnableButtons();
 
             if (file) {
                 excelStatusDiv.textContent = 'Đang đọc tệp Excel...';
@@ -203,10 +448,13 @@
                     excelData = await readExcelFile(file);
                     excelStatusDiv.textContent = `Đã tải và xử lý Excel: ${excelData.length} dòng dữ liệu.`;
                     excelStatusDiv.className = 'status-message success';
+                    errorDiv.style.display = 'none'; // Clear any previous error
                 } catch (error) {
                     excelStatusDiv.textContent = `Lỗi đọc Excel: ${error.message}`;
                     excelStatusDiv.className = 'status-message error';
                     excelData = null;
+                    errorDiv.textContent = `Lỗi: ${error.message}`;
+                    errorDiv.style.display = 'block';
                     console.error("Lỗi đọc Excel:", error);
                 }
             } else {
@@ -215,92 +463,127 @@
             checkAndEnableButtons();
         });
 
-        // Xử lý khi nhấn nút đối chiếu
+        // Compare button click handler
         compareButton.addEventListener('click', async () => {
             errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
             resultDiv.innerHTML = '';
-            lastComparisonResults = []; // Clear previous results
+            lastComparisonResults = [];
+            filteredResults = [];
 
             if (!xmlData || !excelData) {
                 errorDiv.textContent = 'Vui lòng tải lên cả hai tệp trước khi đối chiếu.';
+                errorDiv.style.display = 'block';
                 return;
             }
 
             loadingDiv.style.display = 'block';
+            controlsGroup.style.display = 'none'; // Hide controls during processing
+            statusFilter.value = ''; // Reset filters on new comparison
+            maLkSearch.value = '';
+            patientNameSearch.value = '';
 
             try {
                 lastComparisonResults = compareData(xmlData, excelData);
-                resultDiv.innerHTML = createHtmlReport(lastComparisonResults);
+                applyFilters(); // Apply initial filters (e.g., show all) and render the table
+                controlsGroup.style.display = 'flex'; // Show controls after successful comparison
             } catch (error) {
                 errorDiv.textContent = 'Lỗi trong quá trình đối chiếu: ' + error.message;
+                errorDiv.style.display = 'block';
                 console.error('Lỗi đối chiếu:', error);
             } finally {
                 loadingDiv.style.display = 'none';
-                checkAndEnableButtons(); // Check buttons again after comparison
+                checkAndEnableButtons();
             }
         });
 
-        // Xử lý khi nhấn nút xuất Excel
+        // Export Excel button click handler
         exportExcelButton.addEventListener('click', () => {
             if (lastComparisonResults.length > 0) {
                 exportMismatchedToExcel(lastComparisonResults);
             } else {
-                errorDiv.textContent = 'Không có kết quả đối chiếu nào để xuất.';
+                alert('Không có kết quả đối chiếu nào để xuất.');
             }
         });
 
+        // Filter and Search Event Listeners
+        statusFilter.addEventListener('change', applyFilters);
+        maLkSearch.addEventListener('input', applyFilters);
+        patientNameSearch.addEventListener('input', applyFilters);
+        resetFiltersButton.addEventListener('click', () => {
+            statusFilter.value = '';
+            maLkSearch.value = '';
+            patientNameSearch.value = '';
+            applyFilters();
+        });
+
         /**
-         * Chuyển đổi định dạng ngày giờ của Excel (DD/MM/YYYY HH:MM) sang YYYYMMDDHHMM để so sánh.
-         * @param {string} dateStr Định dạng DD/MM/YYYY HH:MM hoặc DD/MM/YYYY
-         * @returns {string} Định dạng YYYYMMDDHHMM.
+         * Converts Excel date/time string (DD/MM/YYYY HH:MM) to YYYYMMDDHHMM for comparison.
+         * Handles various common Excel date formats and attempts to parse "strange" ones.
+         * @param {string} dateStr Format DD/MM/YYYY HH:MM or DD/MM/YYYY.
+         * @returns {string} YYYYMMDDHHMM format.
          */
         function convertExcelDateToCompareFormat(dateStr) {
             if (!dateStr) return '';
-            const parts = dateStr.split(' '); // Tách ngày và giờ
-            const dateParts = parts[0].split('/'); // Tách DD, MM, YYYY
-            
-            if (dateParts.length !== 3) {
-                 // Xử lý định dạng Excel "lạ" mà bạn đã chỉ ra trước đó: YY/MM//DD/X HH:MM
-                 // Ví dụ: 20/7//01/0 25: 0
-                const strangeMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):\s*(\d{1,2})(:\s*(\d{1,2}))?/);
-                if (strangeMatch) {
-                    let year = parseInt(strangeMatch[1], 10);
-                    const month = strangeMatch[2].padStart(2, '0');
-                    const day = strangeMatch[3].padStart(2, '0');
-                    let hour = parseInt(strangeMatch[5], 10);
-                    let minute = strangeMatch[6].padStart(2, '0');
-                    // Xử lý năm (nếu là 2 chữ số)
-                    if (year < 100) { year = (year < (new Date().getFullYear() % 100) + 10 ? 2000 + year : 1900 + year); }
-                    // Xử lý giờ không hợp lệ
-                    if (hour >= 24) hour = 0; 
-                    hour = String(hour).padStart(2, '0');
-                    return `${year}${month}${day}${hour}${minute}`;
+            dateStr = String(dateStr).trim();
+
+            // Handle numeric Excel date (e.g., 44562 for 1/1/2022)
+            // This is a common way Excel stores dates and times.
+            if (!isNaN(dateStr) && !isNaN(parseFloat(dateStr)) && dateStr.length < 8) {
+                const excelDate = parseFloat(dateStr);
+                // Excel's epoch is Jan 1, 1900. JS epoch is Jan 1, 1970.
+                // 25569 is the number of days between 1900-01-01 and 1970-01-01 (plus one day for Excel's 1900 leap year bug)
+                const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                if (!isNaN(date)) {
+                    const year = date.getFullYear().toString();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    return `${year}${month}${day}${hours}${minutes}`;
                 }
-                return dateStr; // Trả về nguyên bản nếu không khớp bất kỳ định dạng nào
             }
 
-            const day = dateParts[0].padStart(2, '0');
-            const month = dateParts[1].padStart(2, '0');
-            const year = dateParts[2];
-            
-            let time = '';
-            if (parts.length > 1) {
-                const timeParts = parts[1].split(':'); // Tách HH, MM
-                if (timeParts.length === 2) {
-                    time = timeParts[0].padStart(2, '0') + timeParts[1].padStart(2, '0');
-                }
-            } else {
-                time = '0000'; // Mặc định nếu không có giờ
+            // Standard DD/MM/YYYY HH:MM or DD/MM/YYYY
+            let match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/);
+            if (match) {
+                const day = match[1].padStart(2, '0');
+                const month = match[2].padStart(2, '0');
+                const year = match[3];
+                const hour = (match[4] || '00').padStart(2, '0');
+                const minute = (match[5] || '00').padStart(2, '0');
+                return `${year}${month}${day}${hour}${minute}`;
             }
 
-            return `${year}${month}${day}${time}`;
+            // Attempt to handle specific "strange" Excel format: YY/MM//DD/X HH:MM
+            match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):\s*(\d{1,2})(:\s*(\d{1,2}))?/);
+            if (match) {
+                let year = parseInt(match[1], 10);
+                const month = match[2].padStart(2, '0');
+                const day = match[3].padStart(2, '0');
+                let hour = parseInt(match[5], 10);
+                let minute = match[6].padStart(2, '0');
+                // Adjust year for 2-digit format
+                const currentYear = new Date().getFullYear();
+                if (year < 100) {
+                    year = (year < (currentYear % 100) + 10 ? 2000 + year : 1900 + year);
+                }
+                // Handle invalid hours (e.g., 25:00) by capping at 23:59 or 00:00
+                if (hour >= 24) hour = 0;
+                hour = String(hour).padStart(2, '0');
+                return `${year}${month}${day}${hour}${minute}`;
+            }
+
+            // If still no specific match, return original string (it might be YYYYMMDDHHMM already or truly unparsable)
+            return dateStr;
         }
 
+
         /**
-         * Đọc tệp Excel (CSV, XLSX, XLS) và chuyển đổi thành mảng các đối tượng.
-         * Giả định hàng đầu tiên là tiêu đề.
-         * @param {File} file - Đối tượng File từ input.
-         * @returns {Promise<Array<Object>>} Mảng các đối tượng đại diện cho mỗi hàng.
+         * Reads an Excel file (CSV, XLSX, XLS) and converts it into an array of objects.
+         * Assumes the first row is the header.
+         * @param {File} file - The File object from the input.
+         * @returns {Promise<Array<Object>>} A promise that resolves with an array of objects, each representing a row.
          */
         function readExcelFile(file) {
             return new Promise((resolve, reject) => {
@@ -308,31 +591,28 @@
                 reader.onload = function(e) {
                     try {
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const sheetName = workbook.SheetNames[0]; // Lấy sheet đầu tiên
+                        const workbook = XLSX.read(data, { type: 'array', cellDates: false, raw: true }); // raw: true to get raw values, cellDates: false to avoid date objects directly
+                        const sheetName = workbook.SheetNames[0]; // Get the first sheet
                         const worksheet = workbook.Sheets[sheetName];
-                        
+
                         const json = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
-                        
+
                         const normalizedJson = json.map(row => {
                             const newRow = {};
                             for (const key in row) {
-                                let newKey = String(key).trim(); 
-                                
-                                // Ánh xạ tên cột Excel sang tên chuẩn để so sánh
-                                if (newKey === 'Mã liên kết') newKey = 'MA_LK';
-                                else if (newKey === 'Mã thẻ') newKey = 'MA_THE_BHYT';
-                                else if (newKey === 'Họ tên') newKey = 'HO_TEN';
-                                else if (newKey === 'Tổng chi') newKey = 'T_TONGCHI_BH'; 
-                                else if (newKey === 'Ngày vào') newKey = 'NGAY_VAO';
-                                else if (newKey === 'Ngày ra') newKey = 'NGAY_RA';
-                                else if (newKey === 'Chẩn đoán') newKey = 'CHAN_DOAN_RV';
-                                // Không cần T_THUOC vì Excel không có
+                                let newKey = String(key).trim();
+
+                                // Map Excel column names to standard names for comparison
+                                if (newKey.toLowerCase() === 'mã liên kết') newKey = 'MA_LK';
+                                else if (newKey.toLowerCase() === 'mã thẻ') newKey = 'MA_THE_BHYT';
+                                else if (newKey.toLowerCase() === 'họ tên') newKey = 'HO_TEN';
+                                else if (newKey.toLowerCase() === 'tổng chi') newKey = 'T_TONGCHI_BH';
+                                else if (newKey.toLowerCase() === 'ngày vào') newKey = 'NGAY_VAO';
+                                else if (newKey.toLowerCase() === 'ngày ra') newKey = 'NGAY_RA';
+                                else if (newKey.toLowerCase().includes('chẩn đoán')) newKey = 'CHAN_DOAN_RV'; // Flexible for "Chẩn đoán" or "Chẩn đoán RV"
 
                                 newRow[newKey] = String(row[key]).trim();
                             }
-                            // KHÔNG CẦN CHUYỂN ĐỔI ĐỊNH DẠNG NGÀY Ở ĐÂY, SẼ LÀM Ở HÀM COMPARE
-                            
                             return newRow;
                         });
 
@@ -347,31 +627,43 @@
         }
 
         /**
-         * Trích xuất mã ICD từ chuỗi chẩn đoán (ví dụ: "B20-Bệnh HIV..." -> "B20").
+         * Trích xuất mã ICD TỪNG PHẦN (hoặc mã ICD chính đầu tiên nếu có nhiều)
+         * từ chuỗi chẩn đoán (ví dụ: "A17.0†-Viêm màng não do lao (G01*);A15.3-Lao phổi..." -> "A17.0†").
          * @param {string} diagString Chuỗi chẩn đoán đầy đủ.
-         * @returns {string} Mã ICD.
+         * @returns {string} Mã ICD chính đã được trích xuất.
          */
         function extractIcdCode(diagString) {
             if (!diagString) return '';
-            const match = diagString.match(/^([A-Z0-9\.]+\s*)/i); 
-            return match ? match[1].trim() : diagString.trim(); 
+            diagString = String(diagString).trim();
+
+            // Bước 1: Tách lấy phần mã ICD đầu tiên trước dấu chấm phẩy nếu có (cho trường hợp nhiều mã ICD)
+            const firstPart = diagString.split(';')[0];
+
+            // Bước 2: Tách lấy phần mã ICD trước dấu gạch ngang hoặc dấu cách (nếu có mô tả sau mã)
+            // Regex này sẽ khớp một chuỗi bắt đầu bằng chữ cái, theo sau là số và có thể có dấu chấm,
+            // sau đó có thể có các ký tự * hoặc †
+            const match = firstPart.match(/^([A-Z][0-9\.]+[A-Z0-9]*(?:[\*†])?)/i);
+            
+            return match ? match[1].trim() : firstPart.trim(); // Trả về phần khớp hoặc toàn bộ firstPart nếu không khớp regex
         }
 
         /**
-         * Chuẩn hóa mã ICD bằng cách loại bỏ các ký tự đặc biệt như '*' và '†'.
+         * Chuẩn hóa mã ICD bằng cách loại bỏ các ký tự đặc biệt như '*', '†', và khoảng trắng.
+         * Chuyển đổi thành chữ hoa để so sánh không phân biệt hoa/thường.
          * @param {string} icdCode Mã ICD cần chuẩn hóa.
          * @returns {string} Mã ICD đã được chuẩn hóa.
          */
         function normalizeIcdCode(icdCode) {
             if (!icdCode) return '';
-            return icdCode.replace(/[\*†]/g, '').trim();
+            // Loại bỏ tất cả các ký tự *, †, và khoảng trắng, sau đó chuyển về chữ hoa.
+            return String(icdCode).replace(/[\*†\s]/g, '').toUpperCase();
         }
 
         /**
-         * Đọc tệp XML BHYT với cấu trúc phức tạp.
-         * Trích xuất thông tin từ XML1 (TONG_HOP).
-         * @param {File} file - Đối tượng File từ input.
-         * @returns {Promise<Object>} Một đối tượng mà mỗi key là MA_LK, chứa thông tin tổng hợp.
+         * Reads a complex BHYT XML file.
+         * Extracts information from XML1 (TONG_HOP).
+         * @param {File} file - The File object from the input.
+         * @returns {Promise<Object>} An object where each key is MA_LK, containing aggregated information.
          */
         function readXmlFile(file) {
             return new Promise((resolve, reject) => {
@@ -384,13 +676,13 @@
 
                         const errorNode = xmlDoc.querySelector('parsererror');
                         if (errorNode) {
-                            throw new Error('Lỗi phân tích cú pháp XML: ' + errorNode.textContent);
+                            throw new Error('Lỗi phân tích cú pháp XML. Vui lòng kiểm tra định dạng tệp: ' + errorNode.textContent);
                         }
 
-                        const allHossoData = {}; 
+                        const allHossoData = {};
                         const danhSachHoSo = xmlDoc.querySelector('DANHSACHHOSO');
                         if (!danhSachHoSo) {
-                            resolve({}); 
+                            resolve({}); // Resolve with empty object if no DANHSACHHOSO
                             return;
                         }
 
@@ -401,14 +693,14 @@
 
                             let maLkCurrent = null;
                             let tongHopData = {};
-                            
+
                             fileHosoElements.forEach(fileHoso => {
                                 const loaiHoso = fileHoso.querySelector('LOAIHOSO')?.textContent?.trim();
                                 const noiDungFile = fileHoso.querySelector('NOIDUNGFILE');
 
                                 if (!noiDungFile) return;
 
-                                if (loaiHoso === 'XML1') { 
+                                if (loaiHoso === 'XML1') {
                                     const tongHopElement = noiDungFile.querySelector('TONG_HOP');
                                     if (tongHopElement) {
                                         const getCleanText = (el) => {
@@ -417,7 +709,7 @@
                                         };
 
                                         maLkCurrent = getCleanText(tongHopElement.querySelector('MA_LK'));
-                                        if (!maLkCurrent) return; 
+                                        if (!maLkCurrent) return; // Skip if MA_LK is not found or empty
 
                                         const xmlChanDoanRvFull = getCleanText(tongHopElement.querySelector('CHAN_DOAN_RV'));
 
@@ -426,10 +718,10 @@
                                             HO_TEN: getCleanText(tongHopElement.querySelector('HO_TEN')),
                                             MA_THE_BHYT: getCleanText(tongHopElement.querySelector('MA_THE_BHYT')),
                                             T_TONGCHI_BH: parseFloat(getCleanText(tongHopElement.querySelector('T_TONGCHI_BH')) || '0'),
-                                            NGAY_VAO: getCleanText(tongHopElement.querySelector('NGAY_VAO')), // Giữ nguyên YYYYMMDDHHMM
-                                            NGAY_RA: getCleanText(tongHopElement.querySelector('NGAY_RA')),   // Giữ nguyên YYYYMMDDHHMM
-                                            CHAN_DOAN_RV_FULL: xmlChanDoanRvFull, 
-                                            CHAN_DOAN_RV_ICD: extractIcdCode(xmlChanDoanRvFull) 
+                                            NGAY_VAO: getCleanText(tongHopElement.querySelector('NGAY_VAO')),
+                                            NGAY_RA: getCleanText(tongHopElement.querySelector('NGAY_RA')),
+                                            CHAN_DOAN_RV_FULL: xmlChanDoanRvFull,
+                                            CHAN_DOAN_RV_ICD: extractIcdCode(xmlChanDoanRvFull) // Trích xuất mã ICD chính từ chuỗi đầy đủ XML
                                         };
                                     }
                                 }
@@ -451,17 +743,17 @@
         }
 
         /**
-         * So sánh dữ liệu từ XML và Excel.
-         * @param {Object} xmlData - Dữ liệu XML đã phân tích theo MA_LK.
-         * @param {Array<Object>} excelData - Dữ liệu đã đọc từ Excel.
-         * @returns {Array<Object>} Kết quả so sánh.
+         * Compares data from XML and Excel.
+         * @param {Object} xmlData - Parsed XML data by MA_LK.
+         * @param {Array<Object>} excelData - Data read from Excel.
+         * @returns {Array<Object>} Comparison results.
          */
         function compareData(xmlData, excelData) {
             const comparisonResults = [];
             const excelMap = new Map();
 
             excelData.forEach(item => {
-                const maLkExcel = String(item.MA_LK).trim(); 
+                const maLkExcel = String(item.MA_LK).trim();
                 if (maLkExcel) {
                     excelMap.set(maLkExcel, item);
                 }
@@ -476,17 +768,17 @@
                     XML_HO_TEN: xmlItem.HO_TEN,
                     XML_MA_THE_BHYT: xmlItem.MA_THE_BHYT,
                     XML_T_TONGCHI_BH: xmlItem.T_TONGCHI_BH,
-                    XML_NGAY_VAO: xmlItem.NGAY_VAO, 
-                    XML_NGAY_RA: xmlItem.NGAY_RA,   
-                    XML_CHAN_DOAN_RV_FULL: xmlItem.CHAN_DOAN_RV_FULL, 
-                    XML_CHAN_DOAN_RV_ICD: xmlItem.CHAN_DOAN_RV_ICD,   
+                    XML_NGAY_VAO: xmlItem.NGAY_VAO,
+                    XML_NGAY_RA: xmlItem.NGAY_RA,
+                    XML_CHAN_DOAN_RV_FULL: xmlItem.CHAN_DOAN_RV_FULL,
+                    XML_CHAN_DOAN_RV_ICD: xmlItem.CHAN_DOAN_RV_ICD,
 
                     Excel_HO_TEN: 'N/A',
                     Excel_MA_THE_BHYT: 'N/A',
                     Excel_T_TONGCHI_BH: 0,
-                    Excel_NGAY_VAO: 'N/A', 
-                    Excel_NGAY_RA: 'N/A',   
-                    Excel_CHAN_DOAN_RV: 'N/A', 
+                    Excel_NGAY_VAO: 'N/A',
+                    Excel_NGAY_RA: 'N/A',
+                    Excel_CHAN_DOAN_RV: 'N/A', // This holds the full Excel diagnosis string
 
                     Status: '',
                     RowClass: '',
@@ -496,43 +788,49 @@
                 if (excelItem) {
                     result.Excel_HO_TEN = excelItem.HO_TEN || 'N/A';
                     result.Excel_MA_THE_BHYT = excelItem.MA_THE_BHYT || 'N/A';
-                    result.Excel_T_TONGCHI_BH = parseFloat(excelItem.T_TONGCHI_BH || '0'); 
+                    result.Excel_T_TONGCHI_BH = parseFloat(excelItem.T_TONGCHI_BH || '0');
                     result.Excel_NGAY_VAO = excelItem.NGAY_VAO || 'N/A';
                     result.Excel_NGAY_RA = excelItem.NGAY_RA || 'N/A';
                     result.Excel_CHAN_DOAN_RV = excelItem.CHAN_DOAN_RV || 'N/A';
 
                     let isMismatch = false;
 
-                    // So sánh Họ tên (không phân biệt hoa/thường, loại bỏ khoảng trắng thừa)
+                    // Compare Họ tên (case-insensitive, trim whitespace)
                     if (result.XML_HO_TEN.toLowerCase() !== result.Excel_HO_TEN.toLowerCase()) {
                         result.DetailStatus.push(`Họ tên: XML="${result.XML_HO_TEN}" vs Excel="${result.Excel_HO_TEN}"`);
                         isMismatch = true;
                     }
-                    // So sánh Mã thẻ BHYT
+                    // Compare Mã thẻ BHYT (exact match)
                     if (result.XML_MA_THE_BHYT !== result.Excel_MA_THE_BHYT) {
-                         result.DetailStatus.push(`Mã thẻ BHYT: XML="${result.XML_MA_THE_BHYT}" vs Excel="${result.Excel_MA_THE_BHYT}"`);
-                         isMismatch = true;
+                       result.DetailStatus.push(`Mã thẻ BHYT: XML="${result.XML_MA_THE_BHYT}" vs Excel="${result.Excel_MA_THE_BHYT}"`);
+                       isMismatch = true;
                     }
-                    // So sánh Tổng chi BHYT (chấp nhận sai số nhỏ do dấu phẩy động)
+                    // Compare Tổng chi BHYT (with small tolerance for float precision)
                     if (Math.abs(result.XML_T_TONGCHI_BH - result.Excel_T_TONGCHI_BH) > 0.01) {
                         result.DetailStatus.push(`Tổng chi BH: XML=${result.XML_T_TONGCHI_BH.toLocaleString('vi-VN')} vs Excel=${result.Excel_T_TONGCHI_BH.toLocaleString('vi-VN')}`);
                         isMismatch = true;
                     }
-                    // So sánh Ngày vào (chuẩn hóa Excel sang YYYYMMDDHHMM để so sánh)
+                    // Compare Ngày vào (standardize Excel to YYYYMMDDHHMM for comparison)
                     const excelNgayVaoCompare = convertExcelDateToCompareFormat(result.Excel_NGAY_VAO);
-                    if (xmlItem.NGAY_VAO !== excelNgayVaoCompare) { 
+                    if (xmlItem.NGAY_VAO !== excelNgayVaoCompare) {
                         result.DetailStatus.push(`Ngày vào: XML=${formatDateTimeForDisplay(xmlItem.NGAY_VAO)} vs Excel=${result.Excel_NGAY_VAO} (chuẩn hóa: ${excelNgayVaoCompare})`);
                         isMismatch = true;
                     }
-                    // So sánh Ngày ra (chuẩn hóa Excel sang YYYYMMDDHHMM để so sánh)
+                    // Compare Ngày ra (standardize Excel to YYYYMMDDHHMM for comparison)
                     const excelNgayRaCompare = convertExcelDateToCompareFormat(result.Excel_NGAY_RA);
-                    if (xmlItem.NGAY_RA !== excelNgayRaCompare) { 
+                    if (xmlItem.NGAY_RA !== excelNgayRaCompare) {
                         result.DetailStatus.push(`Ngày ra: XML=${formatDateTimeForDisplay(xmlItem.NGAY_RA)} vs Excel=${result.Excel_NGAY_RA} (chuẩn hóa: ${excelNgayRaCompare})`);
                         isMismatch = true;
                     }
-                    // So sánh Chẩn đoán RV (chỉ mã ICD, bỏ qua * và †, không phân biệt hoa/thường)
-                    if (normalizeIcdCode(result.XML_CHAN_DOAN_RV_ICD).toLowerCase() !== normalizeIcdCode(result.Excel_CHAN_DOAN_RV).toLowerCase()) {
-                        result.DetailStatus.push(`Mã ICD chẩn đoán RV: XML="${result.XML_CHAN_DOAN_RV_ICD}" vs Excel="${result.Excel_CHAN_DOAN_RV}"`);
+                    // Compare Chẩn đoán RV (normalize ICD codes: remove *, †, whitespace, then case-insensitive)
+                    // Lấy mã ICD từ XML (đã được trích xuất và lưu trong XML_CHAN_DOAN_RV_ICD)
+                    const xmlIcdNormalized = normalizeIcdCode(result.XML_CHAN_DOAN_RV_ICD);
+                    // Lấy mã ICD từ Excel (từ trường CHAN_DOAN_RV của Excel, sau đó trích xuất và chuẩn hóa)
+                    const excelIcdExtracted = extractIcdCode(result.Excel_CHAN_DOAN_RV);
+                    const excelIcdNormalized = normalizeIcdCode(excelIcdExtracted);
+
+                    if (xmlIcdNormalized !== excelIcdNormalized) {
+                        result.DetailStatus.push(`Mã ICD chẩn đoán RV: XML="${result.XML_CHAN_DOAN_RV_ICD}" (chuẩn hóa: ${xmlIcdNormalized}) vs Excel="${result.Excel_CHAN_DOAN_RV}" (trích xuất: ${excelIcdExtracted}, chuẩn hóa: ${excelIcdNormalized})`);
                         isMismatch = true;
                     }
 
@@ -543,14 +841,15 @@
                         result.Status = '1. Khớp';
                         result.RowClass = 'match';
                     }
-                    excelMap.delete(maLkXml); 
+                    excelMap.delete(maLkXml); // Remove matched item from excelMap
                 } else {
-                    result.Status = '3. Chỉ có trên XML (chưa gửi cổng GĐ)'; 
+                    result.Status = '3. Chỉ có trên XML (chưa gửi cổng GĐ)';
                     result.RowClass = 'xml-only';
                 }
                 comparisonResults.push(result);
             }
 
+            // Add items only present in Excel (meaning they were sent to the gateway but not found in current XML)
             excelMap.forEach(excelItem => {
                 const maLkExcel = String(excelItem.MA_LK).trim();
                 const result = {
@@ -560,17 +859,17 @@
                     XML_T_TONGCHI_BH: 0,
                     XML_NGAY_VAO: 'N/A',
                     XML_NGAY_RA: 'N/A',
-                    XML_CHAN_DOAN_RV_FULL: 'N/A', 
-                    XML_CHAN_DOAN_RV_ICD: 'N/A',   
+                    XML_CHAN_DOAN_RV_FULL: 'N/A',
+                    XML_CHAN_DOAN_RV_ICD: 'N/A',
 
                     Excel_HO_TEN: excelItem.HO_TEN || 'N/A',
                     Excel_MA_THE_BHYT: excelItem.MA_THE_BHYT || 'N/A',
-                    Excel_T_TONGCHI_BH: parseFloat(excelItem.T_TONGCHI_BH || '0'), 
+                    Excel_T_TONGCHI_BH: parseFloat(excelItem.T_TONGCHI_BH || '0'),
                     Excel_NGAY_VAO: excelItem.NGAY_VAO || 'N/A',
                     Excel_NGAY_RA: excelItem.NGAY_RA || 'N/A',
                     Excel_CHAN_DOAN_RV: excelItem.CHAN_DOAN_RV || 'N/A',
 
-                    Status: '4. Chỉ có trên Excel (local)',
+                    Status: '4. Chỉ có trên Excel (Đã gửi cổng GĐ)', // Changed status text for clarity
                     RowClass: 'excel-only',
                     DetailStatus: []
                 };
@@ -581,21 +880,24 @@
         }
 
         /**
-         * Định dạng chuỗi ngày giờ để hiển thị trên báo cáo.
-         * Có thể nhận YYYYMMDDHHMM (từ XML) hoặc DD/MM/YYYY HH:MM (từ Excel gốc).
-         * Luôn trả về DD/MM/YYYY HH:MM.
-         * @param {string} dateString Chuỗi ngày giờ.
-         * @returns {string} Chuỗi ngày giờ đã định dạng (DD/MM/YYYY HH:MM).
+         * Formats a date/time string for display in the report.
+         * Can receive YYYYMMDDHHMM (from XML) or DD/MM/YYYY HH:MM (from original Excel).
+         * Always returns DD/MM/YYYY HH:MM.
+         * @param {string} dateString The date/time string.
+         * @returns {string} The formatted date/time string (DD/MM/YYYY HH:MM).
          */
         function formatDateTimeForDisplay(dateString) {
             if (!dateString) return '';
 
-            // Kiểm tra nếu đã ở định dạng DD/MM/YYYY HH:MM (hoặc DD/MM/YYYY)
+            dateString = String(dateString).trim();
+
+            // Check if already in DD/MM/YYYY HH:MM (or DD/MM/YYYY) format
             if (dateString.match(/^\d{2}\/\d{2}\/\d{4}( \d{2}:\d{2})?$/)) {
                 return dateString;
             }
-            // Kiểm tra nếu ở định dạng YYYYMMDDHHMM (từ XML hoặc đã chuyển đổi)
-            if (dateString.length >= 12 && !isNaN(dateString)) { // Kiểm tra isNaN để đảm bảo là chuỗi số
+
+            // Check if in YYYYMMDDHHMM (from XML or converted)
+            if (dateString.length === 12 && !isNaN(dateString)) {
                 const year = dateString.substring(0, 4);
                 const month = dateString.substring(4, 6);
                 const day = dateString.substring(6, 8);
@@ -603,31 +905,96 @@
                 const minute = dateString.substring(10, 12);
                 return `${day}/${month}/${year} ${hour}:${minute}`;
             }
-            // Nếu không khớp định dạng nào, trả về nguyên bản
-            return dateString; 
+
+            // Attempt to handle the "strange" Excel format for display
+            const strangeMatch = dateString.match(/(\d{1,2})\/(\d{1,2})\/\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):\s*(\d{1,2})(:\s*(\d{1,2}))?/);
+            if (strangeMatch) {
+                let year = parseInt(strangeMatch[1], 10);
+                const month = strangeMatch[2].padStart(2, '0');
+                const day = strangeMatch[3].padStart(2, '0');
+                let hour = parseInt(strangeMatch[5], 10);
+                let minute = strangeMatch[6].padStart(2, '0');
+                if (year < 100) {
+                    year = (year < (new Date().getFullYear() % 100) + 10 ? 2000 + year : 1900 + year);
+                }
+                if (hour >= 24) hour = 0;
+                hour = String(hour).padStart(2, '0');
+                return `${day}/${month}/${year} ${hour}:${minute}`;
+            }
+
+            // Fallback for numeric Excel dates if they somehow reach here unparsed (less likely with initial conversion)
+            if (!isNaN(dateString) && String(dateString).length < 8 && String(parseFloat(dateString)) === dateString) {
+                const excelDate = parseFloat(dateString);
+                const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                if (!isNaN(date)) {
+                    const year = date.getFullYear().toString();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    return `${day}/${month}/${year} ${hours}:${minutes}`;
+                }
+            }
+
+            // If no format matches, return the original string
+            return dateString;
         }
 
 
         /**
-         * Tạo chuỗi HTML cho báo cáo đối chiếu.
-         * Sắp xếp kết quả để đưa các dòng không khớp lên đầu.
-         * @param {Array<Object>} results - Kết quả so sánh.
-         * @returns {string} Chuỗi HTML.
+         * Applies filters (status, MA_LK, patient name) to the comparison results
+         * and re-renders the HTML report.
+         */
+        function applyFilters() {
+            let currentResults = [...lastComparisonResults]; // Start with full results
+
+            const selectedStatus = statusFilter.value;
+            const searchMaLk = maLkSearch.value.toLowerCase().trim();
+            const searchPatientName = patientNameSearch.value.toLowerCase().trim();
+
+            if (selectedStatus) {
+                currentResults = currentResults.filter(item => item.Status === selectedStatus);
+            }
+
+            if (searchMaLk) {
+                currentResults = currentResults.filter(item =>
+                    String(item.MA_LK).toLowerCase().includes(searchMaLk)
+                );
+            }
+
+            if (searchPatientName) {
+                currentResults = currentResults.filter(item =>
+                    (item.XML_HO_TEN && String(item.XML_HO_TEN).toLowerCase().includes(searchPatientName)) ||
+                    (item.Excel_HO_TEN && String(item.Excel_HO_TEN).toLowerCase().includes(searchPatientName))
+                );
+            }
+
+            filteredResults = currentResults; // Store filtered results
+
+            resultDiv.innerHTML = createHtmlReport(filteredResults);
+        }
+
+
+        /**
+         * Creates the HTML string for the comparison report.
+         * Sorts results to put mismatches first.
+         * @param {Array<Object>} results - The comparison results.
+         * @returns {string} The HTML string.
          */
         function createHtmlReport(results) {
             if (results.length === 0) {
-                return '<p class="no-data">Không có dữ liệu để đối chiếu hoặc không tìm thấy bản ghi nào khớp.</p>';
+                return '<p class="no-data">Không tìm thấy hồ sơ nào khớp với tiêu chí lọc.</p>';
             }
 
-            // Sắp xếp kết quả: đưa không khớp lên đầu
+            // Sort results: put mismatches first
+            const statusOrder = {
+                '2. Không khớp': 1,
+                '3. Chỉ có trên XML (chưa gửi cổng GĐ)': 2,
+                '4. Chỉ có trên Excel (Đã gửi cổng GĐ)': 3,
+                '1. Khớp': 4,
+                'Không có dữ liệu': 5
+            };
             const sortedResults = [...results].sort((a, b) => {
-                const statusOrder = {
-                    '2. Không khớp': 1,
-                    '3. Chỉ có trên XML (chưa gửi cổng GĐ)': 2,
-                    '4. Chỉ có trên Excel (local)': 3,
-                    '1. Khớp': 4,
-                    'Không có dữ liệu': 5 
-                };
                 return statusOrder[a.Status] - statusOrder[b.Status];
             });
 
@@ -649,7 +1016,7 @@
                             <th>Ngày vào (Excel)</th>
                             <th>Ngày ra (Excel)</th>
                             <th>CĐ Ra Viện (Excel)</th>
-                            
+
                             <th>Trạng thái & Chi tiết</th>
                         </tr>
                     </thead>`;
@@ -668,8 +1035,8 @@
                 html += `<td>${item.Excel_HO_TEN}</td>`;
                 html += `<td>${item.Excel_MA_THE_BHYT}</td>`;
                 html += `<td>${item.Excel_T_TONGCHI_BH.toLocaleString('vi-VN')}</td>`;
-                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_VAO)}</td>`; // Gọi format để hiển thị đúng
-                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_RA)}</td>`;   // Gọi format để hiển thị đúng
+                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_VAO)}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_RA)}</td>`;
                 html += `<td>${item.Excel_CHAN_DOAN_RV}</td>`;
 
                 let statusCellContent = `<strong>${item.Status}</strong>`;
@@ -686,18 +1053,18 @@
         }
 
         /**
-         * Xuất dữ liệu không khớp ra tệp Excel (CSV).
-         * @param {Array<Object>} data - Toàn bộ kết quả đối chiếu.
+         * Exports mismatched data to an Excel file (XLSX).
+         * @param {Array<Object>} data - All comparison results.
          */
         function exportMismatchedToExcel(data) {
-            const mismatchedData = data.filter(item => item.Status !== '1. Khớp' && item.Status !== 'Không có dữ liệu');
+            const mismatchedData = data.filter(item => item.Status !== '1. Khớp'); // Exclude 'Khớp'
 
             if (mismatchedData.length === 0) {
                 alert('Không có dữ liệu không khớp để xuất ra Excel.');
                 return;
             }
 
-            // Tạo header cho tệp Excel xuất ra
+            // Define headers for the exported Excel file
             const headers = [
                 "Mã LK", "Họ Tên (XML)", "Mã thẻ (XML)", "Tổng chi BH (XML)", "Ngày vào (XML)", "Ngày ra (XML)", "CĐ Ra Viện (XML Full)", "CĐ Ra Viện (XML ICD)",
                 "Họ Tên (Excel)", "Mã thẻ (Excel)", "Tổng chi BH (Excel)", "Ngày vào (Excel)", "Ngày ra (Excel)", "CĐ Ra Viện (Excel)",
@@ -709,29 +1076,29 @@
                 item.XML_HO_TEN,
                 item.XML_MA_THE_BHYT,
                 item.XML_T_TONGCHI_BH,
-                formatDateTimeForDisplay(item.XML_NGAY_VAO), // Dùng hàm định dạng để xuất
-                formatDateTimeForDisplay(item.XML_NGAY_RA),   // Dùng hàm định dạng để xuất
+                formatDateTimeForDisplay(item.XML_NGAY_VAO),
+                formatDateTimeForDisplay(item.XML_NGAY_RA),
                 item.XML_CHAN_DOAN_RV_FULL,
                 item.XML_CHAN_DOAN_RV_ICD,
                 item.Excel_HO_TEN,
                 item.Excel_MA_THE_BHYT,
                 item.Excel_T_TONGCHI_BH,
-                formatDateTimeForDisplay(item.Excel_NGAY_VAO), // Dùng hàm định dạng để xuất
-                formatDateTimeForDisplay(item.Excel_NGAY_RA),   // Dùng hàm định dạng để xuất
+                formatDateTimeForDisplay(item.Excel_NGAY_VAO),
+                formatDateTimeForDisplay(item.Excel_NGAY_RA),
                 item.Excel_CHAN_DOAN_RV,
                 item.Status,
-                item.DetailStatus.join('; ') 
+                item.DetailStatus.join('; ')
             ]);
 
             const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "DuLieuKhongKhop");
 
-            const filename = `BaoCao_DoiChieu_KhongKhop_${new Date().toISOString().slice(0,10)}.xlsx`;
+            const filename = `BaoCao_DoiChieu_KhongKhop_${new Date().toISOString().slice(0,10).replace(/-/g, '')}.xlsx`;
             XLSX.writeFile(wb, filename);
         }
 
-        // Khởi tạo trạng thái nút khi tải trang
+        // Initialize button states on page load
         checkAndEnableButtons();
     </script>
 </body>
