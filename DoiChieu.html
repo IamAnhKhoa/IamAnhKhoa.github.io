@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Công cụ Đối chiếu Dữ liệu BHYT</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-   <style>
+     <style>
 /* General styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
@@ -871,6 +871,61 @@ tr:hover td {
             return dateStr;
         }
 
+        /**
+         * Formats a date string (YYYYMMDDHHMM, YYYYMMDD, or DD/MM/YYYY) to specified format or DD/MM/YYYY by default.
+         * @param {string} dateString The date string.
+         * @param {string} outputFormat The desired output format ('DD/MM/YYYY', 'YYYYMMDD'). Default is 'DD/MM/YYYY'.
+         * @returns {string} The formatted date string.
+         */
+        function formatDateForDisplay(dateString, outputFormat = 'DD/MM/YYYY') {
+            if (!dateString) return '';
+            dateString = String(dateString).trim();
+
+            let year, month, day;
+
+            // Handle YYYYMMDDHHMM format (from XML)
+            if (dateString.length === 12 && !isNaN(dateString)) {
+                year = dateString.substring(0, 4);
+                month = dateString.substring(4, 6);
+                day = dateString.substring(6, 8);
+                // For HHMM, we ignore if only YYYYMMDD is requested
+                if (outputFormat === 'YYYYMMDD') return `${year}${month}${day}`;
+                const hour = dateString.substring(8, 10);
+                const minute = dateString.substring(10, 12);
+                return `${day}/${month}/${year} ${hour}:${minute}`;
+            }
+            // Handle YYYYMMDD format (already stripped HHMM or from Excel raw)
+            else if (dateString.length === 8 && !isNaN(dateString)) {
+                year = dateString.substring(0, 4);
+                month = dateString.substring(4, 6);
+                day = dateString.substring(6, 8);
+                if (outputFormat === 'YYYYMMDD') return `${year}${month}${day}`;
+                return `${day}/${month}/${year}`;
+            }
+            // Handle DD/MM/YYYY HH:MM or DD/MM/YYYY format (from Excel)
+            else if (dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/)) {
+                const parts = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/);
+                day = parts[1].padStart(2, '0');
+                month = parts[2].padStart(2, '0');
+                year = parts[3];
+                if (outputFormat === 'YYYYMMDD') return `${year}${month}${day}`;
+                return `${day}/${month}/${year}` + (parts[4] ? ` ${parts[4].padStart(2, '0')}:${parts[5].padStart(2, '0')}` : '');
+            }
+            // Handle Excel's numeric date format if it somehow passes through
+            else if (!isNaN(dateString) && String(dateString).length < 8 && String(parseFloat(dateString)) === dateString) {
+                const excelDate = parseFloat(dateString);
+                const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                if (!isNaN(date)) {
+                    year = date.getFullYear().toString();
+                    month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    day = date.getDate().toString().padStart(2, '0');
+                    if (outputFormat === 'YYYYMMDD') return `${year}${month}${day}`;
+                    return `${day}/${month}/${year}`;
+                }
+            }
+            return dateString; // Fallback for unhandled formats
+        }
+
 
         /**
          * Reads an Excel file (CSV, XLSX, XLS) and converts it into an array of objects.
@@ -902,7 +957,10 @@ tr:hover td {
                                 else if (newKey.toLowerCase() === 'tổng chi') newKey = 'T_TONGCHI_BH';
                                 else if (newKey.toLowerCase() === 'ngày vào') newKey = 'NGAY_VAO';
                                 else if (newKey.toLowerCase() === 'ngày ra') newKey = 'NGAY_RA';
-                                else if (newKey.toLowerCase().includes('chẩn đoán')) newKey = 'CHAN_DOAN_RV'; // Flexible for "Chẩn đoán" or "Chẩn đoán RV"
+                                else if (newKey.toLowerCase().includes('chẩn đoán')) newKey = 'CHAN_DOAN_RV';
+                                else if (newKey.toLowerCase() === 'ngày sinh') newKey = 'NGAY_SINH'; // New field
+                                else if (newKey.toLowerCase() === 'giới tính') newKey = 'GIOI_TINH'; // New field
+                                else if (newKey.toLowerCase() === 'bệnh nhân cct' || newKey.toLowerCase() === 'bn cct') newKey = 'T_BNCCT'; // New field
 
                                 newRow[newKey] = String(row[key]).trim();
                             }
@@ -920,8 +978,8 @@ tr:hover td {
         }
 
         /**
-         * Trích xuất mã ICD TỪNG PHẦN (hoặc mã ICD chính đầu tiên nếu có nhiều)
-         * từ chuỗi chẩn đoán (ví dụ: "A17.0†-Viêm màng não do lao (G01*);A15.3-Lao phổi..." -> "A17.0†").
+         * Extracts the ICD code TỪNG PHẦN (or the first main ICD code if multiple)
+         * from a diagnosis string (e.g., "A17.0†-Viêm màng não do lao (G01*);A15.3-Lao phổi..." -> "A17.0†").
          * @param {string} diagString Chuỗi chẩn đoán đầy đủ.
          * @returns {string} Mã ICD chính đã được trích xuất.
          */
@@ -929,27 +987,47 @@ tr:hover td {
             if (!diagString) return '';
             diagString = String(diagString).trim();
 
-            // Bước 1: Tách lấy phần mã ICD đầu tiên trước dấu chấm phẩy nếu có (cho trường hợp nhiều mã ICD)
+            // Step 1: Extract the first ICD code part before a semicolon (if multiple ICDs are listed)
             const firstPart = diagString.split(';')[0];
 
-            // Bước 2: Tách lấy phần mã ICD trước dấu gạch ngang hoặc dấu cách (nếu có mô tả sau mã)
-            // Regex này sẽ khớp một chuỗi bắt đầu bằng chữ cái, theo sau là số và có thể có dấu chấm,
-            // sau đó có thể có các ký tự * hoặc †
+            // Step 2: Extract the ICD code itself from the first part, before a hyphen or space (if description follows)
+            // Regex matches a sequence starting with a letter, followed by numbers and possibly dots,
+            // and optionally followed by * or † characters.
             const match = firstPart.match(/^([A-Z][0-9\.]+[A-Z0-9]*(?:[\*†])?)/i);
             
-            return match ? match[1].trim() : firstPart.trim(); // Trả về phần khớp hoặc toàn bộ firstPart nếu không khớp regex
+            return match ? match[1].trim() : firstPart.trim(); // Return the matched part or the whole firstPart if no regex match
         }
 
         /**
-         * Chuẩn hóa mã ICD bằng cách loại bỏ các ký tự đặc biệt như '*', '†', và khoảng trắng.
-         * Chuyển đổi thành chữ hoa để so sánh không phân biệt hoa/thường.
-         * @param {string} icdCode Mã ICD cần chuẩn hóa.
-         * @returns {string} Mã ICD đã được chuẩn hóa.
+         * Normalizes an ICD code by removing special characters like '*', '†', and whitespace.
+         * Converts to uppercase for case-insensitive comparison.
+         * @param {string} icdCode The ICD code to normalize.
+         * @returns {string} The normalized ICD code.
          */
         function normalizeIcdCode(icdCode) {
             if (!icdCode) return '';
-            // Loại bỏ tất cả các ký tự *, †, và khoảng trắng, sau đó chuyển về chữ hoa.
+            // Remove all *, †, and whitespace characters, then convert to uppercase.
             return String(icdCode).replace(/[\*†\s]/g, '').toUpperCase();
+        }
+
+        /**
+         * Normalizes gender for comparison.
+         * XML: 0 for unknown/other, 1 for Male, 2 for Female.
+         * Excel: Can be "Nam", "Nữ", "1", "2", etc.
+         * This function converts all to a standardized format (e.g., "NAM" or "NU")
+         * @param {string} genderStr The gender string from XML or Excel.
+         * @returns {string} Standardized gender ("NAM", "NU", or "UNKNOWN").
+         */
+        function normalizeGender(genderStr) {
+            if (!genderStr) return 'UNKNOWN';
+            const s = String(genderStr).trim().toUpperCase();
+            if (s === '1' || s === 'NAM' || s === 'MALE') {
+                return 'NAM';
+            }
+            if (s === '2' || s === 'NU' || s === 'NỮ' || s === 'FEMALE') {
+                return 'NU';
+            }
+            return 'UNKNOWN'; // For 0, "", or any other value
         }
 
         /**
@@ -1014,7 +1092,11 @@ tr:hover td {
                                             NGAY_VAO: getCleanText(tongHopElement.querySelector('NGAY_VAO')),
                                             NGAY_RA: getCleanText(tongHopElement.querySelector('NGAY_RA')),
                                             CHAN_DOAN_RV_FULL: xmlChanDoanRvFull,
-                                            CHAN_DOAN_RV_ICD: extractIcdCode(xmlChanDoanRvFull) // Trích xuất mã ICD chính từ chuỗi đầy đủ XML
+                                            CHAN_DOAN_RV_ICD: extractIcdCode(xmlChanDoanRvFull),
+                                            // New fields from XML1
+                                            NGAY_SINH: getCleanText(tongHopElement.querySelector('NGAY_SINH')),
+                                            GIOI_TINH: getCleanText(tongHopElement.querySelector('GIOI_TINH')), // 1 for Male, 2 for Female
+                                            T_BNCCT: parseFloat(getCleanText(tongHopElement.querySelector('T_BNCCT')) || '0'),
                                         };
                                     }
                                 }
@@ -1065,13 +1147,19 @@ tr:hover td {
                     XML_NGAY_RA: xmlItem.NGAY_RA,
                     XML_CHAN_DOAN_RV_FULL: xmlItem.CHAN_DOAN_RV_FULL,
                     XML_CHAN_DOAN_RV_ICD: xmlItem.CHAN_DOAN_RV_ICD,
+                    XML_NGAY_SINH: xmlItem.NGAY_SINH, // New field
+                    XML_GIOI_TINH: xmlItem.GIOI_TINH, // New field
+                    XML_T_BNCCT: xmlItem.T_BNCCT,     // New field
 
                     Excel_HO_TEN: 'N/A',
                     Excel_MA_THE_BHYT: 'N/A',
                     Excel_T_TONGCHI_BH: 0,
                     Excel_NGAY_VAO: 'N/A',
                     Excel_NGAY_RA: 'N/A',
-                    Excel_CHAN_DOAN_RV: 'N/A', // This holds the full Excel diagnosis string
+                    Excel_CHAN_DOAN_RV: 'N/A',
+                    Excel_NGAY_SINH: 'N/A',  // New field
+                    Excel_GIOI_TINH: 'N/A',  // New field
+                    Excel_T_BNCCT: 0,        // New field
 
                     Status: '',
                     RowClass: '',
@@ -1085,6 +1173,9 @@ tr:hover td {
                     result.Excel_NGAY_VAO = excelItem.NGAY_VAO || 'N/A';
                     result.Excel_NGAY_RA = excelItem.NGAY_RA || 'N/A';
                     result.Excel_CHAN_DOAN_RV = excelItem.CHAN_DOAN_RV || 'N/A';
+                    result.Excel_NGAY_SINH = excelItem.NGAY_SINH || 'N/A'; // New field
+                    result.Excel_GIOI_TINH = excelItem.GIOI_TINH || 'N/A'; // New field
+                    result.Excel_T_BNCCT = parseFloat(excelItem.T_BNCCT || '0'); // New field
 
                     let isMismatch = false;
 
@@ -1116,9 +1207,7 @@ tr:hover td {
                         isMismatch = true;
                     }
                     // Compare Chẩn đoán RV (normalize ICD codes: remove *, †, whitespace, then case-insensitive)
-                    // Lấy mã ICD từ XML (đã được trích xuất và lưu trong XML_CHAN_DOAN_RV_ICD)
                     const xmlIcdNormalized = normalizeIcdCode(result.XML_CHAN_DOAN_RV_ICD);
-                    // Lấy mã ICD từ Excel (từ trường CHAN_DOAN_RV của Excel, sau đó trích xuất và chuẩn hóa)
                     const excelIcdExtracted = extractIcdCode(result.Excel_CHAN_DOAN_RV);
                     const excelIcdNormalized = normalizeIcdCode(excelIcdExtracted);
 
@@ -1126,6 +1215,32 @@ tr:hover td {
                         result.DetailStatus.push(`Mã ICD chẩn đoán RV: XML="${result.XML_CHAN_DOAN_RV_ICD}" (chuẩn hóa: ${xmlIcdNormalized}) vs Excel="${result.Excel_CHAN_DOAN_RV}" (trích xuất: ${excelIcdExtracted}, chuẩn hóa: ${excelIcdNormalized})`);
                         isMismatch = true;
                     }
+
+                    // --- NEW COMPARISONS ---
+                    // Compare Ngày sinh (YYYYMMDD from XML, convert Excel to YYYYMMDD for comparison)
+                    // Take only YYYYMMDD from XML's YYYYMMDDHHMM
+                    const xmlNgaySinhCompare = formatDateForDisplay(xmlItem.NGAY_SINH, 'YYYYMMDD');
+                    const excelNgaySinhCompare = formatDateForDisplay(result.Excel_NGAY_SINH, 'YYYYMMDD');
+                    if (xmlNgaySinhCompare !== excelNgaySinhCompare) {
+                        result.DetailStatus.push(`Ngày sinh: XML=${formatDateForDisplay(xmlItem.NGAY_SINH)} (chuẩn hóa: ${xmlNgaySinhCompare}) vs Excel=${formatDateForDisplay(result.Excel_NGAY_SINH)} (chuẩn hóa: ${excelNgaySinhCompare})`);
+                        isMismatch = true;
+                    }
+
+                    // Compare Giới tính (normalize both to "NAM" / "NU" / "UNKNOWN")
+                    const xmlGioiTinhNormalized = normalizeGender(xmlItem.GIOI_TINH);
+                    const excelGioiTinhNormalized = normalizeGender(result.Excel_GIOI_TINH);
+                    if (xmlGioiTinhNormalized !== excelGioiTinhNormalized) {
+                        result.DetailStatus.push(`Giới tính: XML="${xmlItem.GIOI_TINH}" (chuẩn hóa: ${xmlGioiTinhNormalized}) vs Excel="${result.Excel_GIOI_TINH}" (chuẩn hóa: ${excelGioiTinhNormalized})`);
+                        isMismatch = true;
+                    }
+
+                    // Compare T_BNCCT (numeric, with tolerance)
+                    if (Math.abs(result.XML_T_BNCCT - result.Excel_T_BNCCT) > 0.01) {
+                        result.DetailStatus.push(`Bệnh nhân CCT: XML=${result.XML_T_BNCCT.toLocaleString('vi-VN')} vs Excel=${result.Excel_T_BNCCT.toLocaleString('vi-VN')}`);
+                        isMismatch = true;
+                    }
+                    // --- END NEW COMPARISONS ---
+
 
                     if (isMismatch) {
                         result.Status = '2. Không khớp';
@@ -1154,6 +1269,9 @@ tr:hover td {
                     XML_NGAY_RA: 'N/A',
                     XML_CHAN_DOAN_RV_FULL: 'N/A',
                     XML_CHAN_DOAN_RV_ICD: 'N/A',
+                    XML_NGAY_SINH: 'N/A', // New field
+                    XML_GIOI_TINH: 'N/A', // New field
+                    XML_T_BNCCT: 0,     // New field
 
                     Excel_HO_TEN: excelItem.HO_TEN || 'N/A',
                     Excel_MA_THE_BHYT: excelItem.MA_THE_BHYT || 'N/A',
@@ -1161,6 +1279,9 @@ tr:hover td {
                     Excel_NGAY_VAO: excelItem.NGAY_VAO || 'N/A',
                     Excel_NGAY_RA: excelItem.NGAY_RA || 'N/A',
                     Excel_CHAN_DOAN_RV: excelItem.CHAN_DOAN_RV || 'N/A',
+                    Excel_NGAY_SINH: excelItem.NGAY_SINH || 'N/A', // New field
+                    Excel_GIOI_TINH: excelItem.GIOI_TINH || 'N/A', // New field
+                    Excel_T_BNCCT: parseFloat(excelItem.T_BNCCT || '0'), // New field
 
                     Status: '4. Chỉ có trên Excel (Đã gửi cổng GĐ)', // Changed status text for clarity
                     RowClass: 'excel-only',
@@ -1177,60 +1298,69 @@ tr:hover td {
          * Can receive YYYYMMDDHHMM (from XML) or DD/MM/YYYY HH:MM (from original Excel).
          * Always returns DD/MM/YYYY HH:MM.
          * @param {string} dateString The date/time string.
-         * @returns {string} The formatted date/time string (DD/MM/YYYY HH:MM).
+         * @param {string} outputFormat The desired output format ('DD/MM/YYYY HH:MM', 'DD/MM/YYYY', 'YYYYMMDD'). Default is 'DD/MM/YYYY HH:MM'.
+         * @returns {string} The formatted date string.
          */
-        function formatDateTimeForDisplay(dateString) {
+        function formatDateTimeForDisplay(dateString, outputFormat = 'DD/MM/YYYY HH:MM') {
             if (!dateString) return '';
 
             dateString = String(dateString).trim();
+            let year, month, day, hour, minute;
 
-            // Check if already in DD/MM/YYYY HH:MM (or DD/MM/YYYY) format
-            if (dateString.match(/^\d{2}\/\d{2}\/\d{4}( \d{2}:\d{2})?$/)) {
-                return dateString;
-            }
-
-            // Check if in YYYYMMDDHHMM (from XML or converted)
+            // Handle YYYYMMDDHHMM format (from XML)
             if (dateString.length === 12 && !isNaN(dateString)) {
-                const year = dateString.substring(0, 4);
-                const month = dateString.substring(4, 6);
-                const day = dateString.substring(6, 8);
-                const hour = dateString.substring(8, 10);
-                const minute = dateString.substring(10, 12);
-                return `${day}/${month}/${year} ${hour}:${minute}`;
+                year = dateString.substring(0, 4);
+                month = dateString.substring(4, 6);
+                day = dateString.substring(6, 8);
+                hour = dateString.substring(8, 10);
+                minute = dateString.substring(10, 12);
             }
-
-            // Attempt to handle the "strange" Excel format for display
-            const strangeMatch = dateString.match(/(\d{1,2})\/(\d{1,2})\/\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):\s*(\d{1,2})(:\s*(\d{1,2}))?/);
-            if (strangeMatch) {
-                let year = parseInt(strangeMatch[1], 10);
-                const month = strangeMatch[2].padStart(2, '0');
-                const day = strangeMatch[3].padStart(2, '0');
-                let hour = parseInt(strangeMatch[5], 10);
-                let minute = strangeMatch[6].padStart(2, '0');
-                if (year < 100) {
-                    year = (year < (new Date().getFullYear() % 100) + 10 ? 2000 + year : 1900 + year);
-                }
+            // Handle DD/MM/YYYY HH:MM or DD/MM/YYYY format (from Excel)
+            else if (dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/)) {
+                const parts = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2}))?$/);
+                day = parts[1].padStart(2, '0');
+                month = parts[2].padStart(2, '0');
+                year = parts[3];
+                hour = (parts[4] || '00').padStart(2, '0');
+                minute = (parts[5] || '00').padStart(2, '0');
+            }
+            // Handle "strange" Excel format (YY/MM//DD/X HH:MM)
+            else if (dateString.match(/(\d{1,2})\/(\d{1,2})\/\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):\s*(\d{1,2})(:\s*(\d{1,2}))?/)) {
+                const strangeMatch = dateString.match(/(\d{1,2})\/(\d{1,2})\/\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):\s*(\d{1,2})(:\s*(\d{1,2}))?/);
+                year = parseInt(strangeMatch[1], 10);
+                month = strangeMatch[2].padStart(2, '0');
+                day = strangeMatch[3].padStart(2, '0');
+                hour = parseInt(strangeMatch[5], 10);
+                minute = strangeMatch[6].padStart(2, '0');
+                // Adjust year for 2-digit format
+                const currentYear = new Date().getFullYear();
+                if (year < 100) { year = (year < (currentYear % 100) + 10 ? 2000 + year : 1900 + year); }
                 if (hour >= 24) hour = 0;
                 hour = String(hour).padStart(2, '0');
-                return `${day}/${month}/${year} ${hour}:${minute}`;
             }
-
-            // Fallback for numeric Excel dates if they somehow reach here unparsed (less likely with initial conversion)
-            if (!isNaN(dateString) && String(dateString).length < 8 && String(parseFloat(dateString)) === dateString) {
+            // Handle numeric Excel date
+            else if (!isNaN(dateString) && String(dateString).length < 8 && String(parseFloat(dateString)) === dateString) {
                 const excelDate = parseFloat(dateString);
                 const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
                 if (!isNaN(date)) {
-                    const year = date.getFullYear().toString();
-                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                    const day = date.getDate().toString().padStart(2, '0');
-                    const hours = date.getHours().toString().padStart(2, '0');
-                    const minutes = date.getMinutes().toString().padStart(2, '0');
-                    return `${day}/${month}/${year} ${hours}:${minutes}`;
-                }
+                    year = date.getFullYear().toString();
+                    month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    day = date.getDate().toString().padStart(2, '0');
+                    hour = date.getHours().toString().padStart(2, '0');
+                    minute = date.getMinutes().toString().padStart(2, '0');
+                } else { return dateString; /* Cannot parse, return original */ }
             }
+            else { return dateString; /* Cannot parse, return original */ }
 
-            // If no format matches, return the original string
-            return dateString;
+            // Format based on outputFormat
+            if (outputFormat === 'YYYYMMDD') {
+                return `${year}${month}${day}`;
+            } else if (outputFormat === 'DD/MM/YYYY') {
+                return `${day}/${month}/${year}`;
+            } else if (outputFormat === 'DD/MM/YYYY HH:MM') {
+                return `${day}/${month}/${year} ${hour}:${minute}`;
+            }
+            return dateString; // Fallback
         }
 
 
@@ -1302,6 +1432,9 @@ tr:hover td {
                             <th>Ngày vào (XML)</th>
                             <th>Ngày ra (XML)</th>
                             <th>CĐ Ra Viện (XML)</th>
+                            <th>Ngày sinh (XML)</th>
+                            <th>Giới tính (XML)</th>
+                            <th>BN CCT (XML)</th>
 
                             <th>Họ Tên (Excel)</th>
                             <th>Mã thẻ (Excel)</th>
@@ -1309,6 +1442,9 @@ tr:hover td {
                             <th>Ngày vào (Excel)</th>
                             <th>Ngày ra (Excel)</th>
                             <th>CĐ Ra Viện (Excel)</th>
+                            <th>Ngày sinh (Excel)</th>
+                            <th>Giới tính (Excel)</th>
+                            <th>BN CCT (Excel)</th>
 
                             <th>Trạng thái & Chi tiết</th>
                         </tr>
@@ -1324,6 +1460,9 @@ tr:hover td {
                 html += `<td>${formatDateTimeForDisplay(item.XML_NGAY_VAO)}</td>`;
                 html += `<td>${formatDateTimeForDisplay(item.XML_NGAY_RA)}</td>`;
                 html += `<td>${item.XML_CHAN_DOAN_RV_FULL}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.XML_NGAY_SINH, 'DD/MM/YYYY')}</td>`; // Display formatted date
+                html += `<td>${normalizeGender(item.XML_GIOI_TINH)}</td>`; // Display normalized gender
+                html += `<td>${item.XML_T_BNCCT.toLocaleString('vi-VN')}</td>`;
 
                 html += `<td>${item.Excel_HO_TEN}</td>`;
                 html += `<td>${item.Excel_MA_THE_BHYT}</td>`;
@@ -1331,6 +1470,9 @@ tr:hover td {
                 html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_VAO)}</td>`;
                 html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_RA)}</td>`;
                 html += `<td>${item.Excel_CHAN_DOAN_RV}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_SINH, 'DD/MM/YYYY')}</td>`; // Display formatted date
+                html += `<td>${normalizeGender(item.Excel_GIOI_TINH)}</td>`; // Display normalized gender
+                html += `<td>${item.Excel_T_BNCCT.toLocaleString('vi-VN')}</td>`;
 
                 let statusCellContent = `<strong>${item.Status}</strong>`;
                 if (item.DetailStatus && item.DetailStatus.length > 0) {
@@ -1360,7 +1502,9 @@ tr:hover td {
             // Define headers for the exported Excel file
             const headers = [
                 "Mã LK", "Họ Tên (XML)", "Mã thẻ (XML)", "Tổng chi BH (XML)", "Ngày vào (XML)", "Ngày ra (XML)", "CĐ Ra Viện (XML Full)", "CĐ Ra Viện (XML ICD)",
+                "Ngày sinh (XML)", "Giới tính (XML)", "BN CCT (XML)",
                 "Họ Tên (Excel)", "Mã thẻ (Excel)", "Tổng chi BH (Excel)", "Ngày vào (Excel)", "Ngày ra (Excel)", "CĐ Ra Viện (Excel)",
+                "Ngày sinh (Excel)", "Giới tính (Excel)", "BN CCT (Excel)",
                 "Trạng thái", "Chi tiết không khớp"
             ];
 
@@ -1373,12 +1517,18 @@ tr:hover td {
                 formatDateTimeForDisplay(item.XML_NGAY_RA),
                 item.XML_CHAN_DOAN_RV_FULL,
                 item.XML_CHAN_DOAN_RV_ICD,
+                formatDateTimeForDisplay(item.XML_NGAY_SINH, 'DD/MM/YYYY'), // Export formatted
+                normalizeGender(item.XML_GIOI_TINH),     // Export normalized
+                item.XML_T_BNCCT,
                 item.Excel_HO_TEN,
                 item.Excel_MA_THE_BHYT,
                 item.Excel_T_TONGCHI_BH,
                 formatDateTimeForDisplay(item.Excel_NGAY_VAO),
                 formatDateTimeForDisplay(item.Excel_NGAY_RA),
                 item.Excel_CHAN_DOAN_RV,
+                formatDateTimeForDisplay(item.Excel_NGAY_SINH, 'DD/MM/YYYY'), // Export formatted
+                normalizeGender(item.Excel_GIOI_TINH),     // Export normalized
+                item.Excel_T_BNCCT,
                 item.Status,
                 item.DetailStatus.join('; ')
             ]);
