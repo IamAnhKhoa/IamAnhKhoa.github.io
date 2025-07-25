@@ -250,16 +250,34 @@
         });
 
         /**
-         * Chuyển đổi định dạng ngày giờ từ DD/MM/YYYY HH:MM sang YYYYMMDDHHMM
+         * Chuyển đổi định dạng ngày giờ của Excel (DD/MM/YYYY HH:MM) sang YYYYMMDDHHMM để so sánh.
          * @param {string} dateStr Định dạng DD/MM/YYYY HH:MM hoặc DD/MM/YYYY
-         * @returns {string} Định dạng YYYYMMDDHHMM
+         * @returns {string} Định dạng YYYYMMDDHHMM.
          */
-        function convertExcelDateToXmlFormat(dateStr) {
+        function convertExcelDateToCompareFormat(dateStr) {
             if (!dateStr) return '';
             const parts = dateStr.split(' '); // Tách ngày và giờ
             const dateParts = parts[0].split('/'); // Tách DD, MM, YYYY
             
-            if (dateParts.length !== 3) return dateStr; // Không đúng định dạng ngày
+            if (dateParts.length !== 3) {
+                 // Xử lý định dạng Excel "lạ" mà bạn đã chỉ ra trước đó: YY/MM//DD/X HH:MM
+                 // Ví dụ: 20/7//01/0 25: 0
+                const strangeMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):\s*(\d{1,2})(:\s*(\d{1,2}))?/);
+                if (strangeMatch) {
+                    let year = parseInt(strangeMatch[1], 10);
+                    const month = strangeMatch[2].padStart(2, '0');
+                    const day = strangeMatch[3].padStart(2, '0');
+                    let hour = parseInt(strangeMatch[5], 10);
+                    let minute = strangeMatch[6].padStart(2, '0');
+                    // Xử lý năm (nếu là 2 chữ số)
+                    if (year < 100) { year = (year < (new Date().getFullYear() % 100) + 10 ? 2000 + year : 1900 + year); }
+                    // Xử lý giờ không hợp lệ
+                    if (hour >= 24) hour = 0; 
+                    hour = String(hour).padStart(2, '0');
+                    return `${year}${month}${day}${hour}${minute}`;
+                }
+                return dateStr; // Trả về nguyên bản nếu không khớp bất kỳ định dạng nào
+            }
 
             const day = dateParts[0].padStart(2, '0');
             const month = dateParts[1].padStart(2, '0');
@@ -313,9 +331,7 @@
 
                                 newRow[newKey] = String(row[key]).trim();
                             }
-                            // Chuyển đổi định dạng ngày giờ của Excel sang định dạng XML để so sánh
-                            if (newRow.NGAY_VAO) newRow.NGAY_VAO_COMPARE = convertExcelDateToXmlFormat(newRow.NGAY_VAO);
-                            if (newRow.NGAY_RA) newRow.NGAY_RA_COMPARE = convertExcelDateToXmlFormat(newRow.NGAY_RA);
+                            // KHÔNG CẦN CHUYỂN ĐỔI ĐỊNH DẠNG NGÀY Ở ĐÂY, SẼ LÀM Ở HÀM COMPARE
                             
                             return newRow;
                         });
@@ -337,9 +353,8 @@
          */
         function extractIcdCode(diagString) {
             if (!diagString) return '';
-            // Sử dụng regex để lấy phần đầu trước dấu gạch ngang hoặc khoảng trắng, hoặc toàn bộ nếu không có
-            const match = diagString.match(/^([A-Z0-9\.]+\s*)/i);
-            return match ? match[1].trim() : diagString.trim();
+            const match = diagString.match(/^([A-Z0-9\.]+\s*)/i); 
+            return match ? match[1].trim() : diagString.trim(); 
         }
 
         /**
@@ -349,7 +364,6 @@
          */
         function normalizeIcdCode(icdCode) {
             if (!icdCode) return '';
-            // Loại bỏ dấu * và dấu †
             return icdCode.replace(/[\*†]/g, '').trim();
         }
 
@@ -412,8 +426,8 @@
                                             HO_TEN: getCleanText(tongHopElement.querySelector('HO_TEN')),
                                             MA_THE_BHYT: getCleanText(tongHopElement.querySelector('MA_THE_BHYT')),
                                             T_TONGCHI_BH: parseFloat(getCleanText(tongHopElement.querySelector('T_TONGCHI_BH')) || '0'),
-                                            NGAY_VAO: getCleanText(tongHopElement.querySelector('NGAY_VAO')),
-                                            NGAY_RA: getCleanText(tongHopElement.querySelector('NGAY_RA')),
+                                            NGAY_VAO: getCleanText(tongHopElement.querySelector('NGAY_VAO')), // Giữ nguyên YYYYMMDDHHMM
+                                            NGAY_RA: getCleanText(tongHopElement.querySelector('NGAY_RA')),   // Giữ nguyên YYYYMMDDHHMM
                                             CHAN_DOAN_RV_FULL: xmlChanDoanRvFull, 
                                             CHAN_DOAN_RV_ICD: extractIcdCode(xmlChanDoanRvFull) 
                                         };
@@ -489,27 +503,34 @@
 
                     let isMismatch = false;
 
+                    // So sánh Họ tên (không phân biệt hoa/thường, loại bỏ khoảng trắng thừa)
                     if (result.XML_HO_TEN.toLowerCase() !== result.Excel_HO_TEN.toLowerCase()) {
                         result.DetailStatus.push(`Họ tên: XML="${result.XML_HO_TEN}" vs Excel="${result.Excel_HO_TEN}"`);
                         isMismatch = true;
                     }
+                    // So sánh Mã thẻ BHYT
                     if (result.XML_MA_THE_BHYT !== result.Excel_MA_THE_BHYT) {
                          result.DetailStatus.push(`Mã thẻ BHYT: XML="${result.XML_MA_THE_BHYT}" vs Excel="${result.Excel_MA_THE_BHYT}"`);
                          isMismatch = true;
                     }
+                    // So sánh Tổng chi BHYT (chấp nhận sai số nhỏ do dấu phẩy động)
                     if (Math.abs(result.XML_T_TONGCHI_BH - result.Excel_T_TONGCHI_BH) > 0.01) {
                         result.DetailStatus.push(`Tổng chi BH: XML=${result.XML_T_TONGCHI_BH.toLocaleString('vi-VN')} vs Excel=${result.Excel_T_TONGCHI_BH.toLocaleString('vi-VN')}`);
                         isMismatch = true;
                     }
-                    if (xmlItem.NGAY_VAO !== excelItem.NGAY_VAO_COMPARE) { 
-                        result.DetailStatus.push(`Ngày vào: XML=${formatDateTimeForDisplay(xmlItem.NGAY_VAO)} vs Excel=${result.Excel_NGAY_VAO}`);
+                    // So sánh Ngày vào (chuẩn hóa Excel sang YYYYMMDDHHMM để so sánh)
+                    const excelNgayVaoCompare = convertExcelDateToCompareFormat(result.Excel_NGAY_VAO);
+                    if (xmlItem.NGAY_VAO !== excelNgayVaoCompare) { 
+                        result.DetailStatus.push(`Ngày vào: XML=${formatDateTimeForDisplay(xmlItem.NGAY_VAO)} vs Excel=${result.Excel_NGAY_VAO} (chuẩn hóa: ${excelNgayVaoCompare})`);
                         isMismatch = true;
                     }
-                    if (xmlItem.NGAY_RA !== excelItem.NGAY_RA_COMPARE) { 
-                        result.DetailStatus.push(`Ngày ra: XML=${formatDateTimeForDisplay(xmlItem.NGAY_RA)} vs Excel=${result.Excel_NGAY_RA}`);
+                    // So sánh Ngày ra (chuẩn hóa Excel sang YYYYMMDDHHMM để so sánh)
+                    const excelNgayRaCompare = convertExcelDateToCompareFormat(result.Excel_NGAY_RA);
+                    if (xmlItem.NGAY_RA !== excelNgayRaCompare) { 
+                        result.DetailStatus.push(`Ngày ra: XML=${formatDateTimeForDisplay(xmlItem.NGAY_RA)} vs Excel=${result.Excel_NGAY_RA} (chuẩn hóa: ${excelNgayRaCompare})`);
                         isMismatch = true;
                     }
-                    // So sánh ICD sau khi đã chuẩn hóa
+                    // So sánh Chẩn đoán RV (chỉ mã ICD, bỏ qua * và †, không phân biệt hoa/thường)
                     if (normalizeIcdCode(result.XML_CHAN_DOAN_RV_ICD).toLowerCase() !== normalizeIcdCode(result.Excel_CHAN_DOAN_RV).toLowerCase()) {
                         result.DetailStatus.push(`Mã ICD chẩn đoán RV: XML="${result.XML_CHAN_DOAN_RV_ICD}" vs Excel="${result.Excel_CHAN_DOAN_RV}"`);
                         isMismatch = true;
@@ -524,7 +545,7 @@
                     }
                     excelMap.delete(maLkXml); 
                 } else {
-                    result.Status = '3. Chỉ có trên XML (chưa gửi cổng GĐ)'; // ĐÃ CẬP NHẬT TẠI ĐÂY
+                    result.Status = '3. Chỉ có trên XML (chưa gửi cổng GĐ)'; 
                     result.RowClass = 'xml-only';
                 }
                 comparisonResults.push(result);
@@ -560,25 +581,30 @@
         }
 
         /**
-         * Định dạng chuỗi ngày giờ từ YYYYMMDDHHMM sang DD/MM/YYYY HH:MM.
-         * @param {string} dateString Chuỗi ngày giờ (YYYYMMDDHHMM).
+         * Định dạng chuỗi ngày giờ để hiển thị trên báo cáo.
+         * Có thể nhận YYYYMMDDHHMM (từ XML) hoặc DD/MM/YYYY HH:MM (từ Excel gốc).
+         * Luôn trả về DD/MM/YYYY HH:MM.
+         * @param {string} dateString Chuỗi ngày giờ.
          * @returns {string} Chuỗi ngày giờ đã định dạng (DD/MM/YYYY HH:MM).
          */
         function formatDateTimeForDisplay(dateString) {
-            if (!dateString || dateString.length < 12) {
-                if (dateString.match(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/)) {
-                    return dateString;
-                }
-                return dateString; 
-            }
+            if (!dateString) return '';
 
-            const year = dateString.substring(0, 4);
-            const month = dateString.substring(4, 6);
-            const day = dateString.substring(6, 8);
-            const hour = dateString.substring(8, 10);
-            const minute = dateString.substring(10, 12);
-            
-            return `${day}/${month}/${year} ${hour}:${minute}`;
+            // Kiểm tra nếu đã ở định dạng DD/MM/YYYY HH:MM (hoặc DD/MM/YYYY)
+            if (dateString.match(/^\d{2}\/\d{2}\/\d{4}( \d{2}:\d{2})?$/)) {
+                return dateString;
+            }
+            // Kiểm tra nếu ở định dạng YYYYMMDDHHMM (từ XML hoặc đã chuyển đổi)
+            if (dateString.length >= 12 && !isNaN(dateString)) { // Kiểm tra isNaN để đảm bảo là chuỗi số
+                const year = dateString.substring(0, 4);
+                const month = dateString.substring(4, 6);
+                const day = dateString.substring(6, 8);
+                const hour = dateString.substring(8, 10);
+                const minute = dateString.substring(10, 12);
+                return `${day}/${month}/${year} ${hour}:${minute}`;
+            }
+            // Nếu không khớp định dạng nào, trả về nguyên bản
+            return dateString; 
         }
 
 
@@ -600,7 +626,7 @@
                     '3. Chỉ có trên XML (chưa gửi cổng GĐ)': 2,
                     '4. Chỉ có trên Excel (local)': 3,
                     '1. Khớp': 4,
-                    'Không có dữ liệu': 5 // Đảm bảo trường hợp này luôn ở cuối
+                    'Không có dữ liệu': 5 
                 };
                 return statusOrder[a.Status] - statusOrder[b.Status];
             });
@@ -642,8 +668,8 @@
                 html += `<td>${item.Excel_HO_TEN}</td>`;
                 html += `<td>${item.Excel_MA_THE_BHYT}</td>`;
                 html += `<td>${item.Excel_T_TONGCHI_BH.toLocaleString('vi-VN')}</td>`;
-                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_VAO)}</td>`;
-                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_RA)}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_VAO)}</td>`; // Gọi format để hiển thị đúng
+                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_RA)}</td>`;   // Gọi format để hiển thị đúng
                 html += `<td>${item.Excel_CHAN_DOAN_RV}</td>`;
 
                 let statusCellContent = `<strong>${item.Status}</strong>`;
@@ -683,25 +709,24 @@
                 item.XML_HO_TEN,
                 item.XML_MA_THE_BHYT,
                 item.XML_T_TONGCHI_BH,
-                formatDateTimeForDisplay(item.XML_NGAY_VAO),
-                formatDateTimeForDisplay(item.XML_NGAY_RA),
+                formatDateTimeForDisplay(item.XML_NGAY_VAO), // Dùng hàm định dạng để xuất
+                formatDateTimeForDisplay(item.XML_NGAY_RA),   // Dùng hàm định dạng để xuất
                 item.XML_CHAN_DOAN_RV_FULL,
                 item.XML_CHAN_DOAN_RV_ICD,
                 item.Excel_HO_TEN,
                 item.Excel_MA_THE_BHYT,
                 item.Excel_T_TONGCHI_BH,
-                formatDateTimeForDisplay(item.Excel_NGAY_VAO), // Dùng hàm định dạng cho Excel display
-                formatDateTimeForDisplay(item.Excel_NGAY_RA),   // Dùng hàm định dạng cho Excel display
+                formatDateTimeForDisplay(item.Excel_NGAY_VAO), // Dùng hàm định dạng để xuất
+                formatDateTimeForDisplay(item.Excel_NGAY_RA),   // Dùng hàm định dạng để xuất
                 item.Excel_CHAN_DOAN_RV,
                 item.Status,
-                item.DetailStatus.join('; ') // Nối các chi tiết không khớp bằng dấu chấm phẩy
+                item.DetailStatus.join('; ') 
             ]);
 
             const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "DuLieuKhongKhop");
 
-            // Xuất tệp Excel
             const filename = `BaoCao_DoiChieu_KhongKhop_${new Date().toISOString().slice(0,10)}.xlsx`;
             XLSX.writeFile(wb, filename);
         }
