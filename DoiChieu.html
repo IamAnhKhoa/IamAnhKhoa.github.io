@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Đối chiếu Dữ liệu BHYT Local (XML & Excel)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 1200px; margin: 20px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #0056b3; margin-bottom: 30px; }
+        h2 { color: #0056b3; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .file-input-group { margin-bottom: 20px; background-color: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-top: 5px;
+            background-color: #fff;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            flex-grow: 1; /* Allow buttons to grow */
+            transition: background-color 0.3s ease;
+        }
+        button:hover:not(:disabled) { background-color: #0056b3; }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #exportExcelButton {
+            background-color: #28a745;
+        }
+        #exportExcelButton:hover:not(:disabled) {
+            background-color: #218838;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+            min-height: 20px; /* Keep space even if empty */
+        }
+        .status-message.success { color: #28a745; font-weight: bold; }
+        .status-message.error { color: #dc3545; font-weight: bold; }
+
+        #loading {
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+            color: #777;
+            display: none;
+            font-size: 1.1em;
+        }
+        #error-message {
+            color: red;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        #result {
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+            overflow-x: auto; /* Allow horizontal scroll for wide tables */
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; min-width: 1000px; /* Ensure table doesn't shrink too much */ }
+        th, td { padding: 12px; text-align: left; border: 1px solid #ddd; font-size: 0.95em; vertical-align: top; }
+        th { background-color: #e9ecef; color: #495057; font-weight: bold; white-space: nowrap; }
+        td { white-space: nowrap; /* Prevent text wrap in cells for better overview */ }
+        td:nth-child(1) { width: 80px; } /* MA_LK */
+        td:nth-child(2), td:nth-child(3), td:nth-child(9), td:nth-child(10) { width: 150px; } /* Names */
+        td:nth-child(4), td:nth-child(11) { width: 100px; text-align: right; } /* Amounts */
+        td:nth-child(5), td:nth-child(6), td:nth-child(12), td:nth-child(13) { width: 120px; } /* Dates */
+        td:nth-child(7), td:nth-child(14) { width: 200px; } /* Diagnosis */
+        td:nth-child(15) { width: 180px; font-weight: bold; } /* Status */
+
+        .match { background-color: #e6ffe6; } /* Khớp */
+        .mismatch { background-color: #ffe6e6; } /* Không khớp */
+        .xml-only { background-color: #e6f7ff; } /* Chỉ có trên XML */
+        .excel-only { background-color: #fff8e6; } /* Chỉ có trên Excel */
+        .no-data { text-align: center; color: #777; font-style: italic; }
+        .status-cell ul { margin: 0; padding-left: 15px; list-style-type: disc; }
+        .status-cell li { margin-bottom: 2px; color: #a52a2a; } /* Highlight specific mismatches */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Công cụ Đối chiếu Dữ liệu BHYT Local</h1>
+
+        <div class="file-input-group">
+            <label for="xmlFile">Bước 1: Tải lên tệp XML BHYT:</label>
+            <input type="file" id="xmlFile" accept=".xml">
+            <div id="xmlStatus" class="status-message"></div>
+        </div>
+
+        <div class="file-input-group">
+            <label for="excelFile">Bước 2: Tải lên tệp Excel (.xlsx, .xls, .csv) chứa dữ liệu đối chiếu:</label>
+            <input type="file" id="excelFile" accept=".xlsx,.xls,.csv">
+            <div id="excelStatus" class="status-message"></div>
+        </div>
+
+        <div class="button-group">
+            <button id="compareButton" disabled>Bước 3: Đối chiếu Dữ liệu</button>
+            <button id="exportExcelButton" disabled>Xuất dữ liệu không khớp ra Excel</button>
+        </div>
+
+        <div id="loading">Đang xử lý dữ liệu, vui lòng chờ...</div>
+        <div id="error-message"></div>
+        <div id="result">
+            </div>
+    </div>
+
+    <script>
+        let xmlData = null;
+        let excelData = null;
+        let lastComparisonResults = []; // Lưu kết quả đối chiếu gần nhất để xuất Excel
+
+        const xmlFileInput = document.getElementById('xmlFile');
+        const excelFileInput = document.getElementById('excelFile');
+        const compareButton = document.getElementById('compareButton');
+        const exportExcelButton = document.getElementById('exportExcelButton'); // Nút xuất Excel
+        const xmlStatusDiv = document.getElementById('xmlStatus');
+        const excelStatusDiv = document.getElementById('excelStatus');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error-message');
+        const resultDiv = document.getElementById('result');
+
+        // Hàm kiểm tra và bật/tắt nút đối chiếu và xuất Excel
+        function checkAndEnableButtons() {
+            if (xmlData && excelData) {
+                compareButton.disabled = false;
+                compareButton.style.backgroundColor = '#007bff';
+            } else {
+                compareButton.disabled = true;
+                compareButton.style.backgroundColor = '#cccccc';
+            }
+            // Chỉ bật nút xuất Excel nếu có kết quả đối chiếu và có dữ liệu để xuất
+            if (lastComparisonResults.length > 0 && 
+                lastComparisonResults.some(r => r.Status !== '1. Khớp' && r.Status !== 'Không có dữ liệu')) {
+                exportExcelButton.disabled = false;
+                exportExcelButton.style.backgroundColor = '#28a745';
+            } else {
+                exportExcelButton.disabled = true;
+                exportExcelButton.style.backgroundColor = '#cccccc';
+            }
+        }
+
+        // Xử lý khi tải tệp XML
+        xmlFileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            xmlStatusDiv.textContent = '';
+            xmlData = null; // Reset data
+            lastComparisonResults = []; // Reset results
+            checkAndEnableButtons(); // Disable buttons immediately
+
+            if (file) {
+                xmlStatusDiv.textContent = 'Đang đọc tệp XML...';
+                xmlStatusDiv.className = 'status-message';
+                try {
+                    xmlData = await readXmlFile(file);
+                    xmlStatusDiv.textContent = `Đã tải và xử lý XML: ${Object.keys(xmlData).length} hồ sơ.`;
+                    xmlStatusDiv.className = 'status-message success';
+                } catch (error) {
+                    xmlStatusDiv.textContent = `Lỗi đọc XML: ${error.message}`;
+                    xmlStatusDiv.className = 'status-message error';
+                    xmlData = null;
+                    console.error("Lỗi đọc XML:", error);
+                }
+            } else {
+                xmlStatusDiv.textContent = 'Chưa chọn tệp XML.';
+            }
+            checkAndEnableButtons();
+        });
+
+        // Xử lý khi tải tệp Excel
+        excelFileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            excelStatusDiv.textContent = '';
+            excelData = null; // Reset data
+            lastComparisonResults = []; // Reset results
+            checkAndEnableButtons(); // Disable buttons immediately
+
+            if (file) {
+                excelStatusDiv.textContent = 'Đang đọc tệp Excel...';
+                excelStatusDiv.className = 'status-message';
+                try {
+                    excelData = await readExcelFile(file);
+                    excelStatusDiv.textContent = `Đã tải và xử lý Excel: ${excelData.length} dòng dữ liệu.`;
+                    excelStatusDiv.className = 'status-message success';
+                } catch (error) {
+                    excelStatusDiv.textContent = `Lỗi đọc Excel: ${error.message}`;
+                    excelStatusDiv.className = 'status-message error';
+                    excelData = null;
+                    console.error("Lỗi đọc Excel:", error);
+                }
+            } else {
+                excelStatusDiv.textContent = 'Chưa chọn tệp Excel.';
+            }
+            checkAndEnableButtons();
+        });
+
+        // Xử lý khi nhấn nút đối chiếu
+        compareButton.addEventListener('click', async () => {
+            errorDiv.textContent = '';
+            resultDiv.innerHTML = '';
+            lastComparisonResults = []; // Clear previous results
+
+            if (!xmlData || !excelData) {
+                errorDiv.textContent = 'Vui lòng tải lên cả hai tệp trước khi đối chiếu.';
+                return;
+            }
+
+            loadingDiv.style.display = 'block';
+
+            try {
+                lastComparisonResults = compareData(xmlData, excelData);
+                resultDiv.innerHTML = createHtmlReport(lastComparisonResults);
+            } catch (error) {
+                errorDiv.textContent = 'Lỗi trong quá trình đối chiếu: ' + error.message;
+                console.error('Lỗi đối chiếu:', error);
+            } finally {
+                loadingDiv.style.display = 'none';
+                checkAndEnableButtons(); // Check buttons again after comparison
+            }
+        });
+
+        // Xử lý khi nhấn nút xuất Excel
+        exportExcelButton.addEventListener('click', () => {
+            if (lastComparisonResults.length > 0) {
+                exportMismatchedToExcel(lastComparisonResults);
+            } else {
+                errorDiv.textContent = 'Không có kết quả đối chiếu nào để xuất.';
+            }
+        });
+
+        /**
+         * Chuyển đổi định dạng ngày giờ từ DD/MM/YYYY HH:MM sang YYYYMMDDHHMM
+         * @param {string} dateStr Định dạng DD/MM/YYYY HH:MM hoặc DD/MM/YYYY
+         * @returns {string} Định dạng YYYYMMDDHHMM
+         */
+        function convertExcelDateToXmlFormat(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split(' '); // Tách ngày và giờ
+            const dateParts = parts[0].split('/'); // Tách DD, MM, YYYY
+            
+            if (dateParts.length !== 3) return dateStr; // Không đúng định dạng ngày
+
+            const day = dateParts[0].padStart(2, '0');
+            const month = dateParts[1].padStart(2, '0');
+            const year = dateParts[2];
+            
+            let time = '';
+            if (parts.length > 1) {
+                const timeParts = parts[1].split(':'); // Tách HH, MM
+                if (timeParts.length === 2) {
+                    time = timeParts[0].padStart(2, '0') + timeParts[1].padStart(2, '0');
+                }
+            } else {
+                time = '0000'; // Mặc định nếu không có giờ
+            }
+
+            return `${year}${month}${day}${time}`;
+        }
+
+        /**
+         * Đọc tệp Excel (CSV, XLSX, XLS) và chuyển đổi thành mảng các đối tượng.
+         * Giả định hàng đầu tiên là tiêu đề.
+         * @param {File} file - Đối tượng File từ input.
+         * @returns {Promise<Array<Object>>} Mảng các đối tượng đại diện cho mỗi hàng.
+         */
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0]; // Lấy sheet đầu tiên
+                        const worksheet = workbook.Sheets[sheetName];
+                        
+                        const json = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
+                        
+                        const normalizedJson = json.map(row => {
+                            const newRow = {};
+                            for (const key in row) {
+                                let newKey = String(key).trim(); 
+                                
+                                // Ánh xạ tên cột Excel sang tên chuẩn để so sánh
+                                if (newKey === 'Mã liên kết') newKey = 'MA_LK';
+                                else if (newKey === 'Mã thẻ') newKey = 'MA_THE_BHYT';
+                                else if (newKey === 'Họ tên') newKey = 'HO_TEN';
+                                else if (newKey === 'Tổng chi') newKey = 'T_TONGCHI_BH'; 
+                                else if (newKey === 'Ngày vào') newKey = 'NGAY_VAO';
+                                else if (newKey === 'Ngày ra') newKey = 'NGAY_RA';
+                                else if (newKey === 'Chẩn đoán') newKey = 'CHAN_DOAN_RV';
+                                // Không cần T_THUOC vì Excel không có
+
+                                newRow[newKey] = String(row[key]).trim();
+                            }
+                            // Chuyển đổi định dạng ngày giờ của Excel sang định dạng XML để so sánh
+                            if (newRow.NGAY_VAO) newRow.NGAY_VAO_COMPARE = convertExcelDateToXmlFormat(newRow.NGAY_VAO);
+                            if (newRow.NGAY_RA) newRow.NGAY_RA_COMPARE = convertExcelDateToXmlFormat(newRow.NGAY_RA);
+                            
+                            return newRow;
+                        });
+
+                        resolve(normalizedJson);
+                    } catch (err) {
+                        reject(new Error('Không thể đọc tệp Excel. Vui lòng đảm bảo định dạng đúng. Chi tiết: ' + err.message));
+                    }
+                };
+                reader.onerror = (error) => reject(new Error('Lỗi khi đọc tệp Excel: ' + error.message));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        /**
+         * Trích xuất mã ICD từ chuỗi chẩn đoán (ví dụ: "B20-Bệnh HIV..." -> "B20").
+         * @param {string} diagString Chuỗi chẩn đoán đầy đủ.
+         * @returns {string} Mã ICD.
+         */
+        function extractIcdCode(diagString) {
+            if (!diagString) return '';
+            // Sử dụng regex để lấy phần đầu trước dấu gạch ngang hoặc khoảng trắng, hoặc toàn bộ nếu không có
+            const match = diagString.match(/^([A-Z0-9\.]+\s*)/i);
+            return match ? match[1].trim() : diagString.trim();
+        }
+
+        /**
+         * Chuẩn hóa mã ICD bằng cách loại bỏ các ký tự đặc biệt như '*' và '†'.
+         * @param {string} icdCode Mã ICD cần chuẩn hóa.
+         * @returns {string} Mã ICD đã được chuẩn hóa.
+         */
+        function normalizeIcdCode(icdCode) {
+            if (!icdCode) return '';
+            // Loại bỏ dấu * và dấu †
+            return icdCode.replace(/[\*†]/g, '').trim();
+        }
+
+        /**
+         * Đọc tệp XML BHYT với cấu trúc phức tạp.
+         * Trích xuất thông tin từ XML1 (TONG_HOP).
+         * @param {File} file - Đối tượng File từ input.
+         * @returns {Promise<Object>} Một đối tượng mà mỗi key là MA_LK, chứa thông tin tổng hợp.
+         */
+        function readXmlFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const xmlString = e.target.result;
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+
+                        const errorNode = xmlDoc.querySelector('parsererror');
+                        if (errorNode) {
+                            throw new Error('Lỗi phân tích cú pháp XML: ' + errorNode.textContent);
+                        }
+
+                        const allHossoData = {}; 
+                        const danhSachHoSo = xmlDoc.querySelector('DANHSACHHOSO');
+                        if (!danhSachHoSo) {
+                            resolve({}); 
+                            return;
+                        }
+
+                        const hossoElements = danhSachHoSo.querySelectorAll('HOSO');
+
+                        hossoElements.forEach(hosoElement => {
+                            const fileHosoElements = hosoElement.querySelectorAll('FILEHOSO');
+
+                            let maLkCurrent = null;
+                            let tongHopData = {};
+                            
+                            fileHosoElements.forEach(fileHoso => {
+                                const loaiHoso = fileHoso.querySelector('LOAIHOSO')?.textContent?.trim();
+                                const noiDungFile = fileHoso.querySelector('NOIDUNGFILE');
+
+                                if (!noiDungFile) return;
+
+                                if (loaiHoso === 'XML1') { 
+                                    const tongHopElement = noiDungFile.querySelector('TONG_HOP');
+                                    if (tongHopElement) {
+                                        const getCleanText = (el) => {
+                                            if (!el) return '';
+                                            return el.textContent.replace('<![CDATA[', '').replace(']]>', '').trim();
+                                        };
+
+                                        maLkCurrent = getCleanText(tongHopElement.querySelector('MA_LK'));
+                                        if (!maLkCurrent) return; 
+
+                                        const xmlChanDoanRvFull = getCleanText(tongHopElement.querySelector('CHAN_DOAN_RV'));
+
+                                        tongHopData = {
+                                            MA_LK: maLkCurrent,
+                                            HO_TEN: getCleanText(tongHopElement.querySelector('HO_TEN')),
+                                            MA_THE_BHYT: getCleanText(tongHopElement.querySelector('MA_THE_BHYT')),
+                                            T_TONGCHI_BH: parseFloat(getCleanText(tongHopElement.querySelector('T_TONGCHI_BH')) || '0'),
+                                            NGAY_VAO: getCleanText(tongHopElement.querySelector('NGAY_VAO')),
+                                            NGAY_RA: getCleanText(tongHopElement.querySelector('NGAY_RA')),
+                                            CHAN_DOAN_RV_FULL: xmlChanDoanRvFull, 
+                                            CHAN_DOAN_RV_ICD: extractIcdCode(xmlChanDoanRvFull) 
+                                        };
+                                    }
+                                }
+                            });
+
+                            if (maLkCurrent && maLkCurrent !== '') {
+                                allHossoData[maLkCurrent] = tongHopData;
+                            }
+                        });
+                        resolve(allHossoData);
+
+                    } catch (err) {
+                        reject(new Error('Không thể đọc tệp XML. Vui lòng đảm bảo định dạng XML hợp lệ và đúng cấu trúc. Chi tiết: ' + err.message));
+                    }
+                };
+                reader.onerror = (error) => reject(new Error('Lỗi khi đọc tệp XML: ' + error.message));
+                reader.readAsText(file);
+            });
+        }
+
+        /**
+         * So sánh dữ liệu từ XML và Excel.
+         * @param {Object} xmlData - Dữ liệu XML đã phân tích theo MA_LK.
+         * @param {Array<Object>} excelData - Dữ liệu đã đọc từ Excel.
+         * @returns {Array<Object>} Kết quả so sánh.
+         */
+        function compareData(xmlData, excelData) {
+            const comparisonResults = [];
+            const excelMap = new Map();
+
+            excelData.forEach(item => {
+                const maLkExcel = String(item.MA_LK).trim(); 
+                if (maLkExcel) {
+                    excelMap.set(maLkExcel, item);
+                }
+            });
+
+            for (const maLkXml in xmlData) {
+                const xmlItem = xmlData[maLkXml];
+                const excelItem = excelMap.get(maLkXml);
+
+                const result = {
+                    MA_LK: maLkXml,
+                    XML_HO_TEN: xmlItem.HO_TEN,
+                    XML_MA_THE_BHYT: xmlItem.MA_THE_BHYT,
+                    XML_T_TONGCHI_BH: xmlItem.T_TONGCHI_BH,
+                    XML_NGAY_VAO: xmlItem.NGAY_VAO, 
+                    XML_NGAY_RA: xmlItem.NGAY_RA,   
+                    XML_CHAN_DOAN_RV_FULL: xmlItem.CHAN_DOAN_RV_FULL, 
+                    XML_CHAN_DOAN_RV_ICD: xmlItem.CHAN_DOAN_RV_ICD,   
+
+                    Excel_HO_TEN: 'N/A',
+                    Excel_MA_THE_BHYT: 'N/A',
+                    Excel_T_TONGCHI_BH: 0,
+                    Excel_NGAY_VAO: 'N/A', 
+                    Excel_NGAY_RA: 'N/A',   
+                    Excel_CHAN_DOAN_RV: 'N/A', 
+
+                    Status: '',
+                    RowClass: '',
+                    DetailStatus: []
+                };
+
+                if (excelItem) {
+                    result.Excel_HO_TEN = excelItem.HO_TEN || 'N/A';
+                    result.Excel_MA_THE_BHYT = excelItem.MA_THE_BHYT || 'N/A';
+                    result.Excel_T_TONGCHI_BH = parseFloat(excelItem.T_TONGCHI_BH || '0'); 
+                    result.Excel_NGAY_VAO = excelItem.NGAY_VAO || 'N/A';
+                    result.Excel_NGAY_RA = excelItem.NGAY_RA || 'N/A';
+                    result.Excel_CHAN_DOAN_RV = excelItem.CHAN_DOAN_RV || 'N/A';
+
+                    let isMismatch = false;
+
+                    if (result.XML_HO_TEN.toLowerCase() !== result.Excel_HO_TEN.toLowerCase()) {
+                        result.DetailStatus.push(`Họ tên: XML="${result.XML_HO_TEN}" vs Excel="${result.Excel_HO_TEN}"`);
+                        isMismatch = true;
+                    }
+                    if (result.XML_MA_THE_BHYT !== result.Excel_MA_THE_BHYT) {
+                         result.DetailStatus.push(`Mã thẻ BHYT: XML="${result.XML_MA_THE_BHYT}" vs Excel="${result.Excel_MA_THE_BHYT}"`);
+                         isMismatch = true;
+                    }
+                    if (Math.abs(result.XML_T_TONGCHI_BH - result.Excel_T_TONGCHI_BH) > 0.01) {
+                        result.DetailStatus.push(`Tổng chi BH: XML=${result.XML_T_TONGCHI_BH.toLocaleString('vi-VN')} vs Excel=${result.Excel_T_TONGCHI_BH.toLocaleString('vi-VN')}`);
+                        isMismatch = true;
+                    }
+                    if (xmlItem.NGAY_VAO !== excelItem.NGAY_VAO_COMPARE) { 
+                        result.DetailStatus.push(`Ngày vào: XML=${formatDateTimeForDisplay(xmlItem.NGAY_VAO)} vs Excel=${result.Excel_NGAY_VAO}`);
+                        isMismatch = true;
+                    }
+                    if (xmlItem.NGAY_RA !== excelItem.NGAY_RA_COMPARE) { 
+                        result.DetailStatus.push(`Ngày ra: XML=${formatDateTimeForDisplay(xmlItem.NGAY_RA)} vs Excel=${result.Excel_NGAY_RA}`);
+                        isMismatch = true;
+                    }
+                    // So sánh ICD sau khi đã chuẩn hóa
+                    if (normalizeIcdCode(result.XML_CHAN_DOAN_RV_ICD).toLowerCase() !== normalizeIcdCode(result.Excel_CHAN_DOAN_RV).toLowerCase()) {
+                        result.DetailStatus.push(`Mã ICD chẩn đoán RV: XML="${result.XML_CHAN_DOAN_RV_ICD}" vs Excel="${result.Excel_CHAN_DOAN_RV}"`);
+                        isMismatch = true;
+                    }
+
+                    if (isMismatch) {
+                        result.Status = '2. Không khớp';
+                        result.RowClass = 'mismatch';
+                    } else {
+                        result.Status = '1. Khớp';
+                        result.RowClass = 'match';
+                    }
+                    excelMap.delete(maLkXml); 
+                } else {
+                    result.Status = '3. Chỉ có trên XML (chưa gửi cổng GĐ)'; // ĐÃ CẬP NHẬT TẠI ĐÂY
+                    result.RowClass = 'xml-only';
+                }
+                comparisonResults.push(result);
+            }
+
+            excelMap.forEach(excelItem => {
+                const maLkExcel = String(excelItem.MA_LK).trim();
+                const result = {
+                    MA_LK: maLkExcel,
+                    XML_HO_TEN: 'N/A',
+                    XML_MA_THE_BHYT: 'N/A',
+                    XML_T_TONGCHI_BH: 0,
+                    XML_NGAY_VAO: 'N/A',
+                    XML_NGAY_RA: 'N/A',
+                    XML_CHAN_DOAN_RV_FULL: 'N/A', 
+                    XML_CHAN_DOAN_RV_ICD: 'N/A',   
+
+                    Excel_HO_TEN: excelItem.HO_TEN || 'N/A',
+                    Excel_MA_THE_BHYT: excelItem.MA_THE_BHYT || 'N/A',
+                    Excel_T_TONGCHI_BH: parseFloat(excelItem.T_TONGCHI_BH || '0'), 
+                    Excel_NGAY_VAO: excelItem.NGAY_VAO || 'N/A',
+                    Excel_NGAY_RA: excelItem.NGAY_RA || 'N/A',
+                    Excel_CHAN_DOAN_RV: excelItem.CHAN_DOAN_RV || 'N/A',
+
+                    Status: '4. Chỉ có trên Excel (local)',
+                    RowClass: 'excel-only',
+                    DetailStatus: []
+                };
+                comparisonResults.push(result);
+            });
+
+            return comparisonResults;
+        }
+
+        /**
+         * Định dạng chuỗi ngày giờ từ YYYYMMDDHHMM sang DD/MM/YYYY HH:MM.
+         * @param {string} dateString Chuỗi ngày giờ (YYYYMMDDHHMM).
+         * @returns {string} Chuỗi ngày giờ đã định dạng (DD/MM/YYYY HH:MM).
+         */
+        function formatDateTimeForDisplay(dateString) {
+            if (!dateString || dateString.length < 12) {
+                if (dateString.match(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/)) {
+                    return dateString;
+                }
+                return dateString; 
+            }
+
+            const year = dateString.substring(0, 4);
+            const month = dateString.substring(4, 6);
+            const day = dateString.substring(6, 8);
+            const hour = dateString.substring(8, 10);
+            const minute = dateString.substring(10, 12);
+            
+            return `${day}/${month}/${year} ${hour}:${minute}`;
+        }
+
+
+        /**
+         * Tạo chuỗi HTML cho báo cáo đối chiếu.
+         * Sắp xếp kết quả để đưa các dòng không khớp lên đầu.
+         * @param {Array<Object>} results - Kết quả so sánh.
+         * @returns {string} Chuỗi HTML.
+         */
+        function createHtmlReport(results) {
+            if (results.length === 0) {
+                return '<p class="no-data">Không có dữ liệu để đối chiếu hoặc không tìm thấy bản ghi nào khớp.</p>';
+            }
+
+            // Sắp xếp kết quả: đưa không khớp lên đầu
+            const sortedResults = [...results].sort((a, b) => {
+                const statusOrder = {
+                    '2. Không khớp': 1,
+                    '3. Chỉ có trên XML (chưa gửi cổng GĐ)': 2,
+                    '4. Chỉ có trên Excel (local)': 3,
+                    '1. Khớp': 4,
+                    'Không có dữ liệu': 5 // Đảm bảo trường hợp này luôn ở cuối
+                };
+                return statusOrder[a.Status] - statusOrder[b.Status];
+            });
+
+            let html = '<h2>Kết quả Đối chiếu Hồ sơ BHYT</h2>';
+            html += '<table border="1">';
+            html += `<thead>
+                        <tr>
+                            <th>Mã LK</th>
+                            <th>Họ Tên (XML)</th>
+                            <th>Mã thẻ (XML)</th>
+                            <th>Tổng chi BH (XML)</th>
+                            <th>Ngày vào (XML)</th>
+                            <th>Ngày ra (XML)</th>
+                            <th>CĐ Ra Viện (XML)</th>
+
+                            <th>Họ Tên (Excel)</th>
+                            <th>Mã thẻ (Excel)</th>
+                            <th>Tổng chi BH (Excel)</th>
+                            <th>Ngày vào (Excel)</th>
+                            <th>Ngày ra (Excel)</th>
+                            <th>CĐ Ra Viện (Excel)</th>
+                            
+                            <th>Trạng thái & Chi tiết</th>
+                        </tr>
+                    </thead>`;
+            html += '<tbody>';
+
+            sortedResults.forEach(item => {
+                html += `<tr class="${item.RowClass}">`;
+                html += `<td>${item.MA_LK}</td>`;
+                html += `<td>${item.XML_HO_TEN}</td>`;
+                html += `<td>${item.XML_MA_THE_BHYT}</td>`;
+                html += `<td>${item.XML_T_TONGCHI_BH.toLocaleString('vi-VN')}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.XML_NGAY_VAO)}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.XML_NGAY_RA)}</td>`;
+                html += `<td>${item.XML_CHAN_DOAN_RV_FULL}</td>`;
+
+                html += `<td>${item.Excel_HO_TEN}</td>`;
+                html += `<td>${item.Excel_MA_THE_BHYT}</td>`;
+                html += `<td>${item.Excel_T_TONGCHI_BH.toLocaleString('vi-VN')}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_VAO)}</td>`;
+                html += `<td>${formatDateTimeForDisplay(item.Excel_NGAY_RA)}</td>`;
+                html += `<td>${item.Excel_CHAN_DOAN_RV}</td>`;
+
+                let statusCellContent = `<strong>${item.Status}</strong>`;
+                if (item.DetailStatus && item.DetailStatus.length > 0) {
+                    statusCellContent += '<ul class="status-cell">' + item.DetailStatus.map(d => `<li>${d}</li>`).join('') + '</ul>';
+                }
+                html += `<td>${statusCellContent}</td>`;
+
+                html += `</tr>`;
+            });
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        /**
+         * Xuất dữ liệu không khớp ra tệp Excel (CSV).
+         * @param {Array<Object>} data - Toàn bộ kết quả đối chiếu.
+         */
+        function exportMismatchedToExcel(data) {
+            const mismatchedData = data.filter(item => item.Status !== '1. Khớp' && item.Status !== 'Không có dữ liệu');
+
+            if (mismatchedData.length === 0) {
+                alert('Không có dữ liệu không khớp để xuất ra Excel.');
+                return;
+            }
+
+            // Tạo header cho tệp Excel xuất ra
+            const headers = [
+                "Mã LK", "Họ Tên (XML)", "Mã thẻ (XML)", "Tổng chi BH (XML)", "Ngày vào (XML)", "Ngày ra (XML)", "CĐ Ra Viện (XML Full)", "CĐ Ra Viện (XML ICD)",
+                "Họ Tên (Excel)", "Mã thẻ (Excel)", "Tổng chi BH (Excel)", "Ngày vào (Excel)", "Ngày ra (Excel)", "CĐ Ra Viện (Excel)",
+                "Trạng thái", "Chi tiết không khớp"
+            ];
+
+            const rows = mismatchedData.map(item => [
+                item.MA_LK,
+                item.XML_HO_TEN,
+                item.XML_MA_THE_BHYT,
+                item.XML_T_TONGCHI_BH,
+                formatDateTimeForDisplay(item.XML_NGAY_VAO),
+                formatDateTimeForDisplay(item.XML_NGAY_RA),
+                item.XML_CHAN_DOAN_RV_FULL,
+                item.XML_CHAN_DOAN_RV_ICD,
+                item.Excel_HO_TEN,
+                item.Excel_MA_THE_BHYT,
+                item.Excel_T_TONGCHI_BH,
+                formatDateTimeForDisplay(item.Excel_NGAY_VAO), // Dùng hàm định dạng cho Excel display
+                formatDateTimeForDisplay(item.Excel_NGAY_RA),   // Dùng hàm định dạng cho Excel display
+                item.Excel_CHAN_DOAN_RV,
+                item.Status,
+                item.DetailStatus.join('; ') // Nối các chi tiết không khớp bằng dấu chấm phẩy
+            ]);
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "DuLieuKhongKhop");
+
+            // Xuất tệp Excel
+            const filename = `BaoCao_DoiChieu_KhongKhop_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, filename);
+        }
+
+        // Khởi tạo trạng thái nút khi tải trang
+        checkAndEnableButtons();
+    </script>
+</body>
+</html>
