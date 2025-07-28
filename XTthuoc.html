@@ -3,47 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phân Tích Tính Hợp Lệ Chế Phẩm Y Tế</title>
+    <title>Phân Tích Lý Do Từ Chối Thanh Toán BHYT</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { padding: 30px; background-color: #f8f9fa; font-family: sans-serif; }
         .container { max-width: 95%; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1 { color: #343a40; border-bottom: 2px solid #198754; padding-bottom: 10px; margin-bottom: 20px; }
-        .api-config { background-color: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff; }
+        h1 { color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-bottom: 20px; }
+        .api-config { background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107; }
         .table thead th, .table tbody td { text-align: center; vertical-align: middle; }
         .summary-row { cursor: pointer; }
-        .summary-row:hover { background-color: #e9ecef; }
+        .summary-row:hover { background-color: #ffe6e6; }
         .summary-row td:first-child { text-align: left; font-weight: bold; }
-        .detail-container-row td { padding: 20px !important; background-color: #f0f2f5; }
+        .detail-container-row td { padding: 20px !important; background-color: #fff5f5; }
         .detail-table-wrapper { max-height: 55vh; overflow-y: auto; }
-        .detail-table thead { position: sticky; top: 0; background-color: #e0e5ec; }
+        .detail-table thead { position: sticky; top: 0; background-color: #ffebee; }
         .reason-cell { min-width: 300px; text-align: left !important; font-weight: 500; font-size: 0.9em; }
-        .reason-cell.rejected { color: #b92c2c; background-color: #ffeaea; }
-        .reason-cell.approved { color: #198754; background-color: #eafaf1; }
-        .reason-cell.warning { color: #e67e22; background-color: #fff3e0; }
-        .reason-cell.analyzing { color: #f39c12; background-color: #fefbf3; }
-        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+        .reason-cell.rejected { color: #dc3545; background-color: #f8d7da; border-left: 3px solid #dc3545; }
+        .reason-cell.approved { color: #28a745; background-color: #d4edda; border-left: 3px solid #28a745; }
+        .reason-cell.warning { color: #fd7e14; background-color: #fff3cd; border-left: 3px solid #fd7e14; }
+        .reason-cell.analyzing { color: #6c757d; background-color: #e9ecef; border-left: 3px solid #6c757d; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #dc3545; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
         .ai-analyze-btn:disabled { opacity: 0.6; }
         .api-status { padding: 10px; border-radius: 5px; margin-bottom: 15px; }
         .api-status.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .api-status.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .stats-card { background: linear-gradient(45deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+        .stats-card { background: linear-gradient(45deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .stat-item { text-align: center; }
         .stat-number { font-size: 2em; font-weight: bold; }
         .stat-label { font-size: 0.9em; opacity: 0.9; }
-        .analysis-summary { background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .analysis-summary { background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 15px 0; border-radius: 5px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .icd-tag { background-color: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin: 1px; display: inline-block; }
-        .medicine-tag { background-color: #f3e5f5; color: #7b1fa2; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin: 1px; display: inline-block; }
+        .icd-tag { background-color: #ffebee; color: #c62828; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin: 1px; display: inline-block; border: 1px solid #ef5350; }
+        .medicine-tag { background-color: #fff3e0; color: #ef6c00; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin: 1px; display: inline-block; border: 1px solid #ff9800; }
+        .rejection-badge { background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; }
+        .header-icon { color: #dc3545; margin-right: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏥 Phân Tích Tính Hợp Lệ Chế Phẩm Y Tế</h1>
-        <p>Phân tích mối quan hệ giữa mã bệnh (MA_BENH, MA_BENHKHAC) và chế phẩm được kê (TEN_CP) để đánh giá tính hợp lệ của đơn thuốc.</p>
+        <h1>🚫 Phân Tích Lý Do Từ Chối Thanh Toán BHYT</h1>
+        <div class="alert alert-danger" role="alert">
+            <strong>⚠️ Lưu ý:</strong> Hệ thống phân tích các trường hợp bảo hiểm y tế đã từ chối thanh toán để xác định lý do và đề xuất khắc phục.
+        </div>
+        <p>Phân tích mối quan hệ giữa mã bệnh (MA_BENH, MA_BENHKHAC) và chế phẩm được kê (TEN_CP) đối với các trường hợp bị từ chối thanh toán.</p>
         
-        <!-- Cấu hình API -->
         <div class="api-config">
             <h5>🔑 Cấu hình Gemini API</h5>
             <div class="row">
@@ -51,7 +55,7 @@
                     <input type="password" id="api-key" class="form-control" placeholder="Nhập API Key của Gemini (Google AI Studio)">
                 </div>
                 <div class="col-md-4">
-                    <button type="button" id="test-api" class="btn btn-outline-primary w-100">Kiểm tra API</button>
+                    <button type="button" id="test-api" class="btn btn-outline-warning w-100">Kiểm tra API</button>
                 </div>
             </div>
             <small class="text-muted">
@@ -65,10 +69,9 @@
             <input type="file" id="excel-file" class="form-control" accept=".xlsx, .xls">
         </div>
         
-        <!-- Statistics Dashboard -->
         <div id="stats-dashboard" style="display: none;">
             <div class="stats-card">
-                <h5 class="mb-3">📊 Tổng quan phân tích</h5>
+                <h5 class="mb-3">📊 Tổng quan các trường hợp từ chối</h5>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number" id="total-records">0</div>
@@ -84,11 +87,11 @@
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="valid-prescriptions">0</div>
-                        <div class="stat-label">Đơn hợp lệ</div>
+                        <div class="stat-label">Có thể chấp nhận</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="invalid-prescriptions">0</div>
-                        <div class="stat-label">Đơn có vấn đề</div>
+                        <div class="stat-label">Từ chối đúng</div>
                     </div>
                 </div>
             </div>
@@ -255,15 +258,15 @@
             }).sort((a, b) => a['MA_CSKCB'] > b['MA_CSKCB'] ? 1 : -1);
 
             if (summaryData.length === 0) {
-                resultsContainer.innerHTML = '<p class="text-warning">Không có dữ liệu hợp lệ trong file.</p>';
+                resultsContainer.innerHTML = '<p class="text-danger">Không có dữ liệu hợp lệ trong file.</p>';
                 return;
             }
 
             const columns = ['TEN_CP', 'MA_BENH', 'MA_BENHKHAC', 'SO_CA'];
             let tableHTML = '<table class="table table-bordered table-hover">';
-            tableHTML += `<thead class="table-light"><tr><th>MA_CSKCB</th>${columns.map(c => `<th>${c}</th>`).join('')}<th>Trạng thái phân tích</th></tr></thead><tbody>`;
+            tableHTML += `<thead class="table-danger"><tr><th>MA_CSKCB <span class="rejection-badge">TỪ CHỐI</span></th>${columns.map(c => `<th>${c}</th>`).join('')}<th>Trạng thái phân tích</th></tr></thead><tbody>`;
             summaryData.forEach(row => {
-                tableHTML += `<tr class="summary-row" data-cskcb="${row['MA_CSKCB']}"><td>${row['MA_CSKCB']}</td>${columns.map(c => `<td>${row[c]}</td>`).join('')}<td id="status-${row['MA_CSKCB']}">Chưa phân tích</td></tr>`;
+                tableHTML += `<tr class="summary-row" data-cskcb="${row['MA_CSKCB']}"><td>${row['MA_CSKCB']}</td>${columns.map(c => `<td>${row[c]}</td>`).join('')}<td id="status-${row['MA_CSKCB']}"><span class="badge bg-secondary">Chưa phân tích</span></td></tr>`;
             });
             tableHTML += '</tbody></table>';
             resultsContainer.innerHTML = tableHTML;
@@ -300,10 +303,12 @@
             const detailColumns = ['MA_BN', 'HO_TEN', 'TEN_CP', 'MA_BENH', 'MA_BENHKHAC'];
             let html = `
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0">Chi tiết phân tích chế phẩm - CSKCB: ${cskcb}</h5>
+                    <h5 class="mb-0">
+                        <span class="header-icon">🚫</span>Chi tiết phân tích lý do từ chối - CSKCB: ${cskcb}
+                    </h5>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-success btn-sm" id="analyze-all-${cskcb}">Phân tích tất cả</button>
-                        <button class="btn btn-info btn-sm" id="export-results-${cskcb}">Xuất kết quả</button>
+                        <button class="btn btn-danger btn-sm" id="analyze-all-${cskcb}">Phân tích tất cả</button>
+                        <button class="btn btn-warning btn-sm" id="export-results-${cskcb}">Xuất kết quả</button>
                         <input type="text" id="search-${cskcb}" class="form-control w-50" placeholder="🔍 Tìm kiếm...">
                     </div>
                 </div>`;
@@ -315,18 +320,18 @@
                 const totalCount = facilityResults.length;
                 html += `
                     <div class="analysis-summary">
-                        <strong>Kết quả phân tích:</strong> ${validCount}/${totalCount} đơn hợp lệ 
-                        (${totalCount > 0 ? Math.round(validCount/totalCount*100) : 0}%)
+                        <strong>Kết quả phân tích từ chối:</strong> ${validCount}/${totalCount} trường hợp có thể chấp nhận 
+                        (${totalCount > 0 ? Math.round(validCount/totalCount*100) : 0}% - ${totalCount - validCount} trường hợp từ chối đúng)
                     </div>`;
             }
 
             html += `
                 <div class="detail-table-wrapper">
                     <table class="table table-sm table-bordered table-striped detail-table">
-                        <thead class="table-info"><tr>
+                        <thead class="table-danger"><tr>
                             ${detailColumns.map(c => `<th>${c}</th>`).join('')}
                             <th>Phân tích</th>
-                            <th>Kết quả phân tích chi tiết</th>
+                            <th>Lý do từ chối / Đánh giá</th>
                         </tr></thead><tbody id="tbody-${cskcb}">`;
 
             rows.forEach((row, index) => {
@@ -347,8 +352,8 @@
                     html += `<td>${cellContent}</td>`;
                 });
                 html += `
-                    <td><button class="btn btn-info btn-sm ai-analyze-btn" data-cskcb="${cskcb}" data-row-index="${index}">Phân tích</button></td>
-                    <td class="reason-cell" id="reason-${cskcb}-${index}"></td>
+                    <td><button class="btn btn-danger btn-sm ai-analyze-btn" data-cskcb="${cskcb}" data-row-index="${index}">Phân tích từ chối</button></td>
+                    <td class="reason-cell" id="reason-${cskcb}-${index}">Chưa phân tích lý do từ chối</td>
                 </tr>`;
             });
             
@@ -395,7 +400,7 @@
                     // Update UI
                     this.disabled = true;
                     this.textContent = 'Đang phân tích...';
-                    reasonCell.textContent = 'Đang phân tích tính hợp lệ của chế phẩm với AI...';
+                    reasonCell.textContent = 'Đang phân tích lý do từ chối thanh toán với AI...';
                     reasonCell.className = 'reason-cell analyzing';
 
                     try {
@@ -418,6 +423,7 @@
                         
                         this.textContent = 'Đã phân tích';
                         updateAnalysisStats();
+                        updateFacilityStatus(cskcb);
                     } catch (error) {
                         reasonCell.textContent = `Lỗi phân tích: ${error.message}`;
                         reasonCell.className = 'reason-cell rejected';
@@ -429,7 +435,7 @@
         }
 
         function formatAnalysisResult(analysis) {
-            let html = `<strong>${analysis.isValid ? '✅ HỢP LỆ' : analysis.hasWarning ? '⚠️ CẦN KIỂM TRA' : '❌ KHÔNG HỢP LỆ'}</strong><br>`;
+            let html = `<strong>${analysis.isValid ? '✅ CÓ THỂ CHẤP NHẬN' : analysis.hasWarning ? '⚠️ CẦN XEM XÉT' : '❌ TỪ CHỐI ĐÚNG'}</strong><br>`;
             html += `${analysis.summary}<br>`;
             if (analysis.details && analysis.details.length > 0) {
                 html += `<small><em>Chi tiết: ${analysis.details.join('; ')}</em></small>`;
@@ -468,8 +474,8 @@
                     'TEN_CP': row['TEN_CP'],
                     'MA_BENH': row['MA_BENH'],
                     'MA_BENHKHAC': row['MA_BENHKHAC'],
-                    'KET_QUA': analysis.isValid ? 'HỢP LỆ' : analysis.hasWarning ? 'CẦN KIỂM TRA' : 'KHÔNG HỢP LỆ',
-                    'MO_TA': analysis.summary,
+                    'TRANG_THAI_TU_CHOI': analysis.isValid ? 'CÓ THỂ CHẤP NHẬN' : analysis.hasWarning ? 'CẦN XEM XÉT' : 'TỪ CHỐI ĐÚNG',
+                    'LY_DO_PHAN_TICH': analysis.summary,
                     'CHI_TIET': analysis.details ? analysis.details.join('; ') : ''
                 });
             });
@@ -503,15 +509,31 @@
             link.click();
         }
 
-        // Enhanced Gemini API analysis focusing on medicine-disease relationship
+        // Enhanced Gemini API analysis focusing on insurance rejection reasons
         async function analyzeWithGemini(rowData) {
             if (!geminiApiKey) {
                 throw new Error('API key chưa được cấu hình');
             }
 
             const prompt = `
-Bạn là chuyên gia phân tích đơn thuốc y tế. Phân tích tính hợp lệ của việc kê chế phẩm dựa trên chẩn đoán:
-Tên thuốc	Hoạt chất	Loại cảnh báo	Điều kiện	Mã ICD	Tên ICD	Ghi chú
+Bạn là chuyên gia phân tích lý do từ chối thanh toán bảo hiểm y tế tại Việt Nam theo các quy định hiện hành (Thông tư 30/2018/TT-BYT, Quyết định 5086/QĐ-BYT). Phân tích xem việc BHYT từ chối thanh toán trường hợp này có đúng không:
+
+THÔNG TIN TRƯỜNG HỢP BỊ TỪ CHỐI:
+- Chế phẩm bị từ chối: ${rowData['TEN_CP'] || 'Không có'}
+- Mã bệnh chính (ICD-10): ${rowData['MA_BENH'] || 'Không có'}
+- Mã bệnh kèm theo (ICD-10): ${rowData['MA_BENHKHAC'] || 'Không có'}
+
+YÊU CẦU PHÂN TÍCH:
+1. Dựa trên mã bệnh, chế phẩm có phù hợp với chỉ định điều trị không?
+2. Phân tích các nguyên nhân có thể dẫn đến từ chối (không phù hợp chẩn đoán, thuốc không trong danh mục BHYT cho mã bệnh này, vượt định mức, sai quy trình...).
+3. Đưa ra kết luận cuối cùng và giải thích ngắn gọn.
+
+Trả lời theo format JSON nghiêm ngặt, không có markdown hay bất kỳ văn bản nào khác:
+{
+  "isValid": true/false,
+  "hasWarning": true/false,
+  "summary": "Kết luận và giải thích ngắn gọn trong khoảng 30-50 từ.",
+  "details": ["Các luận điểm hỗ trợ cho kết luận. Tên thuốc	Hoạt chất	Loại cảnh báo	Điều kiện	Mã ICD	Tên ICD	Ghi chú
 Meloxicam	Meloxicam	Chống chỉ định	Loét dạ dày tá tràng	K25	Loét dạ dày	Tăng nguy cơ xuất huyết tiêu hóa – đặc biệt ở người có tiền sử
 Meloxicam	Meloxicam	Thận trọng	Tăng huyết áp	I10	Tăng huyết áp	Có thể gây giữ muối nước – tăng huyết áp
 Meloxicam	Meloxicam	Thận trọng	Hen phế quản	J45	Hen phế quản	Có thể gây co thắt phế quản ở người mẫn cảm aspirin
@@ -700,213 +722,57 @@ Omeprazol	Omeprazole	Thận trọng	Sử dụng đồng thời với Clopidogrel
 Omeprazol	Omeprazole	Chống chỉ định	Dị ứng với dẫn xuất benzimidazol	T78	Phản ứng dị ứng	Cần hỏi kỹ tiền sử dị ứng thuốc họ PPI
 Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Viêm loét dạ dày tá tràng tiến triển	K25–K28	Loét dạ dày – tá tràng	Có thể gây xuất huyết do hoạt tính enzyme tiêu protein
 Alpha chymotrypsin	AlphaCHY	Thận trọng	Bệnh gan nặng, người đang chảy máu	R58	Chảy máu chưa xác định nguyên nhân	Tăng nguy cơ chảy máu do ảnh hưởng đông máu
-Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng
-- Chế phẩm được kê: ${rowData['TEN_CP'] || 'Không có'}
-- Mã bệnh chính: ${rowData['MA_BENH'] || 'Không có'}
-- Mã bệnh kèm theo: ${rowData['MA_BENHKHAC'] || 'Không có'}
-
-YÊU CẦU PHÂN TÍCH:
-1. Đánh giá mối quan hệ giữa chế phẩm và các mã bệnh
-2. Xác định tính hợp lệ của việc kê đơn
-3. Phát hiện các vấn đề tiềm ẩn (tương tác thuốc, chống chỉ định, liều dùng)
-
-Trả lời theo format JSON:
-{
-  "isValid": true/false,
-  "hasWarning": true/false,
-  "summary": "Tóm tắt ngắn gọn kết quả phân tích",
-  "details": ["Chi tiết 1", "Chi tiết 2", ...]
+Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng"]
 }
-
-Chỉ trả lời JSON hợp lệ, không thêm text khác, đừng có hiện kiểu json { "isValid": false, "hasWarning": true, "summary".
 `;
 
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: prompt
-                            }]
-                        }],
+                        contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: {
-                            temperature: 0.2,
-                            topK: 40,
-                            topP: 0.95,
-                            maxOutputTokens: 900,
+                            responseMimeType: "application/json",
                         }
                     })
                 });
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error?.message || `HTTP ${response.status}`);
+                    throw new Error(error.error?.message || `Lỗi API: ${response.status}`);
                 }
 
                 const data = await response.json();
-                
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                    const responseText = data.candidates[0].content.parts[0].text.trim();
-                    
-                    try {
-                        // Try to parse JSON response
-                        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                        if (jsonMatch) {
-                            return JSON.parse(jsonMatch[0]);
-                        } else {
-                            // Fallback if JSON parsing fails
-                            return {
-                                isValid: responseText.toLowerCase().includes('hợp lệ') && !responseText.toLowerCase().includes('không hợp lệ'),
-                                hasWarning: responseText.toLowerCase().includes('cần kiểm tra') || responseText.toLowerCase().includes('thận trọng'),
-                                summary: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''),
-                                details: []
-                            };
-                        }
-                    } catch (parseError) {
-                        // Fallback parsing
-                        return {
-                            isValid: responseText.toLowerCase().includes('hợp lệ') && !responseText.toLowerCase().includes('không hợp lệ'),
-                            hasWarning: responseText.toLowerCase().includes('cần kiểm tra'),
-                            summary: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''),
-                            details: []
-                        };
-                    }
-                } else {
-                    throw new Error('Không nhận được phản hồi hợp lệ từ Gemini');
-                }
+                const rawText = data.candidates[0].content.parts[0].text;
+                return JSON.parse(rawText);
+
             } catch (error) {
-                console.error('Gemini API Error:', error);
-                throw error;
+                console.error("Lỗi khi gọi Gemini API:", error);
+                throw new Error('Không thể phân tích dữ liệu từ Gemini. ' + error.message);
             }
         }
-
-        // Initialize status update for facilities
+        
         function updateFacilityStatus(cskcb) {
             const statusCell = document.getElementById(`status-${cskcb}`);
-            if (statusCell && analysisResults[cskcb]) {
-                const results = Object.values(analysisResults[cskcb]);
-                const analyzed = results.length;
-                const total = rawDataByCSKCB[cskcb].length;
-                const valid = results.filter(r => r.isValid).length;
-                
-                if (analyzed === total) {
-                    statusCell.innerHTML = `<span class="badge bg-success">Hoàn thành (${valid}/${total})</span>`;
-                } else if (analyzed > 0) {
-                    statusCell.innerHTML = `<span class="badge bg-warning">Đang phân tích (${analyzed}/${total})</span>`;
-                } else {
-                    statusCell.innerHTML = `<span class="badge bg-secondary">Chưa phân tích</span>`;
-                }
+            if (!statusCell) return;
+
+            const totalRows = rawDataByCSKCB[cskcb]?.length || 0;
+            const analyzedCount = Object.keys(analysisResults[cskcb] || {}).length;
+
+            if (analyzedCount === 0) {
+                statusCell.innerHTML = `<span class="badge bg-secondary">Chưa phân tích</span>`;
+            } else if (analyzedCount < totalRows) {
+                statusCell.innerHTML = `<div class="progress" role="progressbar" aria-valuenow="${analyzedCount}" aria-valuemin="0" aria-valuemax="${totalRows}" style="height: 20px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning text-dark" style="width: ${analyzedCount/totalRows*100}%">${analyzedCount}/${totalRows}</div>
+                </div>`;
+            } else {
+                const facilityResults = Object.values(analysisResults[cskcb]);
+                const validCount = facilityResults.filter(r => r.isValid).length;
+                const invalidCount = totalRows - validCount;
+                statusCell.innerHTML = `<span class="badge bg-success">Đã phân tích</span> <span class="badge bg-primary">${validCount} Hợp lệ</span> <span class="badge bg-danger">${invalidCount} Từ chối</span>`;
             }
         }
-
-        // Enhanced data validation
-        function validateMedicalData(rowData) {
-            const issues = [];
-            
-            if (!rowData['MA_BN']) issues.push('Thiếu mã bệnh nhân');
-            if (!rowData['TEN_CP']) issues.push('Thiếu tên chế phẩm');
-            if (!rowData['MA_BENH'] && !rowData['MA_BENHKHAC']) issues.push('Thiếu mã bệnh');
-            
-            return {
-                isValid: issues.length === 0,
-                issues: issues
-            };
-        }
-
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case 'a':
-                        e.preventDefault();
-                        // Analyze all visible records
-                        const activeAnalyzeAllBtn = document.querySelector('[id^="analyze-all-"]:not([disabled])');
-                        if (activeAnalyzeAllBtn) activeAnalyzeAllBtn.click();
-                        break;
-                    case 'e':
-                        e.preventDefault();
-                        // Export results
-                        const activeExportBtn = document.querySelector('[id^="export-results-"]');
-                        if (activeExportBtn) activeExportBtn.click();
-                        break;
-                }
-            }
-        });
-
-        // Add tooltip for better UX
-        function addTooltips() {
-            const tooltips = {
-                'MA_BENH': 'Mã bệnh chính theo phân loại ICD-10',
-                'MA_BENHKHAC': 'Các mã bệnh kèm theo, phân cách bằng dấu ;',
-                'TEN_CP': 'Tên chế phẩm/thuốc được kê đơn'
-            };
-            
-            Object.keys(tooltips).forEach(key => {
-                const elements = document.querySelectorAll(`th:contains("${key}")`);
-                elements.forEach(el => {
-                    el.title = tooltips[key];
-                    el.style.cursor = 'help';
-                });
-            });
-        }
-
-        // Performance optimization for large datasets
-        function optimizeTableRendering(cskcb) {
-            const tbody = document.getElementById(`tbody-${cskcb}`);
-            if (!tbody) return;
-            
-            const rows = tbody.querySelectorAll('tr');
-            let visibleCount = 0;
-            
-            rows.forEach((row, index) => {
-                if (row.style.display !== 'none') {
-                    visibleCount++;
-                    if (visibleCount > 100) {
-                        row.style.display = 'none';
-                        // Add "show more" functionality if needed
-                    }
-                }
-            });
-        }
-
-        // Auto-save analysis progress
-        function saveProgress() {
-            const progress = {
-                timestamp: Date.now(),
-                analysisResults: analysisResults,
-                totalAnalyzed: Object.values(analysisResults).reduce((sum, facility) => sum + Object.keys(facility).length, 0)
-            };
-            sessionStorage.setItem('analysis-progress', JSON.stringify(progress));
-        }
-
-        function loadProgress() {
-            const saved = sessionStorage.getItem('analysis-progress');
-            if (saved) {
-                try {
-                    const progress = JSON.parse(saved);
-                    // Only load if less than 1 hour old
-                    if (Date.now() - progress.timestamp < 3600000) {
-                        analysisResults = progress.analysisResults || {};
-                        return true;
-                    }
-                } catch (e) {
-                    console.warn('Could not load saved progress:', e);
-                }
-            }
-            return false;
-        }
-
-        // Initialize progress loading
-        window.addEventListener('load', function() {
-            loadProgress();
-        });
-
-        // Save progress periodically
-        setInterval(saveProgress, 30000); // Every 30 seconds
     </script>
 </body>
 </html>
