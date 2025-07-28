@@ -516,7 +516,7 @@
             }
 
             const prompt = `
-Bạn là chuyên gia phân tích lý do từ chối thanh toán bảo hiểm y tế tại Việt Nam theo các quy định hiện hành (Thông tư 30/2018/TT-BYT, Quyết định 5086/QĐ-BYT). Phân tích xem việc BHYT từ chối thanh toán trường hợp này có đúng không:
+Bạn là chuyên gia phân tích lý do từ chối thanh toán bảo hiểm y tế. Phân tích xem việc BHYT từ chối thanh toán trường hợp này có đúng không:
 
 THÔNG TIN TRƯỜNG HỢP BỊ TỪ CHỐI:
 - Chế phẩm bị từ chối: ${rowData['TEN_CP'] || 'Không có'}
@@ -524,9 +524,9 @@ THÔNG TIN TRƯỜNG HỢP BỊ TỪ CHỐI:
 - Mã bệnh kèm theo (ICD-10): ${rowData['MA_BENHKHAC'] || 'Không có'}
 
 YÊU CẦU PHÂN TÍCH:
-1. Dựa trên mã bệnh, chế phẩm thuốc đã cho bị từ chối là đúng hay không? 
-2. Phân tích các nguyên nhân có thể dẫn đến từ chối (không phù hợp chẩn đoán, tương tác thuốc, độ tuổi cho thuốc...).
-3. Đưa ra kết luận cuối cùng và giải thích ngắn gọn.
+
+1. Phân tích các nguyên nhân có thể dẫn đến từ chối (không phù hợp chẩn đoán, tương tác thuốc, độ tuổi cho thuốc...).
+2. Đưa ra kết luận cuối cùng và giải thích ngắn gọn (30 - 50 từ).
 
 Trả lời theo format JSON nghiêm ngặt, không có markdown hay bất kỳ văn bản nào khác:
 {
