@@ -532,7 +532,7 @@ Trả lời theo format JSON:
   "details": ["Chi tiết 1", "Chi tiết 2", ...]
 }
 
-Chỉ trả lời JSON hợp lệ, không thêm text khác.
+Chỉ trả lời JSON hợp lệ, không thêm text khác, đừng có hiện kiểu [```json { "isValid": false, "hasWarning": true, "summary":] này.
 `;
 
             try {
@@ -551,7 +551,7 @@ Chỉ trả lời JSON hợp lệ, không thêm text khác.
                             temperature: 0.2,
                             topK: 40,
                             topP: 0.95,
-                            maxOutputTokens: 300,
+                            maxOutputTokens: 900,
                         }
                     })
                 });
