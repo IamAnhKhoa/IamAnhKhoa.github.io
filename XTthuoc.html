@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phân Tích Lý Do Xuất Toán BHYT</title>
+    <title>Dashboard Phân Tích Xuất Toán BHYT</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -18,15 +18,17 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
-        h1 {
+        h1, h4 {
             background: linear-gradient(45deg, #dc3545, #c82333);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            font-weight: bold;
+        }
+        h1 {
             border-bottom: 3px solid #dc3545;
             padding-bottom: 15px;
             margin-bottom: 25px;
-            font-weight: bold;
         }
         .api-config {
             background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
@@ -43,7 +45,8 @@
         }
         .summary-row:hover {
             background: linear-gradient(135deg, #ffe6e6 0%, #ffcccb 100%);
-            transform: translateX(5px);
+            transform: scale(1.01);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         .summary-row td:first-child { text-align: left; font-weight: bold; }
         .detail-container-row td {
@@ -98,19 +101,7 @@
             margin: 30px auto;
             display: none;
         }
-        .ai-analyze-btn:disabled { opacity: 0.6; }
-        .api-status { padding: 15px; border-radius: 8px; margin-bottom: 15px; font-weight: 500; }
-        .api-status.success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .api-status.error {
-            background: linear-gradient(135deg, #f8d7da 0%, #f1aeb5 100%);
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .stats-card {
+        .stats-card, .dashboard-section {
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
             border-radius: 15px;
@@ -120,13 +111,13 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 20px;
         }
         .stat-item { text-align: center; }
-        .stat-number { font-size: 2.5em; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .stat-number { font-size: 2.2em; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .stat-label { font-size: 1em; opacity: 0.9; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .stat-sublabel { font-size: 0.8em; opacity: 0.8; }
         .icd-tag {
             background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
             color: #c62828;
@@ -149,17 +140,6 @@
             border: 1px solid #ff9800;
             font-weight: 500;
         }
-        .rejection-badge {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(220,53,69,0.3);
-        }
-        .header-icon { color: #dc3545; margin-right: 10px; font-size: 1.2em; }
-        .btn-group-custom { gap: 10px; }
         .btn-modern {
             border-radius: 8px;
             font-weight: 500;
@@ -173,12 +153,6 @@
             border-radius: 10px;
             margin-bottom: 20px;
             border: 1px solid #dee2e6;
-        }
-        .filter-section {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
         }
         .reason-header {
             background: #dc3545;
@@ -205,14 +179,12 @@
             border-left: 3px solid #6c757d;
             border-radius: 4px;
         }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚫 Phân Tích Lý Do Xuất Toán BHYT</h1>
-        <div class="alert alert-danger" role="alert">
-            <strong>⚠️ Lưu ý:</strong> Hệ thống phân tích các trường hợp đã bị BHYT từ chối thanh toán (xuất toán) để tìm ra lý do chi tiết và cụ thể.
-        </div>
+        <h1>Dashboard Phân Tích Xuất Toán BHYT</h1>
                 
         <div class="api-config">
             <h5>🔑 Cấu hình Gemini API</h5>
@@ -224,39 +196,45 @@
                     <button type="button" id="test-api" class="btn btn-outline-warning w-100 btn-modern">Kiểm tra API</button>
                 </div>
             </div>
-            <small class="text-muted">
-                <strong>Hướng dẫn:</strong> Vào <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> 
-                để tạo API key miễn phí. API key được lưu cục bộ và không chia sẻ.
-            </small>
-            <div id="api-status"></div>
+            <div id="api-status" class="mt-2"></div>
         </div>
 
         <div class="mb-3">
             <input type="file" id="excel-file" class="form-control" accept=".xlsx, .xls">
         </div>
                 
-        <div id="stats-dashboard" style="display: none;">
+        <div id="dashboard-container" style="display: none;">
             <div class="stats-card">
-                <h5 class="mb-3">📊 Tổng quan các trường hợp xuất toán</h5>
+                <h4 class="mb-3 text-white">📊 Tổng Quan</h4>
                 <div class="stats-grid">
                     <div class="stat-item">
+                        <div class="stat-number" id="total-amount">0 đ</div>
+                        <div class="stat-label">Tổng Tiền Xuất Toán</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="top-facility-name">N/A</div>
+                        <div class="stat-label">CSKCB Xuất Toán Nhiều Nhất</div>
+                        <div class="stat-sublabel" id="top-facility-amount">0 đ</div>
+                    </div>
+                    <div class="stat-item">
                         <div class="stat-number" id="total-records">0</div>
-                        <div class="stat-label">Tổng bản ghi</div>
+                        <div class="stat-label">Tổng Số Ca</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="total-facilities">0</div>
-                        <div class="stat-label">Cơ sở KCB</div>
+                        <div class="stat-label">Tổng Số CSKCB</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="analyzed-records">0</div>
-                        <div class="stat-label">Đã phân tích</div>
+                        <div class="stat-label">Số Ca Đã Phân Tích</div>
                     </div>
                 </div>
             </div>
+            <div id="medicine-stats-container" class="mt-4"></div>
         </div>
 
         <div id="loader" class="loader"></div>
-        <div id="results-container"></div>
+        <div id="results-container" class="mt-4"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -268,19 +246,14 @@
         const apiStatus = document.getElementById('api-status');
         let geminiApiKey = '';
 
-        // Load API key from sessionStorage nếu có
         if (typeof(Storage) !== "undefined") {
             geminiApiKey = sessionStorage.getItem('gemini-api-key') || '';
-            if (geminiApiKey) {
-                document.getElementById('api-key').value = geminiApiKey;
-            }
+            if (geminiApiKey) document.getElementById('api-key').value = geminiApiKey;
         }
 
         document.getElementById('api-key').addEventListener('input', function() {
             geminiApiKey = this.value;
-            if (typeof(Storage) !== "undefined") {
-                sessionStorage.setItem('gemini-api-key', geminiApiKey);
-            }
+            if (typeof(Storage) !== "undefined") sessionStorage.setItem('gemini-api-key', geminiApiKey);
         });
 
         document.getElementById('test-api').addEventListener('click', async function() {
@@ -289,62 +262,55 @@
                 showApiStatus('Vui lòng nhập API key.', 'error');
                 return;
             }
-            this.disabled = true;
-            this.textContent = 'Đang kiểm tra...';
+            this.disabled = true; this.textContent = 'Đang kiểm tra...';
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Test connection" }] }] })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Test" }] }] })
                 });
                 if (response.ok) {
-                    showApiStatus('✅ API key hợp lệ! Sẵn sàng phân tích dữ liệu.', 'success');
+                    showApiStatus('✅ API key hợp lệ!', 'success');
                     geminiApiKey = apiKey;
                 } else {
                     const error = await response.json();
-                    showApiStatus(`❌ API key không hợp lệ: ${error.error?.message || 'Unknown error'}`, 'error');
+                    showApiStatus(`❌ API key không hợp lệ: ${error.error?.message || 'Lỗi không xác định'}`, 'error');
                 }
             } catch (error) {
                 showApiStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
             }
-            this.disabled = false;
-            this.textContent = 'Kiểm tra API';
+            this.disabled = false; this.textContent = 'Kiểm tra API';
         });
 
         function showApiStatus(message, type) {
-            apiStatus.innerHTML = `<div class="api-status ${type}">${message}</div>`;
+            apiStatus.innerHTML = `<div class="alert alert-${type === 'error' ? 'danger' : 'success'}">${message}</div>`;
         }
 
         document.getElementById('excel-file').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (!file) return;
             resultsContainer.innerHTML = '';
-            document.getElementById('stats-dashboard').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'none';
+            document.getElementById('medicine-stats-container').innerHTML = '';
             loader.style.display = 'block';
-            rawDataByCSKCB = {};
-            analysisResults = {};
+            rawDataByCSKCB = {}; analysisResults = {};
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                     let allJsonData = [];
                     workbook.SheetNames.forEach(sheetName => {
                         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
                         allJsonData.push(...jsonData);
                     });
                     processData(allJsonData);
+                    updateDashboard();
                     renderSummaryTable();
-                    updateStatsDashboard();
                 } catch (error) {
-                    alert("Đã xảy ra lỗi khi đọc file. Vui lòng kiểm tra lại định dạng file Excel.\nLỗi: " + error.message);
+                    alert("Đã xảy ra lỗi khi đọc file. Vui lòng kiểm tra lại định dạng và các cột dữ liệu.\nLỗi: " + error.message);
                 } finally {
                     loader.style.display = 'none';
                 }
-            };
-            reader.onerror = function() {
-                 loader.style.display = 'none';
-                 alert("Không thể đọc được file đã chọn.");
             };
             reader.readAsArrayBuffer(file);
         });
@@ -359,36 +325,75 @@
             });
         }
 
-        function updateStatsDashboard() {
-            const totalRecords = Object.values(rawDataByCSKCB).reduce((sum, arr) => sum + arr.length, 0);
-            const totalFacilities = Object.keys(rawDataByCSKCB).length;
-            document.getElementById('total-records').textContent = totalRecords;
-            document.getElementById('total-facilities').textContent = totalFacilities;
+        function updateDashboard() {
+            const allRecords = Object.values(rawDataByCSKCB).flat();
+            let totalAmountAll = 0;
+            const facilityTotals = {};
+            const medicineTotals = {};
+
+            allRecords.forEach(row => {
+                const amount = parseFloat(row['THANH_TIEN']) || 0;
+                const cskcb = row['MA_CSKCB'];
+                const medicine = row['TEN_CP'] || 'Không xác định';
+                totalAmountAll += amount;
+                facilityTotals[cskcb] = (facilityTotals[cskcb] || 0) + amount;
+                medicineTotals[medicine] = (medicineTotals[medicine] || 0) + amount;
+            });
+
+            let topFacility = { name: 'N/A', amount: 0 };
+            for (const [name, amount] of Object.entries(facilityTotals)) {
+                if (amount > topFacility.amount) topFacility = { name, amount };
+            }
+
+            document.getElementById('total-amount').textContent = totalAmountAll.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('top-facility-name').textContent = topFacility.name;
+            document.getElementById('top-facility-amount').textContent = topFacility.amount.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('total-records').textContent = allRecords.length;
+            document.getElementById('total-facilities').textContent = Object.keys(rawDataByCSKCB).length;
             document.getElementById('analyzed-records').textContent = '0';
-            document.getElementById('stats-dashboard').style.display = 'block';
+
+            renderMedicineStats(medicineTotals);
+            document.getElementById('dashboard-container').style.display = 'block';
         }
 
-        function updateAnalysisStats() {
-            let analyzed = 0;
-            Object.values(analysisResults).forEach(facilityResults => {
-                analyzed += Object.keys(facilityResults).length;
+        function renderMedicineStats(medicineTotals) {
+            const sortedMedicine = Object.entries(medicineTotals).sort(([, a], [, b]) => b - a);
+            let html = `<div class="dashboard-section bg-light text-dark p-3">
+                            <h4 class="text-danger">Thống Kê Xuất Toán Theo Chế Phẩm</h4>
+                            <div class="table-responsive" style="max-height: 300px;">
+                                <table class="table table-striped table-hover table-sm">
+                                    <thead class="table-dark"><tr><th>#</th><th>Tên Chế Phẩm</th><th>Tổng Tiền</th></tr></thead>
+                                    <tbody>`;
+            sortedMedicine.forEach(([name, amount], index) => {
+                html += `<tr><td>${index + 1}</td><td class="text-start">${name}</td><td>${amount.toLocaleString('vi-VN')} đ</td></tr>`;
             });
+            html += `</tbody></table></div></div>`;
+            document.getElementById('medicine-stats-container').innerHTML = html;
+        }
+        
+        function updateAnalysisStats() {
+            let analyzed = Object.values(analysisResults).reduce((sum, facility) => sum + Object.keys(facility).length, 0);
             document.getElementById('analyzed-records').textContent = analyzed;
         }
 
         function renderSummaryTable() {
-            const summaryData = Object.keys(rawDataByCSKCB).map(cskcb => ({
-                'MA_CSKCB': cskcb,
-                'SO_CA': rawDataByCSKCB[cskcb].length
-            })).sort((a, b) => a['MA_CSKCB'] > b['MA_CSKCB'] ? 1 : -1);
-            if (summaryData.length === 0) {
-                resultsContainer.innerHTML = '<p class="text-danger">Không có dữ liệu hợp lệ trong file.</p>';
-                return;
-            }
-            let tableHTML = '<table class="table table-bordered table-hover">';
-            tableHTML += `<thead class="table-danger"><tr><th>MA_CSKCB <span class="rejection-badge">XUẤT TOÁN</span></th><th>Số ca</th><th>Trạng thái phân tích</th></tr></thead><tbody>`;
+            const summaryData = Object.keys(rawDataByCSKCB).map(cskcb => {
+                const rows = rawDataByCSKCB[cskcb];
+                const totalAmount = rows.reduce((sum, r) => sum + (parseFloat(r['THANH_TIEN']) || 0), 0);
+                return { 'MA_CSKCB': cskcb, 'SO_CA': rows.length, 'TONG_TIEN': totalAmount };
+            }).sort((a, b) => b.TONG_TIEN - a.TONG_TIEN);
+
+            let tableHTML = `<h4 class="mt-4">Tổng Hợp Theo Cơ Sở KCB</h4>
+                             <table class="table table-bordered table-hover">
+                             <thead class="table-dark"><tr><th>Mã CSKCB</th><th>Số Ca Xuất Toán</th><th>Tổng Tiền</th><th>Trạng thái</th></tr></thead>
+                             <tbody>`;
             summaryData.forEach(row => {
-                tableHTML += `<tr class="summary-row" data-cskcb="${row['MA_CSKCB']}"><td>${row['MA_CSKCB']}</td><td>${row['SO_CA']}</td><td id="status-${row['MA_CSKCB']}"><span class="badge bg-secondary">Chưa phân tích</span></td></tr>`;
+                tableHTML += `<tr class="summary-row" data-cskcb="${row['MA_CSKCB']}">
+                                <td>${row['MA_CSKCB']}</td>
+                                <td>${row['SO_CA']}</td>
+                                <td>${row['TONG_TIEN'].toLocaleString('vi-VN')} đ</td>
+                                <td id="status-${row['MA_CSKCB']}"><span class="badge bg-secondary">Chưa phân tích</span></td>
+                              </tr>`;
             });
             tableHTML += '</tbody></table>';
             resultsContainer.innerHTML = tableHTML;
@@ -400,239 +405,145 @@
                 row.addEventListener('click', function() {
                     const cskcb = this.dataset.cskcb;
                     const existingDetailRow = document.querySelector('.detail-container-row');
-                    const wasActive = this.classList.contains('table-active');
                     if (existingDetailRow) existingDetailRow.remove();
                     document.querySelectorAll('.summary-row.table-active').forEach(r => r.classList.remove('table-active'));
-                    if (!wasActive) {
-                        this.classList.add('table-active');
-                        const detailRow = document.createElement('tr');
-                        detailRow.className = 'detail-container-row';
-                        const detailCell = document.createElement('td');
-                        detailCell.colSpan = this.cells.length;
-                        detailCell.innerHTML = createDetailView(cskcb);
-                        detailRow.appendChild(detailCell);
-                        this.after(detailRow);
-                        addDetailViewListeners(cskcb);
-                    }
+                    this.classList.add('table-active');
+                    const detailRow = document.createElement('tr');
+                    detailRow.className = 'detail-container-row';
+                    const detailCell = document.createElement('td');
+                    detailCell.colSpan = 4;
+                    detailCell.innerHTML = createDetailView(cskcb);
+                    detailRow.appendChild(detailCell);
+                    this.after(detailRow);
+                    addDetailViewListeners(cskcb);
                 });
             });
         }
                 
         function createDetailView(cskcb) {
             const rows = rawDataByCSKCB[cskcb];
-            const detailColumns = ['TEN_CP', 'MA_BENH', 'MA_BENHKHAC'];
+            const detailColumns = ['HO_TEN', 'NGAY_VAO', 'TEN_CP', 'THANH_TIEN', 'MA_BENH', 'MA_BENHKHAC'];
             let html = `
                 <div class="detail-header">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0"><span class="header-icon">🚫</span>Chi tiết các ca xuất toán - CSKCB: ${cskcb}</h5>
-                        <div class="d-flex btn-group-custom align-items-center">
-                            <button class="btn btn-success btn-sm btn-modern" id="export-excel-all-${cskcb}">📊 Xuất Excel (Tất cả)</button>
-                            <button class="btn btn-warning btn-sm btn-modern" id="export-excel-analyzed-${cskcb}">📋 Xuất Excel (Đã phân tích)</button>
+                    <h5 class="mb-3"><span class="header-icon">📄</span>Chi tiết ca xuất toán - CSKCB: ${cskcb}</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                         <input type="text" id="filter-medicine-${cskcb}" class="form-control w-50" placeholder="🔍 Lọc theo tên thuốc, họ tên, mã bệnh...">
+                         <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm btn-modern" id="export-excel-${cskcb}">📊 Xuất Excel</button>
                             <button class="btn btn-danger btn-sm btn-modern" id="analyze-all-${cskcb}">🤖 Phân tích tất cả</button>
-                        </div>
-                    </div>
-                    <div class="filter-section">
-                        <input type="text" id="filter-medicine-${cskcb}" class="form-control" placeholder="🔍 Lọc theo tên thuốc/chế phẩm...">
+                         </div>
                     </div>
                 </div>
                 <div class="detail-table-wrapper">
                     <table class="table table-sm table-bordered table-striped detail-table">
-                        <thead class="table-danger"><tr>
+                        <thead><tr>
                             ${detailColumns.map(c => `<th>${c}</th>`).join('')}
                             <th>Thao tác</th>
-                            <th style="min-width: 450px;">Lý do xuất toán (Phân tích bởi AI)</th>
+                            <th style="min-width: 400px;">Lý do xuất toán (AI)</th>
                         </tr></thead><tbody id="tbody-${cskcb}">`;
             rows.forEach((row, index) => {
                 html += '<tr>';
                 detailColumns.forEach(col => {
-                     let cellContent = row[col] || '';
-                    if (col === 'MA_BENH' || col === 'MA_BENHKHAC') {
-                        if (cellContent) {
-                            cellContent = cellContent.toString().split(';').map(c => c.trim()).filter(Boolean).map(code => `<span class="icd-tag">${code}</span>`).join(' ');
-                        }
+                    let cellValue = row[col] || '';
+                    let formattedContent = cellValue;
+                    if (col === 'NGAY_VAO' && cellValue instanceof Date) {
+                        formattedContent = cellValue.toLocaleDateString('vi-VN');
+                    } else if (col === 'THANH_TIEN') {
+                        formattedContent = (parseFloat(cellValue) || 0).toLocaleString('vi-VN') + ' đ';
+                    } else if (col === 'MA_BENH' || col === 'MA_BENHKHAC') {
+                        formattedContent = cellValue.toString().split(';').map(c => c.trim()).filter(Boolean).map(code => `<span class="icd-tag">${code}</span>`).join(' ');
                     } else if (col === 'TEN_CP') {
-                        if (cellContent) cellContent = `<span class="medicine-tag">${cellContent}</span>`;
+                        formattedContent = `<span class="medicine-tag">${cellValue}</span>`;
                     }
-                    html += `<td>${cellContent}</td>`;
+                    html += `<td>${formattedContent}</td>`;
                 });
-                html += `
-                    <td><button class="btn btn-danger btn-sm ai-analyze-btn btn-modern" data-cskcb="${cskcb}" data-row-index="${index}">🔍 Phân tích</button></td>
-                    <td class="reason-cell not-analyzed" id="reason-${cskcb}-${index}">Chưa phân tích - Click "Phân tích" để xem lý do chi tiết</td>
-                </tr>`;
+                html += `<td><button class="btn btn-danger btn-sm ai-analyze-btn btn-modern" data-cskcb="${cskcb}" data-row-index="${index}">Phân tích</button></td>
+                         <td class="reason-cell not-analyzed" id="reason-${cskcb}-${index}">Chưa phân tích</td></tr>`;
             });
             html += `</tbody></table></div>`;
             return html;
         }
 
         function addDetailViewListeners(cskcb) {
-            document.getElementById(`filter-medicine-${cskcb}`).addEventListener('input', function() {
-                filterDetailTable(cskcb, this.value);
-            });
-            
-            // Xuất Excel tất cả (kể cả chưa phân tích)
-            document.getElementById(`export-excel-all-${cskcb}`).addEventListener('click', () => exportToExcel(cskcb, 'all'));
-            
-            // Xuất Excel chỉ các ca đã phân tích
-            document.getElementById(`export-excel-analyzed-${cskcb}`).addEventListener('click', () => exportToExcel(cskcb, 'analyzed'));
-            
+            document.getElementById(`filter-medicine-${cskcb}`).addEventListener('input', function() { filterDetailTable(cskcb, this.value); });
+            document.getElementById(`export-excel-${cskcb}`).addEventListener('click', () => exportToExcel(cskcb));
             document.getElementById(`analyze-all-${cskcb}`).addEventListener('click', function() {
-                if (!geminiApiKey) {
-                    alert('Vui lòng cấu hình API key trước khi sử dụng.');
-                    return;
-                }
+                if (!geminiApiKey) { alert('Vui lòng cấu hình API key.'); return; }
                 const buttons = document.querySelectorAll(`#tbody-${cskcb} .ai-analyze-btn:not(:disabled)`);
-                buttons.forEach((btn, index) => {
-                    setTimeout(() => btn.click(), index * 1500); // Tăng delay để tránh rate limit
-                });
+                buttons.forEach((btn, index) => { setTimeout(() => btn.click(), index * 1200); });
             });
-            
             document.querySelectorAll(`#tbody-${cskcb} .ai-analyze-btn`).forEach(btn => {
                 btn.addEventListener('click', async function() {
-                    if (!geminiApiKey) {
-                        alert('Vui lòng cấu hình API key trước khi sử dụng.');
-                        return;
-                    }
-                    const rowIndex = this.dataset.rowIndex;
-                    const cskcb = this.dataset.cskcb;
+                    if (!geminiApiKey) { alert('Vui lòng cấu hình API key.'); return; }
+                    const rowIndex = this.dataset.rowIndex, cskcb = this.dataset.cskcb;
                     const rowData = rawDataByCSKCB[cskcb][rowIndex];
                     const reasonCell = document.getElementById(`reason-${cskcb}-${rowIndex}`);
-                    this.disabled = true;
-                    this.innerHTML = '⏳ Đang xử lý...';
-                    reasonCell.innerHTML = '🤖 Đang phân tích với AI... Vui lòng chờ';
-                    reasonCell.className = 'reason-cell analyzing';
+                    this.disabled = true; this.innerHTML = '⏳ Đang xử lý...';
+                    reasonCell.innerHTML = '🤖 Đang phân tích...'; reasonCell.className = 'reason-cell analyzing';
                     try {
                         const analysis = await analyzeWithGemini(rowData);
                         if (!analysisResults[cskcb]) analysisResults[cskcb] = {};
                         analysisResults[cskcb][rowIndex] = analysis;
-                        
-                        // Format kết quả đẹp hơn
-                        reasonCell.innerHTML = `
-                            <div class="reason-header">❌ LÝ DO XUẤT TOÁN</div>
-                            <div class="reason-content">
-                                <strong>Lý do chính:</strong> ${analysis.summary}
-                                ${analysis.details && analysis.details.length > 0 ?
-                                     `<div class="analysis-summary"><strong>Chi tiết:</strong> ${analysis.details.join('; ')}</div>`
-                                     : ''}
-                            </div>
-                        `;
+                        reasonCell.innerHTML = `<div class="reason-header">❌ LÝ DO XUẤT TOÁN</div>
+                                              <div class="reason-content"><strong>Lý do chính:</strong> ${analysis.summary}
+                                              ${analysis.details && analysis.details.length > 0 ? `<div class="analysis-summary"><strong>Chi tiết:</strong> ${analysis.details.join('; ')}</div>` : ''}
+                                              </div>`;
                         reasonCell.className = 'reason-cell rejected';
-                        this.innerHTML = '✅ Đã phân tích';
-                        updateAnalysisStats();
-                        updateFacilityStatus(cskcb);
+                        this.innerHTML = '✅ Đã xem';
+                        updateAnalysisStats(); updateFacilityStatus(cskcb);
                     } catch (error) {
-                        reasonCell.innerHTML = `
-                            <div class="reason-header">⚠️ LỖI PHÂN TÍCH</div>
-                            <div class="reason-content">
-                                <strong>Lỗi:</strong> ${error.message}
-                                <br><small>Vui lòng thử lại sau.</small>
-                            </div>
-                        `;
+                        reasonCell.innerHTML = `<div class="reason-header">⚠️ LỖI</div>
+                                              <div class="reason-content"><strong>Lỗi:</strong> ${error.message}</div>`;
                         reasonCell.className = 'reason-cell rejected';
-                        this.disabled = false;
-                        this.innerHTML = '🔄 Phân tích lại';
+                        this.disabled = false; this.innerHTML = '🔄 Thử lại';
                     }
                 });
             });
         }
 
-        function filterDetailTable(cskcb, medicineTerm) {
-            const term = medicineTerm.toLowerCase();
+        function filterDetailTable(cskcb, searchTerm) {
+            const term = searchTerm.toLowerCase();
             const rows = document.getElementById(`tbody-${cskcb}`).getElementsByTagName('tr');
             for (const row of rows) {
-                const medicineCell = row.getElementsByTagName('td')[0];
-                if (medicineCell && medicineCell.textContent.toLowerCase().includes(term)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
             }
         }
                 
-        function exportToExcel(cskcb, type) {
+        function exportToExcel(cskcb) {
             const allRows = rawDataByCSKCB[cskcb];
-            if (!allRows || allRows.length === 0) {
-                alert('Không có dữ liệu để xuất cho CSKCB này.');
-                return;
-            }
-            
-            let dataToExport = [];
-            if (type === 'all') {
-                // Xuất tất cả các ca
-                dataToExport = allRows.map((row, index) => {
-                    const analysis = analysisResults[cskcb]?.[index];
-                    return {
-                        'STT': index + 1,
-                        'MA_CSKCB': cskcb,
-                        'TEN_CHE_PHAM': row['TEN_CP'] || '',
-                        'MA_BENH_CHINH': row['MA_BENH'] || '',
-                        'MA_BENH_KEM_THEO': row['MA_BENHKHAC'] || '',
-                        'TRANG_THAI_PHAN_TICH': analysis ? 'Đã phân tích' : 'Chưa phân tích',
-                        'LY_DO_XUAT_TOAN_CHINH': analysis ? analysis.summary : 'Chưa phân tích',
-                        'CHI_TIET_PHAN_TICH': analysis && analysis.details ? analysis.details.join('; ') : '',
-                        'NGAY_PHAN_TICH': analysis ? new Date().toLocaleDateString('vi-VN') : ''
-                    };
-                });
-            } else {
-                // Xuất chỉ các ca đã phân tích
-                dataToExport = allRows.map((row, index) => {
-                    const analysis = analysisResults[cskcb]?.[index];
-                    if (analysis) {
-                        return {
-                            'STT': index + 1,
-                            'MA_CSKCB': cskcb,
-                            'TEN_CHE_PHAM': row['TEN_CP'] || '',
-                            'MA_BENH_CHINH': row['MA_BENH'] || '',
-                            'MA_BENH_KEM_THEO': row['MA_BENHKHAC'] || '',
-                            'TRANG_THAI_PHAN_TICH': 'Đã phân tích',
-                            'LY_DO_XUAT_TOAN_CHINH': analysis.summary,
-                            'CHI_TIET_PHAN_TICH': analysis.details ? analysis.details.join('; ') : '',
-                            'NGAY_PHAN_TICH': new Date().toLocaleDateString('vi-VN')
-                        };
-                    }
-                    return null;
-                }).filter(Boolean); // Lọc bỏ các giá trị null
-            }
-
-            if (dataToExport.length === 0) {
-                alert(type === 'all' ? 'Không có dữ liệu để xuất.' : 'Không có ca nào đã được phân tích để xuất.');
-                return;
-            }
-
-            const filename = `KetQuaXuatToan_${cskcb}_${type}_${new Date().toISOString().slice(0, 10)}`;
+            if (!allRows || allRows.length === 0) { alert('Không có dữ liệu để xuất.'); return; }
+            const dataToExport = allRows.map((row, index) => {
+                const analysis = analysisResults[cskcb]?.[index];
+                const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : row['NGAY_VAO'];
+                return {
+                    'STT': index + 1, 'MA_CSKCB': cskcb, 'HO_TEN': row['HO_TEN'] || '',
+                    'NGAY_VAO': ngayVao, 'TEN_CHE_PHAM': row['TEN_CP'] || '',
+                    'THANH_TIEN': parseFloat(row['THANH_TIEN']) || 0,
+                    'MA_BENH_CHINH': row['MA_BENH'] || '',
+                    'MA_BENH_KEM_THEO': row['MA_BENHKHAC'] || '',
+                    'TRANG_THAI_PHAN_TICH': analysis ? 'Đã phân tích' : 'Chưa phân tích',
+                    'LY_DO_XUAT_TOAN': analysis ? analysis.summary : '',
+                    'CHI_TIET_AI': analysis && analysis.details ? analysis.details.join('; ') : ''
+                };
+            });
+            const filename = `KetQuaXuatToan_${cskcb}_${new Date().toISOString().slice(0, 10)}`;
             downloadAsExcel(dataToExport, filename);
         }
 
         function downloadAsExcel(data, filename) {
             const worksheet = XLSX.utils.json_to_sheet(data);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'KetQuaPhanTich');
-            
-            // Tự động điều chỉnh độ rộng cột
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'KetQua');
             const cols = Object.keys(data[0]);
-            const colWidths = cols.map(col => ({ 
-                wch: Math.max(...data.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 
-            }));
-            worksheet['!cols'] = colWidths;
-
+            worksheet['!cols'] = cols.map(col => ({ wch: Math.max(...data.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 }));
             XLSX.writeFile(workbook, filename + '.xlsx');
         }
 
         async function analyzeWithGemini(rowData) {
             if (!geminiApiKey) throw new Error('API key chưa được cấu hình');
-            
-            const prompt = `
-            Bạn là chuyên gia giám định BHYT Việt Nam. Giả định rằng việc BHYT từ chối thanh toán (xuất toán) là ĐÚNG.
-
-            LƯU Ý: Chế phẩm này LUÔN THUỘC DANH MỤC BHYT. Lý do từ chối không thể là "thuốc ngoài danh mục".
-
-            THÔNG TIN:
-            - Chế phẩm: ${rowData['TEN_CP'] || 'Không có'}
-            - Mã bệnh chính (ICD-10): ${rowData['MA_BENH'] || 'Không có'}
-            - Mã bệnh kèm theo (ICD-10): ${rowData['MA_BENHKHAC'] || 'Không có'}
-
-            YÊU CẦU:
-            1.  **summary (Tóm tắt)**: Đưa ra lý do chính từ chối thanh toán một cách súc tích.
-            2.  **details (Chi tiết)**: Để làm rõ, hãy giải thích tại sao chẩn đoán hiện tại không phù hợp VÀ liệt kê một vài bệnh lý khác (kèm mã ICD-10) mà chế phẩm này chống chỉ định, tương tác thuốc. Tên thuốc	Hoạt chất	Loại cảnh báo	Điều kiện	Mã ICD	Tên ICD	Ghi chú
+            const prompt = `Bạn là chuyên gia giám định BHYT Việt Nam. Giả định việc BHYT từ chối thanh toán là ĐÚNG. LƯU Ý: Chế phẩm này LUÔN THUỘC DANH MỤC BHYT.
+                           THÔNG TIN: Chế phẩm: ${rowData['TEN_CP'] || 'Không có'}, Mã bệnh chính (ICD-10): ${rowData['MA_BENH'] || 'Không có'}, Mã bệnh kèm theo (ICD-10): ${rowData['MA_BENHKHAC'] || 'Không có'}.
+                           YÊU CẦU: 1. summary: Tóm tắt lý do chính từ chối. 2. details (Chi tiết)**: Để làm rõ, hãy giải thích tại sao chẩn đoán hiện tại không phù hợp VÀ liệt kê một vài bệnh lý khác (kèm mã ICD-10) mà chế phẩm này chống chỉ định, tương tác thuốc. Tên thuốc	Hoạt chất	Loại cảnh báo	Điều kiện	Mã ICD	Tên ICD	Ghi chú
 Meloxicam	Meloxicam	Chống chỉ định	Loét dạ dày tá tràng	K25	Loét dạ dày	Tăng nguy cơ xuất huyết tiêu hóa – đặc biệt ở người có tiền sử
 Meloxicam	Meloxicam	Thận trọng	Tăng huyết áp	I10	Tăng huyết áp	Có thể gây giữ muối nước – tăng huyết áp
 Meloxicam	Meloxicam	Thận trọng	Hen phế quản	J45	Hen phế quản	Có thể gây co thắt phế quản ở người mẫn cảm aspirin
@@ -821,38 +732,21 @@ Omeprazol	Omeprazole	Thận trọng	Sử dụng đồng thời với Clopidogrel
 Omeprazol	Omeprazole	Chống chỉ định	Dị ứng với dẫn xuất benzimidazol	T78	Phản ứng dị ứng	Cần hỏi kỹ tiền sử dị ứng thuốc họ PPI
 Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Viêm loét dạ dày tá tràng tiến triển	K25–K28	Loét dạ dày – tá tràng	Có thể gây xuất huyết do hoạt tính enzyme tiêu protein
 Alpha chymotrypsin	AlphaCHY	Thận trọng	Bệnh gan nặng, người đang chảy máu	R58	Chảy máu chưa xác định nguyên nhân	Tăng nguy cơ chảy máu do ảnh hưởng đông máu
-Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng
-
-            Trả lời theo format JSON nghiêm ngặt, không có văn bản nào khác ngoài JSON:
-            {
-              "summary": "Tóm tắt lý do chính trong một câu, ví dụ: Chẩn đoán không phù hợp với chỉ định của thuốc.",
-              "details": ["Giải thích chi tiết và đưa ra ví dụ về chống chỉ định, tương tác thuốc, thuốc không phù hợp độ tuổi..."]
-            }
-            `;
-            
+Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng 
+                           TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ..."] }`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { responseMimeType: "application/json" }
-                    })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" }})
                 });
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error?.message || `Lỗi API: ${response.status}`);
+                    const error = await response.json(); throw new Error(error.error?.message || `Lỗi API: ${response.status}`);
                 }
                 const data = await response.json();
                 const parsedResult = JSON.parse(data.candidates[0].content.parts[0].text);
-                // Đảm bảo kết quả luôn có 2 trường dữ liệu để tránh lỗi
-                return {
-                    summary: parsedResult.summary || "Không có tóm tắt.",
-                    details: parsedResult.details || []
-                };
+                return { summary: parsedResult.summary || "Không có tóm tắt.", details: parsedResult.details || [] };
             } catch (error) {
-                console.error("Lỗi khi gọi hoặc phân tích cú pháp Gemini API:", error);
-                throw new Error('Không thể phân tích từ Gemini. ' + error.message);
+                console.error("Lỗi Gemini API:", error); throw new Error('Lỗi phân tích từ Gemini. ' + error.message);
             }
         }
 
@@ -865,10 +759,10 @@ Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ 
                 statusCell.innerHTML = `<span class="badge bg-secondary">Chưa phân tích</span>`;
             } else if (analyzedCount < totalRows) {
                 statusCell.innerHTML = `<div class="progress" role="progressbar" style="height: 20px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning text-dark" style="width: ${analyzedCount/totalRows*100}%"><b>${analyzedCount}/${totalRows}</b></div>
-                </div>`;
+                                           <div class="progress-bar progress-bar-striped bg-warning text-dark" style="width: ${analyzedCount/totalRows*100}%"><b>${analyzedCount}/${totalRows}</b></div>
+                                        </div>`;
             } else {
-                statusCell.innerHTML = `<span class="badge bg-success">✅ Đã phân tích xong</span>`;
+                statusCell.innerHTML = `<span class="badge bg-success">✅ Đã xong</span>`;
             }
         }
     </script>
