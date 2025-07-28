@@ -298,14 +298,20 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    let allJsonData = [];
-                    workbook.SheetNames.forEach(sheetName => {
-                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                        allJsonData.push(...jsonData);
-                    });
-                    processData(allJsonData);
-                    updateDashboard();
-                    renderSummaryTable();
+                    
+                    const specialSheetName = "Ngày y lệnh sau ngày ra viện";
+                    if (workbook.SheetNames.includes(specialSheetName)) {
+                        handleSpecialSheet(workbook, specialSheetName);
+                    } else {
+                        let allJsonData = [];
+                        workbook.SheetNames.forEach(sheetName => {
+                            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                            allJsonData.push(...jsonData);
+                        });
+                        processData(allJsonData);
+                        updateDashboard();
+                        renderSummaryTable();
+                    }
                 } catch (error) {
                     alert("Đã xảy ra lỗi khi đọc file. Vui lòng kiểm tra lại định dạng và các cột dữ liệu.\nLỗi: " + error.message);
                 } finally {
@@ -314,6 +320,77 @@
             };
             reader.readAsArrayBuffer(file);
         });
+
+        function handleSpecialSheet(workbook, sheetName) {
+            resultsContainer.innerHTML = '';
+            document.getElementById('dashboard-container').style.display = 'none';
+            const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            
+            // Lọc bỏ những dòng có MA_CSKCB là undefined hoặc null
+            const validSheetData = sheetData.filter(row => row['MA_CSKCB']);
+
+            if (validSheetData.length === 0) {
+                resultsContainer.innerHTML = `<p class="text-info">Sheet "${sheetName}" được tìm thấy nhưng không có dữ liệu hợp lệ.</p>`;
+                return;
+            }
+
+            let overallTotal = 0;
+            const facilityErrorTotals = {};
+            validSheetData.forEach(row => {
+                const amount = parseFloat(row['T_TONGCHI']) || 0;
+                overallTotal += amount;
+                const cskcb = row['MA_CSKCB'];
+                if(cskcb) facilityErrorTotals[cskcb] = (facilityErrorTotals[cskcb] || 0) + amount;
+            });
+            
+            const sortedFacilities = Object.entries(facilityErrorTotals).sort(([,a],[,b]) => b-a);
+            let dashboardHTML = `<div class="dashboard-section bg-light text-dark p-3 mb-4">
+                                    <h4 class="text-danger">Thống Kê Lỗi Theo Cơ Sở KCB</h4>
+                                    <div class="table-responsive" style="max-height: 300px;">
+                                        <table class="table table-striped table-hover table-sm">
+                                            <thead class="table-dark"><tr><th>#</th><th>Mã CSKCB</th><th>Tổng Tiền Lỗi</th></tr></thead>
+                                            <tbody>`;
+            sortedFacilities.forEach(([name, amount], index) => {
+                dashboardHTML += `<tr><td>${index + 1}</td><td class="text-start">${name}</td><td>${amount.toLocaleString('vi-VN')} đ</td></tr>`;
+            });
+            dashboardHTML += `</tbody></table></div></div>`;
+            
+            let tableHTML = `<h4 class="text-danger mt-4"> Lỗi Logic: Ngày Y Lệnh Sau Ngày Ra Viện (Tổng tiền XT tất cả: ${overallTotal.toLocaleString('vi-VN')} đ)</h4>
+                             <p>Danh sách các trường hợp có ngày y lệnh sau ngày ra viện. Đây là lỗi logic cần được xử lý ngay mà không cần phân tích AI.</p>
+                             <div class="table-responsive">
+                                 <table class="table table-bordered table-hover">
+                                     <thead class="table-dark">
+                                         <tr>
+                                             <th>Mã CSKCB</th>
+                                             <th>Họ Tên</th>
+                                             <th>Ngày Vào</th>
+                                             <th>Ngày Ra</th>
+                                             <th>Ngày Y Lệnh</th>
+                                             <th>Tổng Chi Phí</th>
+                                             <th>Lý Do Xuất Toán (Mặc định)</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody>`;
+            validSheetData.forEach(row => {
+                const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : row['NGAY_VAO'];
+                const ngayRa = row['NGAY_RA'] instanceof Date ? row['NGAY_RA'].toLocaleDateString('vi-VN') : row['NGAY_RA'];
+                const ngayYl = row['NGAY_YL'] instanceof Date ? row['NGAY_YL'].toLocaleDateString('vi-VN') : row['NGAY_YL'];
+                const tongChi = (parseFloat(row['T_TONGCHI']) || 0).toLocaleString('vi-VN') + ' đ';
+
+                tableHTML += `<tr>
+                                <td>${row['MA_CSKCB']}</td>
+                                <td>${row['HO_TEN']}</td>
+                                <td>${ngayVao}</td>
+                                <td>${ngayRa}</td>
+                                <td><strong class="text-danger">${ngayYl}</strong></td>
+                                <td>${tongChi}</td>
+                                <td class="text-danger fw-bold">Ngày y lệnh không được sau ngày ra viện</td>
+                              </tr>`;
+            });
+
+            tableHTML += `</tbody></table></div>`;
+            resultsContainer.innerHTML = dashboardHTML + tableHTML;
+        }
 
         function processData(allData) {
             allData.forEach(row => {
@@ -427,7 +504,7 @@
                 <div class="detail-header">
                     <h5 class="mb-3"><span class="header-icon">📄</span>Chi tiết ca xuất toán - CSKCB: ${cskcb}</h5>
                     <div class="d-flex justify-content-between align-items-center">
-                         <input type="text" id="filter-medicine-${cskcb}" class="form-control w-50" placeholder="🔍 Lọc theo tên thuốc, họ tên, mã bệnh...">
+                         <input type="text" id="filter-detail-${cskcb}" class="form-control w-50" placeholder="🔍 Lọc theo tên thuốc, họ tên, mã bệnh...">
                          <div class="d-flex gap-2">
                             <button class="btn btn-success btn-sm btn-modern" id="export-excel-${cskcb}">📊 Xuất Excel</button>
                             <button class="btn btn-danger btn-sm btn-modern" id="analyze-all-${cskcb}">🤖 Phân tích tất cả</button>
@@ -465,7 +542,7 @@
         }
 
         function addDetailViewListeners(cskcb) {
-            document.getElementById(`filter-medicine-${cskcb}`).addEventListener('input', function() { filterDetailTable(cskcb, this.value); });
+            document.getElementById(`filter-detail-${cskcb}`).addEventListener('input', function() { filterDetailTable(cskcb, this.value); });
             document.getElementById(`export-excel-${cskcb}`).addEventListener('click', () => exportToExcel(cskcb));
             document.getElementById(`analyze-all-${cskcb}`).addEventListener('click', function() {
                 if (!geminiApiKey) { alert('Vui lòng cấu hình API key.'); return; }
@@ -543,7 +620,7 @@
             if (!geminiApiKey) throw new Error('API key chưa được cấu hình');
             const prompt = `Bạn là chuyên gia giám định BHYT Việt Nam. Giả định việc BHYT từ chối thanh toán là ĐÚNG. LƯU Ý: Chế phẩm này LUÔN THUỘC DANH MỤC BHYT.
                            THÔNG TIN: Chế phẩm: ${rowData['TEN_CP'] || 'Không có'}, Mã bệnh chính (ICD-10): ${rowData['MA_BENH'] || 'Không có'}, Mã bệnh kèm theo (ICD-10): ${rowData['MA_BENHKHAC'] || 'Không có'}.
-                           YÊU CẦU: 1. summary: Tóm tắt lý do chính từ chối. 2. details (Chi tiết)**: Để làm rõ, hãy giải thích tại sao chẩn đoán hiện tại không phù hợp VÀ liệt kê một vài bệnh lý khác (kèm mã ICD-10) mà chế phẩm này chống chỉ định, tương tác thuốc. Tên thuốc	Hoạt chất	Loại cảnh báo	Điều kiện	Mã ICD	Tên ICD	Ghi chú
+                           YÊU CẦU: 1. summary: Tóm tắt lý do chính từ chối.  2. details (Chi tiết)**: Để làm rõ, hãy giải thích tại sao chẩn đoán hiện tại không phù hợp VÀ liệt kê một vài bệnh lý khác (kèm mã ICD-10) mà chế phẩm này chống chỉ định, tương tác thuốc. Tên thuốc	Hoạt chất	Loại cảnh báo	Điều kiện	Mã ICD	Tên ICD	Ghi chú
 Meloxicam	Meloxicam	Chống chỉ định	Loét dạ dày tá tràng	K25	Loét dạ dày	Tăng nguy cơ xuất huyết tiêu hóa – đặc biệt ở người có tiền sử
 Meloxicam	Meloxicam	Thận trọng	Tăng huyết áp	I10	Tăng huyết áp	Có thể gây giữ muối nước – tăng huyết áp
 Meloxicam	Meloxicam	Thận trọng	Hen phế quản	J45	Hen phế quản	Có thể gây co thắt phế quản ở người mẫn cảm aspirin
@@ -732,8 +809,8 @@ Omeprazol	Omeprazole	Thận trọng	Sử dụng đồng thời với Clopidogrel
 Omeprazol	Omeprazole	Chống chỉ định	Dị ứng với dẫn xuất benzimidazol	T78	Phản ứng dị ứng	Cần hỏi kỹ tiền sử dị ứng thuốc họ PPI
 Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Viêm loét dạ dày tá tràng tiến triển	K25–K28	Loét dạ dày – tá tràng	Có thể gây xuất huyết do hoạt tính enzyme tiêu protein
 Alpha chymotrypsin	AlphaCHY	Thận trọng	Bệnh gan nặng, người đang chảy máu	R58	Chảy máu chưa xác định nguyên nhân	Tăng nguy cơ chảy máu do ảnh hưởng đông máu
-Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng 
-                           TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ..."] }`;
+Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng.
+                           TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ (50 - 70 dòng..."] }`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
