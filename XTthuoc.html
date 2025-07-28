@@ -48,7 +48,7 @@
             transform: scale(1.01);
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        .summary-row td:first-child { text-align: left; font-weight: bold; }
+        .summary-row td:first-child, .table .text-start { text-align: left !important; }
         .detail-container-row td {
             padding: 25px !important;
             background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%);
@@ -246,6 +246,36 @@
         const apiStatus = document.getElementById('api-status');
         let geminiApiKey = '';
 
+        const facilityNameMap = {
+            '79764': 'Phòng khám đa khoa thuộc TTYT huyện Củ Chi',
+            '79331': 'Trạm y tế thị trấn Củ Chi',
+            '79334': 'Trạm y tế Trung Lập Thượng',
+            '79339': 'Trạm y tế Trung Lập Hạ',
+            '79340': 'Trạm y tế Trung An',
+            '79341': 'Trạm y tế Phước Thạnh',
+            '79342': 'Trạm y tế Phước Hiệp',
+            '79343': 'Trạm y tế Tân An Hội',
+            '79344': 'Trạm y tế Phước Vĩnh An',
+            '79345': 'Trạm y tế Thái Mỹ',
+            '79346': 'Trạm y tế Tân Thạnh Tây',
+            '79347': 'Trạm y tế Hòa Phú',
+            '79348': 'Trạm y tế Tân Thạnh Đông',
+            '79349': 'Trạm y tế Bình Mỹ',
+            '79350': 'Trạm y tế Tân Phú Trung',
+            '79351': 'Trạm y tế Tân Thông Hội',
+            '79332': 'Trạm y tế Phú Mỹ Hưng',
+            '79333': 'Trạm y tế An Phú',
+            '79335': 'Trạm y tế An Nhơn Tây',
+            '79338': 'Trạm y tế Phú Hòa Đông',
+            '79337': 'Trạm y tế Phạm Văn Cội',
+            '79336': 'Trạm y tế Nhuận Đức'
+        };
+
+        function getFacilityDisplayName(cskcb) {
+            const name = facilityNameMap[cskcb];
+            return name ? `${name} (${cskcb})` : cskcb;
+        }
+
         if (typeof(Storage) !== "undefined") {
             geminiApiKey = sessionStorage.getItem('gemini-api-key') || '';
             if (geminiApiKey) document.getElementById('api-key').value = geminiApiKey;
@@ -326,7 +356,6 @@
             document.getElementById('dashboard-container').style.display = 'none';
             const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
             
-            // Lọc bỏ những dòng có MA_CSKCB là undefined hoặc null
             const validSheetData = sheetData.filter(row => row['MA_CSKCB']);
 
             if (validSheetData.length === 0) {
@@ -345,13 +374,13 @@
             
             const sortedFacilities = Object.entries(facilityErrorTotals).sort(([,a],[,b]) => b-a);
             let dashboardHTML = `<div class="dashboard-section bg-light text-dark p-3 mb-4">
-                                    <h4 class="text-danger">Thống Kê Lỗi Theo Cơ Sở KCB</h4>
+                                    <h4 class="text-danger">Thống Kê Lỗi "Ngày Y Lệnh Sau Ngày Ra Viện" Theo CSKCB</h4>
                                     <div class="table-responsive" style="max-height: 300px;">
                                         <table class="table table-striped table-hover table-sm">
-                                            <thead class="table-dark"><tr><th>#</th><th>Mã CSKCB</th><th>Tổng Tiền Lỗi</th></tr></thead>
+                                            <thead class="table-dark"><tr><th>#</th><th>Cơ Sở KCB</th><th>Tổng Tiền Lỗi</th></tr></thead>
                                             <tbody>`;
-            sortedFacilities.forEach(([name, amount], index) => {
-                dashboardHTML += `<tr><td>${index + 1}</td><td class="text-start">${name}</td><td>${amount.toLocaleString('vi-VN')} đ</td></tr>`;
+            sortedFacilities.forEach(([cskcb, amount], index) => {
+                dashboardHTML += `<tr><td>${index + 1}</td><td class="text-start">${getFacilityDisplayName(cskcb)}</td><td>${amount.toLocaleString('vi-VN')} đ</td></tr>`;
             });
             dashboardHTML += `</tbody></table></div></div>`;
             
@@ -361,7 +390,7 @@
                                  <table class="table table-bordered table-hover">
                                      <thead class="table-dark">
                                          <tr>
-                                             <th>Mã CSKCB</th>
+                                             <th>Cơ Sở KCB</th>
                                              <th>Họ Tên</th>
                                              <th>Ngày Vào</th>
                                              <th>Ngày Ra</th>
@@ -378,7 +407,7 @@
                 const tongChi = (parseFloat(row['T_TONGCHI']) || 0).toLocaleString('vi-VN') + ' đ';
 
                 tableHTML += `<tr>
-                                <td>${row['MA_CSKCB']}</td>
+                                <td class="text-start">${getFacilityDisplayName(row['MA_CSKCB'])}</td>
                                 <td>${row['HO_TEN']}</td>
                                 <td>${ngayVao}</td>
                                 <td>${ngayRa}</td>
@@ -423,7 +452,7 @@
             }
 
             document.getElementById('total-amount').textContent = totalAmountAll.toLocaleString('vi-VN') + ' đ';
-            document.getElementById('top-facility-name').textContent = topFacility.name;
+            document.getElementById('top-facility-name').textContent = getFacilityDisplayName(topFacility.name);
             document.getElementById('top-facility-amount').textContent = topFacility.amount.toLocaleString('vi-VN') + ' đ';
             document.getElementById('total-records').textContent = allRecords.length;
             document.getElementById('total-facilities').textContent = Object.keys(rawDataByCSKCB).length;
@@ -462,11 +491,11 @@
 
             let tableHTML = `<h4 class="mt-4">Tổng Hợp Theo Cơ Sở KCB</h4>
                              <table class="table table-bordered table-hover">
-                             <thead class="table-dark"><tr><th>Mã CSKCB</th><th>Số Ca Xuất Toán</th><th>Tổng Tiền</th><th>Trạng thái</th></tr></thead>
+                             <thead class="table-dark"><tr><th>Cơ Sở KCB</th><th>Số Ca Xuất Toán</th><th>Tổng Tiền</th><th>Trạng thái</th></tr></thead>
                              <tbody>`;
             summaryData.forEach(row => {
                 tableHTML += `<tr class="summary-row" data-cskcb="${row['MA_CSKCB']}">
-                                <td>${row['MA_CSKCB']}</td>
+                                <td class="text-start">${getFacilityDisplayName(row['MA_CSKCB'])}</td>
                                 <td>${row['SO_CA']}</td>
                                 <td>${row['TONG_TIEN'].toLocaleString('vi-VN')} đ</td>
                                 <td id="status-${row['MA_CSKCB']}"><span class="badge bg-secondary">Chưa phân tích</span></td>
@@ -502,7 +531,7 @@
             const detailColumns = ['HO_TEN', 'NGAY_VAO', 'TEN_CP', 'THANH_TIEN', 'MA_BENH', 'MA_BENHKHAC'];
             let html = `
                 <div class="detail-header">
-                    <h5 class="mb-3"><span class="header-icon">📄</span>Chi tiết ca xuất toán - CSKCB: ${cskcb}</h5>
+                    <h5 class="mb-3"><span class="header-icon">📄</span>Chi tiết ca xuất toán - ${getFacilityDisplayName(cskcb)}</h5>
                     <div class="d-flex justify-content-between align-items-center">
                          <input type="text" id="filter-detail-${cskcb}" class="form-control w-50" placeholder="🔍 Lọc theo tên thuốc, họ tên, mã bệnh...">
                          <div class="d-flex gap-2">
@@ -593,8 +622,12 @@
                 const analysis = analysisResults[cskcb]?.[index];
                 const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : row['NGAY_VAO'];
                 return {
-                    'STT': index + 1, 'MA_CSKCB': cskcb, 'HO_TEN': row['HO_TEN'] || '',
-                    'NGAY_VAO': ngayVao, 'TEN_CHE_PHAM': row['TEN_CP'] || '',
+                    'STT': index + 1,
+                    'MA_CSKCB': cskcb,
+                    'TEN_CSKCB': facilityNameMap[cskcb] || cskcb,
+                    'HO_TEN': row['HO_TEN'] || '',
+                    'NGAY_VAO': ngayVao,
+                    'TEN_CHE_PHAM': row['TEN_CP'] || '',
                     'THANH_TIEN': parseFloat(row['THANH_TIEN']) || 0,
                     'MA_BENH_CHINH': row['MA_BENH'] || '',
                     'MA_BENH_KEM_THEO': row['MA_BENHKHAC'] || '',
@@ -810,7 +843,7 @@ Omeprazol	Omeprazole	Chống chỉ định	Dị ứng với dẫn xuất benzimi
 Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Viêm loét dạ dày tá tràng tiến triển	K25–K28	Loét dạ dày – tá tràng	Có thể gây xuất huyết do hoạt tính enzyme tiêu protein
 Alpha chymotrypsin	AlphaCHY	Thận trọng	Bệnh gan nặng, người đang chảy máu	R58	Chảy máu chưa xác định nguyên nhân	Tăng nguy cơ chảy máu do ảnh hưởng đông máu
 Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng.
-                           TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ (50 - 70 dòng..."] }`;
+                           TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ...(đoạn văn 30 - 70 từ"] }`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
