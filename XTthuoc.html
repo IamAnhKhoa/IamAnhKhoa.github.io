@@ -435,7 +435,7 @@
         }
 
         function formatAnalysisResult(analysis) {
-            let html = `<strong>${analysis.isValid ? '✅ CÓ THỂ CHẤP NHẬN' : analysis.hasWarning ? '⚠️ CẦN XEM XÉT' : '❌ TỪ CHỐI ĐÚNG'}</strong><br>`;
+            let html = `<strong>${analysis.isValid ? '✅ NGHI NGỜ XT SAI ' : analysis.hasWarning ? '⚠️ CẦN XEM XÉT XT' : '❌ TỪ CHỐI ĐÚNG'}</strong><br>`;
             html += `${analysis.summary}<br>`;
             if (analysis.details && analysis.details.length > 0) {
                 html += `<small><em>Chi tiết: ${analysis.details.join('; ')}</em></small>`;
