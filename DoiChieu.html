@@ -264,6 +264,11 @@
             color: white;
         }
         
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+            color: white;
+        }
+
         .btn-warning {
             background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
             color: white;
@@ -499,6 +504,9 @@
         </nav>
 
         <div id="dashboardTab" class="tab-content active">
+             <div class="filter-actions" style="margin-bottom: 20px;">
+                <button class="btn btn-success" id="exportDashboardButton" onclick="exportDashboardToExcel()">📊 Xuất Excel Dashboard</button>
+            </div>
             <div class="stats-overview" id="dashboardStats">
                 <div class="stat-card">
                     <h3 id="totalFiles">0</h3>
@@ -509,8 +517,8 @@
                     <p>Tổng hồ sơ</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="errorRate">0%</h3>
-                    <p>Tỷ lệ lỗi</p>
+                    <h3 id="errorCount">0</h3>
+                    <p>Số hồ sơ lỗi</p>
                 </div>
                 <div class="stat-card">
                     <h3 id="totalAmount">0</h3>
@@ -535,8 +543,8 @@
                     <canvas id="amountChart"></canvas>
                 </div>
             </div>
-
-            <div class="dashboard-grid">
+            
+             <div class="dashboard-grid">
                 <div class="chart-container">
                     <canvas id="topDrugsChart"></canvas>
                 </div>
@@ -627,13 +635,23 @@
                             </select>
                         </div>
 
+                        <div class="filter-group">
+                            <label>Lọc ca có DVKT & Khám:</label>
+                             <select class="filter-select" id="dvktFilter">
+                                <option value="">Tất cả</option>
+                                <option value="yes">Có DVKT & Khám</option>
+                                <option value="no">Không (Chỉ DVKT hoặc chỉ Khám)</option>
+                            </select>
+                        </div>
+
                     </div>
                     
                     <div class="filter-actions">
                         <button class="btn btn-primary" onclick="applyFilters()">🔍 Áp dụng lọc</button>
                         <button class="btn btn-warning" onclick="clearFilters()">🔄 Xóa bộ lọc</button>
-                        <button class="btn btn-success" onclick="exportToExcel(false)">📊 Xuất Excel</button>
-                        <button class="btn btn-danger" onclick="exportToExcel(true)">⚠️ Chỉ xuất lỗi</button>
+                        <button class="btn btn-success" onclick="exportToExcel(false)">📊 Xuất Excel (Tất cả)</button>
+                        <button class="btn btn-danger" onclick="exportToExcel(true)">⚠️ Xuất Excel (Chỉ Lỗi)</button>
+                        <button class="btn btn-info" onclick="exportDvktPlusKham()">📄 Xuất Excel (DVKT & Khám)</button>
                     </div>
                 </div>
             </div>
@@ -836,7 +854,7 @@
                 }
                 return formatted;
             }
-            return dateString; // Fallback
+            return dateString;
         };
         
         const formatCurrency = (amount) => {
@@ -892,7 +910,7 @@
             
             document.getElementById('totalFiles').textContent = globalData.xmlDataContent ? 1 : 0;
             document.getElementById('totalRecords').textContent = stats.totalRecords.toLocaleString('vi-VN');
-            document.getElementById('errorRate').textContent = stats.errorRate.toFixed(2) + '%';
+            document.getElementById('errorCount').textContent = stats.errorRecordsCount.toLocaleString('vi-VN');
             document.getElementById('totalAmount').textContent = formatCurrency(stats.totalAmount); // totalAmount is now T_BHTT
             
             updateChart('errorTypesChart', 'doughnut', {
@@ -902,9 +920,9 @@
 
             const sortedTimeline = Object.entries(stats.timeline).sort(([a], [b]) => a.localeCompare(b));
             updateChart('timelineChart', 'line', {
-                labels: sortedTimeline.map(([month]) => `${month.substring(4,6)}/${month.substring(0,4)}`),
+                labels: sortedTimeline.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
                 datasets: [{ label: 'Số hồ sơ', data: sortedTimeline.map(([, count]) => count), borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)', fill: true, tension: 0.4 }]
-            }, 'Xu hướng theo thời gian');
+            }, 'Xu hướng theo ngày');
 
             const sortedDepartments = Object.entries(stats.departments).sort(([,a], [,b]) => b - a).slice(0, 10);
             updateChart('departmentChart', 'bar', {
@@ -917,12 +935,10 @@
                 datasets: [{ label: 'Số hồ sơ', data: Object.values(stats.amounts), backgroundColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545', '#6f42c1']}]
             }, 'Phân bố chi phí BHYT TT');
 
-            // Render new dashboards
             renderDrugAndServiceDashboard();
         }
         
         function renderDrugAndServiceDashboard() {
-            // Process drugs
             const drugCosts = {};
             globalData.allDrugs.forEach(drug => {
                 const key = `${drug.ten_thuoc} (${drug.ma_thuoc})`;
@@ -934,7 +950,6 @@
                 datasets: [{ label: 'Tổng chi phí BHYT', data: topDrugs.map(([,cost])=>cost), backgroundColor: 'rgba(255, 99, 132, 0.8)' }]
             }, 'Top 10 Thuốc có chi phí BHYT cao nhất');
 
-            // Process services
             const serviceCosts = {};
             globalData.allServices.forEach(service => {
                 const key = `${service.ten_dich_vu} (${service.ma_dich_vu})`;
@@ -971,12 +986,12 @@
                 stats.totalAmount += r.t_bhtt || 0;
                 if (r.errors) r.errors.forEach(err => { stats.errorTypes[err.type] = (stats.errorTypes[err.type] || 0) + 1; });
                 if (r.ngayVao) {
-                    const month = String(r.ngayVao).substring(0, 6);
-                    stats.timeline[month] = (stats.timeline[month] || 0) + 1;
+                    const day = String(r.ngayVao).substring(0, 8);
+                    stats.timeline[day] = (stats.timeline[day] || 0) + 1;
                 }
                 if(r.maKhoa) stats.departments[r.maKhoa] = (stats.departments[r.maKhoa] || 0) + 1;
 
-                const cost = r.t_bhtt || 0; // The amount paid by insurance
+                const cost = r.t_bhtt || 0;
                 if (cost < 1000000) stats.amounts['< 1tr']++;
                 else if (cost <= 5000000) stats.amounts['1-5tr']++;
                 else if (cost <= 10000000) stats.amounts['5-10tr']++;
@@ -998,7 +1013,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    indexAxis: type === 'bar' && data.labels.length > 5 ? 'y' : 'x', // Use horizontal bar for long labels
+                    indexAxis: type === 'bar' && data.labels.length > 5 ? 'y' : 'x',
                     plugins: {
                         title: { display: true, text: titleText, font: {size: 16} },
                         legend: { display: (data.datasets[0].label && type !== 'doughnut' && type !== 'pie') }
@@ -1122,8 +1137,8 @@
             if (!tongHop) return null;
 
             const getText = (element, selector) => element?.querySelector(selector)?.textContent.trim() || '';
-
             const maLk = getText(tongHop, 'MA_LK');
+
             const record = {
                 maLk: maLk, 
                 hoTen: getText(tongHop,'HO_TEN'), 
@@ -1131,15 +1146,19 @@
                 ngayRa: getText(tongHop,'NGAY_RA'), 
                 maBn: getText(tongHop,'MA_BN'), 
                 maThe: getText(tongHop,'MA_THE_BHYT'),
-                tongChi: parseFloat(getText(tongHop, 'T_TONGCHI') || '0'), // Tổng chi phí
-                t_bhtt: parseFloat(getText(tongHop, 'T_BHTT') || '0'), // BHYT thanh toán
-                t_bncct: parseFloat(getText(tongHop, 'T_BNCCT') || '0'), // Bệnh nhân CCT
+                t_tongchi: parseFloat(getText(tongHop, 'T_TONGCHI') || '0'),
+                t_bhtt: parseFloat(getText(tongHop, 'T_BHTT') || '0'),
+                t_bncct: parseFloat(getText(tongHop, 'T_BNCCT') || '0'), 
                 gioiTinh: getText(tongHop,'GIOI_TINH'),
                 ngaySinh: getText(tongHop,'NGAY_SINH'), 
                 chanDoan: getText(tongHop,'CHAN_DOAN_RV'),
                 maKhoa: getText(tongHop,'MA_KHOA'), 
+                tong_tien_kham: 0,
+                tong_tien_dvkt_khac: 0,
+                has_kham_and_dvkt: false,
                 errors: []
             };
+            if (!record.maLk || !record.hoTen || !record.ngayVao || !record.ngayRa) return null;
 
             const drugs = [];
             if (chiTietThuoc) {
@@ -1151,27 +1170,42 @@
                         so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                         thanh_tien_bh: parseFloat(getText(item, 'THANH_TIEN_BH') || '0')
                     });
-                    const ngayYl = item.querySelector('NGAY_YL')?.textContent.trim();
+                    const ngayYl = getText(item, 'NGAY_YL');
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${getText(item, 'TEN_THUOC')}": YL sau ngày ra.` });
                     if (ngayYl && ngayYl < record.ngayVao) record.errors.push({ type: 'NGAY_YL_THUOC_NGOAI_KHOANG', severity: 'warning', message: `Thuốc "${getText(item, 'TEN_THUOC')}": YL trước ngày vào.` });
                 });
             }
 
             const services = [];
+            let hasKham = false;
+            let hasOtherDvkt = false;
             if (chiTietDvkt) {
                 chiTietDvkt.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
+                    const tenDV = getText(item, 'TEN_DICH_VU');
+                    const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
+                    
                     services.push({
                         ma_lk: maLk,
                         ma_dich_vu: getText(item, 'MA_DICH_VU'),
-                        ten_dich_vu: getText(item, 'TEN_DICH_VU'),
+                        ten_dich_vu: tenDV,
                         so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                        thanh_tien_bh: parseFloat(getText(item, 'THANH_TIEN_BH') || '0')
+                        thanh_tien_bh: thanhTienBH
                     });
-                    const ngayYl = item.querySelector('NGAY_YL')?.textContent.trim();
-                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${getText(item, 'TEN_DICH_VU')}": YL sau ngày ra.` });
-                    if (ngayYl && ngayYl < record.ngayVao) record.errors.push({ type: 'NGAY_YL_DVKT_NGOAI_KHOANG', severity: 'warning', message: `DVKT "${getText(item, 'TEN_DICH_VU')}": YL trước ngày vào.` });
+                    
+                    if (tenDV.toLowerCase().includes('khám')) {
+                        record.tong_tien_kham += thanhTienBH;
+                        hasKham = true;
+                    } else {
+                        record.tong_tien_dvkt_khac += thanhTienBH;
+                        hasOtherDvkt = true;
+                    }
+
+                    const ngayYl = getText(item, 'NGAY_YL');
+                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL sau ngày ra.` });
+                    if (ngayYl && ngayYl < record.ngayVao) record.errors.push({ type: 'NGAY_YL_DVKT_NGOAI_KHOANG', severity: 'warning', message: `DVKT "${tenDV}": YL trước ngày vào.` });
                 });
             }
+            record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
 
             if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào sau ngày ra.` });
             
@@ -1205,7 +1239,8 @@
                 amountFrom: parseFloat(document.getElementById('amountFromFilter').value),
                 amountTo: parseFloat(document.getElementById('amountToFilter').value),
                 gender: document.getElementById('genderFilter').value,
-                bncct: document.getElementById('bncctFilter').value
+                bncct: document.getElementById('bncctFilter').value,
+                dvkt: document.getElementById('dvktFilter').value
             };
 
             globalData.filteredRecords = globalData.allRecords.filter(r => {
@@ -1225,6 +1260,9 @@
                 
                 if (filters.bncct === 'yes' && (!r.t_bncct || r.t_bncct <= 0)) return false;
                 if (filters.bncct === 'no' && r.t_bncct && r.t_bncct > 0) return false;
+
+                if (filters.dvkt === 'yes' && !r.has_kham_and_dvkt) return false;
+                if (filters.dvkt === 'no' && r.has_kham_and_dvkt) return false;
 
                 return true;
             });
@@ -1327,7 +1365,7 @@
             const data = recordsToExport.map((r, i) => ({
                 'STT': i + 1, 'Họ Tên': r.hoTen, 'Mã LK': r.maLk, 'Mã BN': r.maBn,
                 'Ngày Vào': formatDateTimeForDisplay(r.ngayVao), 'Ngày Ra': formatDateTimeForDisplay(r.ngayRa),
-                'Tổng Chi Phí BHYT TT': r.t_bhtt, 'BN CCT': r.t_bncct,
+                'BHYT TT': r.t_bhtt, 'BN CCT': r.t_bncct, 'Tổng Chi': r.t_tongchi,
                 'Trạng Thái': r.errors.length > 0 ? (r.errors.some(e => e.severity === 'critical') ? 'Lỗi nghiêm trọng' : 'Cảnh báo') : 'Hợp lệ',
                 'Chi Tiết Lỗi': r.errors.map(e => `${ERROR_TYPES[e.type] || e.type}: ${e.message}`).join('\n')
             }));
@@ -1337,6 +1375,27 @@
             XLSX.writeFile(wb, errorsOnly ? 'BaoCaoLoi_BHYT.xlsx' : 'BaoCaoKiemTra_BHYT.xlsx');
         }
         
+        function exportDvktPlusKham() {
+             const recordsToExport = globalData.allRecords.filter(r => r.has_kham_and_dvkt);
+             if (recordsToExport.length === 0) {
+                alert('Không có hồ sơ nào vừa có công khám, vừa có DVKT khác.');
+                return;
+             }
+
+             const data = recordsToExport.map((r, i) => ({
+                'STT': i + 1, 'Mã LK': r.maLk, 'Họ Tên': r.hoTen, 'Mã BN': r.maBn,
+                'Ngày Vào': formatDateTimeForDisplay(r.ngayVao),
+                'Tổng tiền Khám (BH)': r.tong_tien_kham,
+                'Tổng tiền DVKT khác (BH)': r.tong_tien_dvkt_khac,
+                'Tổng BHYT TT': r.t_bhtt
+             }));
+
+             const ws = XLSX.utils.json_to_sheet(data);
+             const wb = XLSX.utils.book_new();
+             XLSX.utils.book_append_sheet(wb, ws, 'DVKT_va_Kham');
+             XLSX.writeFile(wb, 'BaoCao_DVKT_va_Kham.xlsx');
+        }
+
         // ============================= COMPARATOR FUNCTIONALITY (UPGRADED) =============================
         function initializeComparator() {
             document.getElementById('comparatorXmlInput').addEventListener('change', (e) => handleFileUpload(e, 'xml'));
@@ -1389,7 +1448,7 @@
                     }
                 });
                 
-                // 3. Compare Data
+                // 3. Compare Data from XML1
                 const allKeys = new Set([...globalData.xmlRecords.keys(), ...globalData.excelRecords.keys()]);
                 globalData.comparisonResults = [];
                 for (const key of allKeys) {
@@ -1399,7 +1458,6 @@
                     let result = { key, xmlRec, excelRec, status: 'mismatch', details: [] };
                     
                     if (xmlRec && excelRec) {
-                        // Compare T_BHTT
                         const t_bhtt_xml = xmlRec.t_bhtt || 0;
                         const t_bhtt_excel_key = findKey(excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']);
                         const t_bhtt_excel = t_bhtt_excel_key ? (parseFloat(excelRec[t_bhtt_excel_key]) || 0) : 0;
@@ -1407,7 +1465,6 @@
                             result.details.push(`BHYT TT: XML=${formatCurrency(t_bhtt_xml)} vs Excel=${formatCurrency(t_bhtt_excel)}`);
                         }
                         
-                        // Compare T_BNCCT
                         const t_bncct_xml = xmlRec.t_bncct || 0;
                         const t_bncct_excel_key = findKey(excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']);
                         const t_bncct_excel = t_bncct_excel_key ? (parseFloat(excelRec[t_bncct_excel_key]) || 0) : 0;
@@ -1600,25 +1657,25 @@
                     const sortedTimeline = Object.entries(stats.timeline).sort(([a], [b]) => a.localeCompare(b));
                     chart1Type = 'line';
                     chart1Data = {
-                        labels: sortedTimeline.map(([month]) => `${month.substring(4,6)}/${month.substring(0,4)}`),
+                        labels: sortedTimeline.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
                         datasets: [{ label: 'Số Hồ Sơ', data: sortedTimeline.map(([, count]) => count), borderColor: '#667eea', tension: 0.1 }]
                     };
-                    chart1Title = 'Phân Tích Số Lượng Hồ Sơ Theo Thời Gian';
+                    chart1Title = 'Phân Tích Số Lượng Hồ Sơ Theo Ngày';
 
                     const errorTimeline = {};
                     filteredForReport.forEach(r => {
                         if (r.errors.length > 0) {
-                            const month = String(r.ngayVao).substring(0, 6);
-                            errorTimeline[month] = (errorTimeline[month] || 0) + 1;
+                            const day = String(r.ngayVao).substring(0, 8);
+                            errorTimeline[day] = (errorTimeline[day] || 0) + 1;
                         }
                     });
-                    const filledErrorTimelineData = sortedTimeline.map(([month]) => errorTimeline[month] || 0);
+                    const filledErrorTimelineData = sortedTimeline.map(([day]) => errorTimeline[day] || 0);
                     chart2Type = 'line';
                     chart2Data = {
-                        labels: sortedTimeline.map(([month]) => `${month.substring(4,6)}/${month.substring(0,4)}`),
+                        labels: sortedTimeline.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
                         datasets: [{ label: 'Số Hồ Sơ Lỗi', data: filledErrorTimelineData, borderColor: '#dc3545', tension: 0.1 }]
                     };
-                    chart2Title = 'Phân Tích Số Lượng Lỗi Theo Thời Gian';
+                    chart2Title = 'Phân Tích Số Lượng Lỗi Theo Ngày';
                     break;
                 case 'cost-analysis':
                     chart1Type = 'bar';
@@ -1628,18 +1685,18 @@
                     };
                     chart1Title = 'Phân Bố Hồ Sơ Theo Khoảng Chi Phí BHYT TT';
 
-                     const costByMonth = {};
+                     const costByDay = {};
                      filteredForReport.forEach(r => {
-                         const month = String(r.ngayVao).substring(0, 6);
-                         costByMonth[month] = (costByMonth[month] || 0) + r.t_bhtt;
+                         const day = String(r.ngayVao).substring(0, 8);
+                         costByDay[day] = (costByDay[day] || 0) + r.t_bhtt;
                      });
-                    const sortedCostByMonth = Object.entries(costByMonth).sort(([a], [b]) => a.localeCompare(b));
+                    const sortedCostByDay = Object.entries(costByDay).sort(([a], [b]) => a.localeCompare(b));
                     chart2Type = 'bar';
                     chart2Data = {
-                         labels: sortedCostByMonth.map(([month]) => `${month.substring(4,6)}/${month.substring(0,4)}`),
-                        datasets: [{ label: 'Tổng Chi Phí BHYT TT (VNĐ)', data: sortedCostByMonth.map(([, cost]) => cost), backgroundColor: 'rgba(54, 162, 235, 0.8)' }]
+                         labels: sortedCostByDay.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
+                        datasets: [{ label: 'Tổng Chi Phí BHYT TT (VNĐ)', data: sortedCostByDay.map(([, cost]) => cost), backgroundColor: 'rgba(54, 162, 235, 0.8)' }]
                     };
-                    chart2Title = 'Tổng Chi Phí BHYT TT Theo Thời Gian';
+                    chart2Title = 'Tổng Chi Phí BHYT TT Theo Ngày';
                     break;
                 case 'department-analysis':
                     const sortedDepts = Object.entries(stats.departments).sort(([, a], [, b]) => b - a).slice(0, 15);
@@ -1671,8 +1728,107 @@
         }
 
         function exportReport() {
-            alert('Chức năng xuất báo cáo chuyên sâu đang được phát triển. Vui lòng sử dụng chức năng "Xuất Excel" ở tab Kiểm tra XML.');
+             if (globalData.allRecords.length === 0) {
+                alert('Chưa có dữ liệu để xuất báo cáo.');
+                return;
+            }
+
+            const reportType = document.getElementById('reportType').value;
+            const dateFrom = document.getElementById('reportDateFrom').value.replace(/-/g, '');
+            const dateTo = document.getElementById('reportDateTo').value.replace(/-/g, '');
+
+            const filteredForReport = globalData.allRecords.filter(r => {
+                if (!dateFrom && !dateTo) return true;
+                const recordDate = String(r.ngayVao).substring(0, 8);
+                if (dateFrom && recordDate < dateFrom) return false;
+                if (dateTo && recordDate > dateTo) return false;
+                return true;
+            });
+            
+            const wb = XLSX.utils.book_new();
+            const stats = calculateGlobalStats(filteredForReport);
+            let reportData, sheetName, fileName;
+
+            switch(reportType) {
+                case 'error-summary':
+                    const sortedErrors = Object.entries(stats.errorTypes).sort(([, a], [, b]) => b - a);
+                    reportData = sortedErrors.map(([type, count]) => ({
+                        'Loại Lỗi': ERROR_TYPES[type] || type,
+                        'Số Lượng': count
+                    }));
+                    sheetName = 'TomTatLoi';
+                    fileName = 'BaoCao_TomTatLoi.xlsx';
+                    break;
+                case 'time-analysis':
+                     const timelineData = Object.entries(stats.timeline).sort(([a], [b]) => a.localeCompare(b));
+                     reportData = timelineData.map(([day, count]) => ({ 'Ngày': formatDateTimeForDisplay(day), 'Số Hồ Sơ': count}));
+                     sheetName = 'PhanTichThoiGian';
+                     fileName = 'BaoCao_PhanTichThoiGian.xlsx';
+                    break;
+                case 'cost-analysis':
+                    const costData = Object.entries(stats.amounts).map(([range, count]) => ({ 'Khoảng Chi Phí': range, 'Số Hồ Sơ': count }));
+                    sheetName = 'PhanTichChiPhi';
+                    fileName = 'BaoCao_PhanTichChiPhi.xlsx';
+                    break;
+                case 'department-analysis':
+                    const deptCosts = {};
+                    filteredForReport.forEach(r => { deptCosts[r.maKhoa] = (deptCosts[r.maKhoa] || 0) + r.t_bhtt; });
+                    const sortedDepts = Object.entries(stats.departments).sort(([, a], [, b]) => b - a);
+                    reportData = sortedDepts.map(([name, count]) => ({
+                        'Tên Khoa': name || 'Không xác định',
+                        'Số Lượng Hồ Sơ': count,
+                        'Tổng Chi Phí BHYT TT': deptCosts[name] || 0
+                    }));
+                    sheetName = 'PhanTichKhoa';
+                    fileName = 'BaoCao_PhanTichKhoa.xlsx';
+                    break;
+            }
+            
+            const ws = XLSX.utils.json_to_sheet(reportData);
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            XLSX.writeFile(wb, fileName);
         }
+
+        function exportDashboardToExcel() {
+            if (globalData.allRecords.length === 0) {
+                alert('Chưa có dữ liệu để xuất dashboard. Vui lòng xử lý file XML trước.');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+
+            const stats = calculateGlobalStats(globalData.allRecords);
+            const summaryData = [
+                ['Thống kê tổng quan Dashboard'],
+                ['Tổng số hồ sơ', stats.totalRecords],
+                ['Tổng số hồ sơ lỗi', stats.errorRecordsCount],
+                ['Tổng chi phí BHYT TT', stats.totalAmount]
+            ];
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'ThongKeTongQuan');
+
+            const drugCosts = {};
+            globalData.allDrugs.forEach(drug => {
+                const key = `${drug.ten_thuoc} (${drug.ma_thuoc})`;
+                drugCosts[key] = (drugCosts[key] || 0) + drug.thanh_tien_bh;
+            });
+            const topDrugs = Object.entries(drugCosts).sort(([,a],[,b]) => b-a).slice(0, 10);
+            const drugsData = topDrugs.map(([name, cost]) => ({ 'Tên thuốc': name, 'Tổng chi phí BHYT': cost }));
+            const wsDrugs = XLSX.utils.json_to_sheet(drugsData);
+            XLSX.utils.book_append_sheet(wb, wsDrugs, 'Top_10_Thuoc');
+            
+            const serviceCosts = {};
+            globalData.allServices.forEach(service => {
+                const key = `${service.ten_dich_vu} (${service.ma_dich_vu})`;
+                serviceCosts[key] = (serviceCosts[key] || 0) + service.thanh_tien_bh;
+            });
+            const topServices = Object.entries(serviceCosts).sort(([,a],[,b]) => b-a).slice(0, 10);
+            const servicesData = topServices.map(([name, cost]) => ({ 'Tên DVKT': name, 'Tổng chi phí BHYT': cost }));
+            const wsServices = XLSX.utils.json_to_sheet(servicesData);
+            XLSX.utils.book_append_sheet(wb, wsServices, 'Top_10_DVKT');
+            
+            XLSX.writeFile(wb, 'Dashboard_BHYT_Summary.xlsx');
+        }
+
 
         // ============================= INITIALIZATION =============================
         document.addEventListener('DOMContentLoaded', () => {
