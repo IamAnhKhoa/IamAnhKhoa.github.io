@@ -586,9 +586,9 @@
 
         <div id="dashboardTab" class="tab-content active">
              <div class="filter-actions" style="margin-bottom: 20px;">
-                <button class="btn btn-success" id="exportDashboardButton" onclick="exportDashboardToExcel()">📊 Xuất Excel Dashboard</button>
-                <button class="btn btn-info" onclick="exportDoctorAnalysis()">⚕️ Xuất Phân tích BS</button>
-            </div>
+                 <button class="btn btn-success" id="exportDashboardButton" onclick="exportDashboardToExcel()">📊 Xuất Excel Dashboard</button>
+                 <button class="btn btn-info" onclick="exportDoctorAnalysis()">⚕️ Xuất Phân tích NVYT</button>
+             </div>
             <div class="stats-overview" id="dashboardStats">
                 <div class="stat-card">
                     <h3 id="totalRecords">0</h3>
@@ -852,7 +852,7 @@
                     </div>
                     
                     <div style="overflow-x: auto; max-height: 600px;" id="comparatorResultsTableWrapper">
-                        </div>
+                         </div>
                 </div>
             </div>
         </div>
@@ -908,7 +908,7 @@
                 <span class="close-button" onclick="closeXml4Modal()">&times;</span>
             </div>
             <div id="xml4DetailsTableContainer">
-                </div>
+                 </div>
         </div>
     </div>
 
@@ -1280,7 +1280,7 @@
                 t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'), 
                 gioiTinh: getText(tongHopNode,'GIOI_TINH'),
                 ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
-                chanDoan: getText(tongHopNode,'CHAN_DOAN_RV'),
+                chanDoan: getText(tongHopNode,'CHAN_DOAN_RV') || getText(tongHopNode,'MA_BENH'),
                 maKhoa: getText(tongHopNode,'MA_KHOA'),
                 tong_tien_kham: 0,
                 tong_tien_dvkt_khac: 0,
@@ -1329,7 +1329,7 @@
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
                     const maBacSi = getText(item, 'MA_BAC_SI');
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
-                    const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN');
+                    const nguoiThucHien = getText(item, 'MA_NGUOI_THIEN'); // Note: Standard is MA_NGUOI_THIEN
                     if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
                 });
             }
@@ -1476,16 +1476,15 @@
             updatePagination();
             updateResultsInfo();
         }
-
+        
         function copyToClipboard(event, text) {
-            event.stopPropagation(); // Ngăn sự kiện click vào hàng
+            event.stopPropagation();
             navigator.clipboard.writeText(text).then(() => {
                 alert(`Đã sao chép: ${text}`);
             }).catch(err => {
                 console.error('Không thể sao chép: ', err);
             });
         }
-
 
         function updatePagination() {
             const container = document.getElementById('paginationContainer');
@@ -1579,7 +1578,7 @@
              const wb = XLSX.utils.book_new();
              XLSX.utils.book_append_sheet(wb, ws, 'DVKT_va_Kham');
              XLSX.writeFile(wb, 'BaoCao_DVKT_va_Kham.xlsx');
-        }
+         }
 
         // ============================= XML4 MODAL =============================
         function handleRowClick(record) {
@@ -1665,7 +1664,7 @@
                 const xmlContent = await globalData.xmlFile.text();
                 const { records: xmlRecordsRaw } = validateXmlContent(xmlContent);
                 globalData.xmlRecords.clear();
-                xmlRecordsRaw.forEach(r => globalData.xmlRecords.set(r.maLk, r));
+                xmlRecordsRaw.forEach(r => globalData.xmlRecords.set(String(r.maLk), r));
 
                 // 2. Read Excel/CSV File
                 globalData.excelRecords.clear();
@@ -1772,11 +1771,17 @@
                 tableHTML += `<tr><td colspan="5" style="text-align:center;">Không tìm thấy kết quả phù hợp.</td></tr>`;
             } else {
                 globalData.filteredComparisonResults.forEach(r => {
+                    // XML Data
                     const xmlName = r.xmlRec?.hoTen || 'N/A';
                     const xml_t_bhtt = r.xmlRec ? formatCurrency(r.xmlRec.t_bhtt) : 'N/A';
                     const xml_t_bncct = r.xmlRec ? formatCurrency(r.xmlRec.t_bncct) : 'N/A';
+                    const xml_ngay_vao = r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayVao) : 'N/A';
+                    const xml_ngay_ra = r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayRa) : 'N/A';
+                    const xml_ngay_ttoan = r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayTtoan) : 'N/A';
+                    const xml_chan_doan = r.xmlRec?.chanDoan || 'N/A';
 
-                    const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN']) : null;
+                    // Excel Data
+                    const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN', 'TÊN BỆNH NHÂN']) : null;
                     const excelName = excelHoTenKey ? r.excelRec[excelHoTenKey] : 'N/A';
                     
                     const excelBHTTKey = r.excelRec ? findKey(r.excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']) : null;
@@ -1785,6 +1790,18 @@
                     const excelBNCCTKey = r.excelRec ? findKey(r.excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']) : null;
                     const excel_t_bncct = excelBNCCTKey ? formatCurrency(r.excelRec[excelBNCCTKey]) : 'N/A';
                     
+                    const excelNgayVaoKey = r.excelRec ? findKey(r.excelRec, ['NGAY_VAO', 'NGÀY VÀO']) : null;
+                    const excel_ngay_vao = excelNgayVaoKey ? formatDateTimeForDisplay(r.excelRec[excelNgayVaoKey]) : 'N/A';
+                    
+                    const excelNgayRaKey = r.excelRec ? findKey(r.excelRec, ['NGAY_RA', 'NGÀY RA']) : null;
+                    const excel_ngay_ra = excelNgayRaKey ? formatDateTimeForDisplay(r.excelRec[excelNgayRaKey]) : 'N/A';
+
+                    const excelNgayTToanKey = r.excelRec ? findKey(r.excelRec, ['NGAY_TTOAN', 'NGÀY THANH TOÁN']) : null;
+                    const excel_ngay_ttoan = excelNgayTToanKey ? formatDateTimeForDisplay(r.excelRec[excelNgayTToanKey]) : 'N/A';
+
+                    const excelChanDoanKey = r.excelRec ? findKey(r.excelRec, ['CHAN_DOAN_RV', 'CHẨN ĐOÁN', 'MA_BENH', 'MÃ BỆNH']) : null;
+                    const excel_chan_doan = excelChanDoanKey ? r.excelRec[excelChanDoanKey] : 'N/A';
+
                     const statusMap = {
                         match: { text: '✅ Khớp', class: 'status-match' },
                         mismatch: { text: '❌ Không khớp', class: 'status-mismatch' },
@@ -1806,12 +1823,16 @@
                             <td>
                                 <strong>${xmlName}</strong><br>
                                 <span ${isMismatch ? 'style="color:red;"':''}>BHYT TT: ${xml_t_bhtt}</span><br>
-                                <span ${isMismatch ? 'style="color:red;"':''}>BN CCT: ${xml_t_bncct}</span>
+                                <span ${isMismatch ? 'style="color:red;"':''}>BN CCT: ${xml_t_bncct}</span><br>
+                                <small>Vào: ${xml_ngay_vao} | Ra: ${xml_ngay_ra}</small><br>
+                                <small>TT: ${xml_ngay_ttoan} | CĐ: ${xml_chan_doan}</small>
                             </td>
                             <td>
                                 <strong>${excelName}</strong><br>
                                 <span ${isMismatch ? 'style="color:red;"':''}>BHYT TT: ${excel_t_bhtt}</span><br>
-                                <span ${isMismatch ? 'style="color:red;"':''}>BN CCT: ${excel_t_bncct}</span>
+                                <span ${isMismatch ? 'style="color:red;"':''}>BN CCT: ${excel_t_bncct}</span><br>
+                                <small>Vào: ${excel_ngay_vao} | Ra: ${excel_ngay_ra}</small><br>
+                                <small>TT: ${excel_ngay_ttoan} | CĐ: ${excel_chan_doan}</small>
                             </td>
                             <td>${detailsHtml}</td>
                         </tr>
@@ -1835,20 +1856,34 @@
             if (globalData.filteredComparisonResults.length === 0) return alert('Không có dữ liệu để xuất!');
             
             const data = globalData.filteredComparisonResults.map(r => {
-                 const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN']) : null;
-                 const excelBHTTKey = r.excelRec ? findKey(r.excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']) : null;
-                 const excelBNCCTKey = r.excelRec ? findKey(r.excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']) : null;
-                 return {
+                // Find keys for Excel data
+                const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN']) : null;
+                const excelBHTTKey = r.excelRec ? findKey(r.excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']) : null;
+                const excelBNCCTKey = r.excelRec ? findKey(r.excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']) : null;
+                const excelNgayVaoKey = r.excelRec ? findKey(r.excelRec, ['NGAY_VAO', 'NGÀY VÀO']) : null;
+                const excelNgayRaKey = r.excelRec ? findKey(r.excelRec, ['NGAY_RA', 'NGÀY RA']) : null;
+                const excelNgayTToanKey = r.excelRec ? findKey(r.excelRec, ['NGAY_TTOAN', 'NGÀY THANH TOÁN']) : null;
+                const excelChanDoanKey = r.excelRec ? findKey(r.excelRec, ['CHAN_DOAN_RV', 'CHẨN ĐOÁN', 'MA_BENH', 'MÃ BỆNH']) : null;
+
+                return {
                     'Mã LK': r.key,
                     'Trạng thái': r.status,
                     'Tên BN (XML)': r.xmlRec?.hoTen,
                     'BHYT TT (XML)': r.xmlRec?.t_bhtt,
                     'BN CCT (XML)': r.xmlRec?.t_bncct,
+                    'Ngày Vào (XML)': r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayVao) : null,
+                    'Ngày Ra (XML)': r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayRa) : null,
+                    'Ngày TT (XML)': r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayTtoan) : null,
+                    'Chẩn Đoán (XML)': r.xmlRec?.chanDoan,
                     'Tên BN (File đối chiếu)': excelHoTenKey ? r.excelRec[excelHoTenKey] : null,
                     'BHYT TT (File đối chiếu)': excelBHTTKey ? r.excelRec[excelBHTTKey] : null,
                     'BN CCT (File đối chiếu)': excelBNCCTKey ? r.excelRec[excelBNCCTKey] : null,
+                    'Ngày Vào (File đối chiếu)': excelNgayVaoKey ? formatDateTimeForDisplay(r.excelRec[excelNgayVaoKey]) : null,
+                    'Ngày Ra (File đối chiếu)': excelNgayRaKey ? formatDateTimeForDisplay(r.excelRec[excelNgayRaKey]) : null,
+                    'Ngày TT (File đối chiếu)': excelNgayTToanKey ? formatDateTimeForDisplay(r.excelRec[excelNgayTToanKey]) : null,
+                    'Chẩn Đoán (File đối chiếu)': excelChanDoanKey ? r.excelRec[excelChanDoanKey] : null,
                     'Chi tiết không khớp': r.details ? r.details.join('; ') : ''
-                 };
+                };
             });
 
             const ws = XLSX.utils.json_to_sheet(data);
@@ -1931,8 +1966,8 @@
 
                      const costByDay = {};
                      filteredForReport.forEach(r => {
-                         const day = String(r.ngayVao).substring(0, 8);
-                         costByDay[day] = (costByDay[day] || 0) + r.t_bhtt;
+                          const day = String(r.ngayVao).substring(0, 8);
+                          costByDay[day] = (costByDay[day] || 0) + r.t_bhtt;
                      });
                     const sortedCostByDay = Object.entries(costByDay).sort(([a], [b]) => a.localeCompare(b));
                     chart2Type = 'bar';
@@ -1961,7 +1996,7 @@
                     }));
                      chart2Type = 'bar';
                      chart2Data = {
-                        labels: sortedCostDepts.map(d => d.name),
+                         labels: sortedCostDepts.map(d => d.name),
                         datasets: [{ label: 'Tổng Chi Phí BHYT TT (VNĐ)', data: sortedCostDepts.map(d => d.cost), backgroundColor: 'rgba(153, 102, 255, 0.8)' }]
                      };
                      chart2Title = 'Top 15 Khoa Theo Tổng Chi Phí BHYT TT';
@@ -2079,29 +2114,78 @@
                 alert('Chưa có dữ liệu để phân tích. Vui lòng xử lý file XML trước.');
                 return;
             }
-            const doctorCostMap = {};
-            
+
+            const doctorStatsMap = new Map();
+            const performerStatsMap = new Map();
+
             globalData.allRecords.forEach(record => {
                 const doctors = Array.from(record.bac_si_chi_dinh);
+                const performers = Array.from(record.nguoi_thuc_hien);
+                const recordDate = record.ngayVao;
+
                 if (doctors.length > 0) {
-                    // Phân bổ chi phí đều cho các bác sĩ trong cùng một hồ sơ
                     const costPerDoctor = record.t_bhtt / doctors.length;
                     doctors.forEach(maBS => {
-                        doctorCostMap[maBS] = (doctorCostMap[maBS] || 0) + costPerDoctor;
+                        if (!doctorStatsMap.has(maBS)) {
+                            doctorStatsMap.set(maBS, { totalCost: 0, recordCount: 0, firstDate: recordDate, lastDate: recordDate });
+                        }
+                        const stats = doctorStatsMap.get(maBS);
+                        stats.totalCost += costPerDoctor;
+                        stats.recordCount++;
+                        if (recordDate < stats.firstDate) stats.firstDate = recordDate;
+                        if (recordDate > stats.lastDate) stats.lastDate = recordDate;
+                    });
+                }
+                 if (performers.length > 0) {
+                    const costPerPerformer = record.t_bhtt / performers.length;
+                    performers.forEach(maNTH => {
+                        if (!performerStatsMap.has(maNTH)) {
+                            performerStatsMap.set(maNTH, { totalCost: 0, recordCount: 0, firstDate: recordDate, lastDate: recordDate });
+                        }
+                        const stats = performerStatsMap.get(maNTH);
+                        stats.totalCost += costPerPerformer;
+                        stats.recordCount++;
+                        if (recordDate < stats.firstDate) stats.firstDate = recordDate;
+                        if (recordDate > stats.lastDate) stats.lastDate = recordDate;
                     });
                 }
             });
 
-            const sortedDoctors = Object.entries(doctorCostMap).sort(([,a], [,b]) => b - a);
-            const data = sortedDoctors.map(([maBS, totalCost]) => ({
-                'Mã Bác Sĩ': maBS,
-                'Tổng Chi Phí BHYT TT': totalCost
-            }));
-            
-            const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "PhanTichChiPhi_BacSi");
-            XLSX.writeFile(wb, 'BaoCao_PhanTichChiPhi_BacSi.xlsx');
+
+            // Sheet for Doctors
+            const sortedDoctors = Array.from(doctorStatsMap.entries()).sort(([,a], [,b]) => b.totalCost - a.totalCost);
+            const doctorData = sortedDoctors.map(([maBS, stats]) => ({
+                'Mã Bác Sĩ': maBS,
+                'Tổng Chi Phí BHYT TT (phân bổ)': stats.totalCost,
+                'Tổng Số Hồ Sơ': stats.recordCount,
+                'Ngày Khám Đầu Tiên': formatDateTimeForDisplay(stats.firstDate),
+                'Ngày Khám Cuối Cùng': formatDateTimeForDisplay(stats.lastDate),
+            }));
+            if (doctorData.length > 0) {
+                const wsDoctors = XLSX.utils.json_to_sheet(doctorData);
+                XLSX.utils.book_append_sheet(wb, wsDoctors, "BacSi_ChiDinh");
+            }
+
+            // Sheet for Performers
+            const sortedPerformers = Array.from(performerStatsMap.entries()).sort(([,a], [,b]) => b.totalCost - a.totalCost);
+            const performerData = sortedPerformers.map(([maNTH, stats]) => ({
+                'Mã Người Thực Hiện': maNTH,
+                'Tổng Chi Phí BHYT TT (phân bổ)': stats.totalCost,
+                'Tổng Số Hồ Sơ': stats.recordCount,
+                'Ngày TH Đầu Tiên': formatDateTimeForDisplay(stats.firstDate),
+                'Ngày TH Cuối Cùng': formatDateTimeForDisplay(stats.lastDate),
+            }));
+             if (performerData.length > 0) {
+                const wsPerformers = XLSX.utils.json_to_sheet(performerData);
+                XLSX.utils.book_append_sheet(wb, wsPerformers, "Nguoi_ThucHien");
+            }
+            
+            if (wb.SheetNames.length > 0) {
+               XLSX.writeFile(wb, 'BaoCao_PhanTich_NhanVienYTe.xlsx');
+            } else {
+               alert('Không có dữ liệu bác sĩ chỉ định hoặc người thực hiện để xuất.');
+            }
         }
 
 
