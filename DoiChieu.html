@@ -987,6 +987,31 @@
             return dateString;
         };
         
+        const flexibleFormatDate = (dateInput) => {
+            if (!dateInput) return 'N/A';
+
+            // If it's a JavaScript Date object (from Excel with cellDates: true)
+            if (dateInput instanceof Date) {
+                const day = String(dateInput.getDate()).padStart(2, '0');
+                const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+                const year = dateInput.getFullYear();
+                const hours = String(dateInput.getHours()).padStart(2, '0');
+                const minutes = String(dateInput.getMinutes()).padStart(2, '0');
+                if (hours === '00' && minutes === '00') {
+                    return `${day}/${month}/${year}`;
+                }
+                return `${day}/${month}/${year} ${hours}:${minutes}`;
+            }
+            
+            // If it's the BHYT string format
+            if (typeof dateInput === 'string' && /^\d{8,}/.test(dateInput)) {
+                return formatDateTimeForDisplay(dateInput);
+            }
+
+            // Fallback for other string formats or types
+            return dateInput.toString();
+        };
+
         const formatCurrency = (amount) => {
             const num = Number(amount);
             if (isNaN(num)) return 'N/A';
@@ -1264,11 +1289,16 @@
         }
         
         function validateSingleHoso(hoso) {
-            const getText = (element, selector) => {
+            const getText = (element, ...selectors) => {
                 if (!element) return '';
-                const node = element.querySelector(selector);
-                if (!node) return '';
-                return (node.textContent || "").trim();
+                for (const selector of selectors) {
+                    const node = element.querySelector(selector);
+                    if (node && node.textContent) {
+                        const text = node.textContent.trim();
+                        if (text) return text;
+                    }
+                }
+                return '';
             };
             
             const findFileContent = (type) => {
@@ -1307,7 +1337,7 @@
                 t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'), 
                 gioiTinh: getText(tongHopNode,'GIOI_TINH'),
                 ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
-                chanDoan: getText(tongHopNode,'CHAN_DOAN_RV') || getText(tongHopNode,'MA_BENH'),
+                chanDoan: getText(tongHopNode,'CHAN_DOAN_RV', 'MA_BENH'),
                 maKhoa: getText(tongHopNode,'MA_KHOA'),
                 tong_tien_kham: 0,
                 tong_tien_dvkt_khac: 0,
@@ -1356,7 +1386,7 @@
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
                     const maBacSi = getText(item, 'MA_BAC_SI');
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
-                    const nguoiThucHien = getText(item, 'MA_NGUOI_THIEN'); // Note: Standard is MA_NGUOI_THIEN
+                    const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
                     if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
                 });
             }
@@ -1480,6 +1510,7 @@
                 const errorDetails = record.errors.map(e => `<div class="error-detail"><span class="status-badge ${e.severity === 'critical' ? 'status-error' : 'status-warning'}">${ERROR_TYPES[e.type] || e.type}</span> <small>${e.message}</small></div>`).join('');
                 
                 const formatStaffInfo = (staffSet) => {
+                    if (!staffSet || staffSet.size === 0) return '';
                     return Array.from(staffSet).map(code => {
                         const name = staffNameMap.get(code);
                         return name ? `${name} (${code})` : code;
@@ -1703,65 +1734,61 @@
                 // 2. Read Excel/CSV File
                 globalData.excelRecords.clear();
                 const file = globalData.excelFile;
-                const isCSV = file.name.toLowerCase().endsWith('.csv');
-
                 let excelJson;
-                if (isCSV) {
-                    const text = await file.text();
-                    const workbook = XLSX.read(text, {type: 'string'});
-                    const sheetName = workbook.SheetNames[0];
-                    excelJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                } else {
-                    const excelBuffer = await file.arrayBuffer();
-                    const workbook = XLSX.read(excelBuffer, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    excelJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                }
-
-                excelJson.forEach(row => {
-                    const maLkKey = findKey(row, ['MA_LK', 'MÃ LK', 'MÃ LIÊN KẾT']);
-                    if(maLkKey && row[maLkKey]) {
-                        globalData.excelRecords.set(String(row[maLkKey]), row);
-                    }
-                });
                 
-                // 3. Compare Data
-                const allKeys = new Set([...globalData.xmlRecords.keys(), ...globalData.excelRecords.keys()]);
-                globalData.comparisonResults = [];
-                for (const key of allKeys) {
-                    const xmlRec = globalData.xmlRecords.get(key);
-                    const excelRec = globalData.excelRecords.get(key);
-                    
-                    let result = { key, xmlRec, excelRec, status: 'mismatch', details: [] };
-                    
-                    if (xmlRec && excelRec) {
-                        const t_bhtt_xml = xmlRec.t_bhtt || 0;
-                        const t_bhtt_excel_key = findKey(excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']);
-                        const t_bhtt_excel = t_bhtt_excel_key ? (parseFloat(excelRec[t_bhtt_excel_key]) || 0) : 0;
-                        if(Math.abs(t_bhtt_xml - t_bhtt_excel) > 1) { 
-                            result.details.push(`BHYT TT: XML=${formatCurrency(t_bhtt_xml)} vs Excel=${formatCurrency(t_bhtt_excel)}`);
-                        }
-                        
-                        const t_bncct_xml = xmlRec.t_bncct || 0;
-                        const t_bncct_excel_key = findKey(excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']);
-                        const t_bncct_excel = t_bncct_excel_key ? (parseFloat(excelRec[t_bncct_excel_key]) || 0) : 0;
-                         if(Math.abs(t_bncct_xml - t_bncct_excel) > 1) {
-                            result.details.push(`BN CCT: XML=${formatCurrency(t_bncct_xml)} vs Excel=${formatCurrency(t_bncct_excel)}`);
-                        }
-                        
-                        result.status = result.details.length === 0 ? 'match' : 'mismatch';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    excelJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { cellDates: true });
 
-                    } else if (xmlRec) {
-                        result.status = 'xml-only';
-                    } else {
-                        result.status = 'excel-only';
+                    excelJson.forEach(row => {
+                        const maLkKey = findKey(row, ['MA_LK', 'MÃ LK', 'MÃ LIÊN KẾT']);
+                        if(maLkKey && row[maLkKey]) {
+                            globalData.excelRecords.set(String(row[maLkKey]), row);
+                        }
+                    });
+                    
+                    // 3. Compare Data
+                    const allKeys = new Set([...globalData.xmlRecords.keys(), ...globalData.excelRecords.keys()]);
+                    globalData.comparisonResults = [];
+                    for (const key of allKeys) {
+                        const xmlRec = globalData.xmlRecords.get(key);
+                        const excelRec = globalData.excelRecords.get(key);
+                        
+                        let result = { key, xmlRec, excelRec, status: 'mismatch', details: [] };
+                        
+                        if (xmlRec && excelRec) {
+                            const t_bhtt_xml = xmlRec.t_bhtt || 0;
+                            const t_bhtt_excel_key = findKey(excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']);
+                            const t_bhtt_excel = t_bhtt_excel_key ? (parseFloat(excelRec[t_bhtt_excel_key]) || 0) : 0;
+                            if(Math.abs(t_bhtt_xml - t_bhtt_excel) > 1) { 
+                                result.details.push(`BHYT TT: XML=${formatCurrency(t_bhtt_xml)} vs Excel=${formatCurrency(t_bhtt_excel)}`);
+                            }
+                            
+                            const t_bncct_xml = xmlRec.t_bncct || 0;
+                            const t_bncct_excel_key = findKey(excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']);
+                            const t_bncct_excel = t_bncct_excel_key ? (parseFloat(excelRec[t_bncct_excel_key]) || 0) : 0;
+                             if(Math.abs(t_bncct_xml - t_bncct_excel) > 1) {
+                                result.details.push(`BN CCT: XML=${formatCurrency(t_bncct_xml)} vs Excel=${formatCurrency(t_bncct_excel)}`);
+                            }
+                            
+                            result.status = result.details.length === 0 ? 'match' : 'mismatch';
+
+                        } else if (xmlRec) {
+                            result.status = 'xml-only';
+                        } else {
+                            result.status = 'excel-only';
+                        }
+                        globalData.comparisonResults.push(result);
                     }
-                    globalData.comparisonResults.push(result);
-                }
-                
-                hideLoading('comparatorLoading');
-                document.getElementById('comparatorResults').style.display = 'block';
-                applyComparatorFilters();
+                    
+                    hideLoading('comparatorLoading');
+                    document.getElementById('comparatorResults').style.display = 'block';
+                    applyComparatorFilters();
+                };
+                reader.readAsArrayBuffer(file);
 
             } catch (error) {
                 hideLoading('comparatorLoading');
@@ -1809,9 +1836,9 @@
                     const xmlName = r.xmlRec?.hoTen || 'N/A';
                     const xml_t_bhtt = r.xmlRec ? formatCurrency(r.xmlRec.t_bhtt) : 'N/A';
                     const xml_t_bncct = r.xmlRec ? formatCurrency(r.xmlRec.t_bncct) : 'N/A';
-                    const xml_ngay_vao = r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayVao) : 'N/A';
-                    const xml_ngay_ra = r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayRa) : 'N/A';
-                    const xml_ngay_ttoan = r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayTtoan) : 'N/A';
+                    const xml_ngay_vao = r.xmlRec ? flexibleFormatDate(r.xmlRec.ngayVao) : 'N/A';
+                    const xml_ngay_ra = r.xmlRec ? flexibleFormatDate(r.xmlRec.ngayRa) : 'N/A';
+                    const xml_ngay_ttoan = r.xmlRec ? flexibleFormatDate(r.xmlRec.ngayTtoan) : 'N/A';
                     const xml_chan_doan = r.xmlRec?.chanDoan || 'N/A';
 
                     // Excel Data
@@ -1825,13 +1852,13 @@
                     const excel_t_bncct = excelBNCCTKey ? formatCurrency(r.excelRec[excelBNCCTKey]) : 'N/A';
                     
                     const excelNgayVaoKey = r.excelRec ? findKey(r.excelRec, ['NGAY_VAO', 'NGÀY VÀO']) : null;
-                    const excel_ngay_vao = excelNgayVaoKey ? formatDateTimeForDisplay(r.excelRec[excelNgayVaoKey]) : 'N/A';
+                    const excel_ngay_vao = excelNgayVaoKey ? flexibleFormatDate(r.excelRec[excelNgayVaoKey]) : 'N/A';
                     
                     const excelNgayRaKey = r.excelRec ? findKey(r.excelRec, ['NGAY_RA', 'NGÀY RA']) : null;
-                    const excel_ngay_ra = excelNgayRaKey ? formatDateTimeForDisplay(r.excelRec[excelNgayRaKey]) : 'N/A';
+                    const excel_ngay_ra = excelNgayRaKey ? flexibleFormatDate(r.excelRec[excelNgayRaKey]) : 'N/A';
 
                     const excelNgayTToanKey = r.excelRec ? findKey(r.excelRec, ['NGAY_TTOAN', 'NGÀY THANH TOÁN', 'NGAY TT', 'NGÀY TT']) : null;
-                    const excel_ngay_ttoan = excelNgayTToanKey ? formatDateTimeForDisplay(r.excelRec[excelNgayTToanKey]) : 'N/A';
+                    const excel_ngay_ttoan = excelNgayTToanKey ? flexibleFormatDate(r.excelRec[excelNgayTToanKey]) : 'N/A';
 
                     const excelChanDoanKey = r.excelRec ? findKey(r.excelRec, ['CHAN_DOAN_RV', 'CHẨN ĐOÁN', 'MA_BENH', 'MÃ BỆNH']) : null;
                     const excel_chan_doan = excelChanDoanKey ? r.excelRec[excelChanDoanKey] : 'N/A';
@@ -1905,16 +1932,16 @@
                     'Tên BN (XML)': r.xmlRec?.hoTen,
                     'BHYT TT (XML)': r.xmlRec?.t_bhtt,
                     'BN CCT (XML)': r.xmlRec?.t_bncct,
-                    'Ngày Vào (XML)': r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayVao) : null,
-                    'Ngày Ra (XML)': r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayRa) : null,
-                    'Ngày TT (XML)': r.xmlRec ? formatDateTimeForDisplay(r.xmlRec.ngayTtoan) : null,
+                    'Ngày Vào (XML)': r.xmlRec ? flexibleFormatDate(r.xmlRec.ngayVao) : null,
+                    'Ngày Ra (XML)': r.xmlRec ? flexibleFormatDate(r.xmlRec.ngayRa) : null,
+                    'Ngày TT (XML)': r.xmlRec ? flexibleFormatDate(r.xmlRec.ngayTtoan) : null,
                     'Chẩn Đoán (XML)': r.xmlRec?.chanDoan,
                     'Tên BN (File đối chiếu)': excelHoTenKey ? r.excelRec[excelHoTenKey] : null,
                     'BHYT TT (File đối chiếu)': excelBHTTKey ? r.excelRec[excelBHTTKey] : null,
                     'BN CCT (File đối chiếu)': excelBNCCTKey ? r.excelRec[excelBNCCTKey] : null,
-                    'Ngày Vào (File đối chiếu)': excelNgayVaoKey ? formatDateTimeForDisplay(r.excelRec[excelNgayVaoKey]) : null,
-                    'Ngày Ra (File đối chiếu)': excelNgayRaKey ? formatDateTimeForDisplay(r.excelRec[excelNgayRaKey]) : null,
-                    'Ngày TT (File đối chiếu)': excelNgayTToanKey ? formatDateTimeForDisplay(r.excelRec[excelNgayTToanKey]) : null,
+                    'Ngày Vào (File đối chiếu)': excelNgayVaoKey ? flexibleFormatDate(r.excelRec[excelNgayVaoKey]) : null,
+                    'Ngày Ra (File đối chiếu)': excelNgayRaKey ? flexibleFormatDate(r.excelRec[excelNgayRaKey]) : null,
+                    'Ngày TT (File đối chiếu)': excelNgayTToanKey ? flexibleFormatDate(r.excelRec[excelNgayTToanKey]) : null,
                     'Chẩn Đoán (File đối chiếu)': excelChanDoanKey ? r.excelRec[excelChanDoanKey] : null,
                     'Chi tiết không khớp': r.details ? r.details.join('; ') : ''
                 };
