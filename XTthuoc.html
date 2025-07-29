@@ -351,85 +351,112 @@
             reader.readAsArrayBuffer(file);
         });
 
-        function handleSpecialSheet(workbook, sheetName) {
-            resultsContainer.innerHTML = '';
-            document.getElementById('dashboard-container').style.display = 'none';
-            const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-            
-            const validSheetData = sheetData.filter(row => row['MA_CSKCB']);
+       function handleSpecialSheet(workbook, sheetName) {
+    resultsContainer.innerHTML = '';
+    document.getElementById('dashboard-container').style.display = 'none';
+    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    
+    const validSheetData = sheetData.filter(row => row['MA_CSKCB']);
 
-            if (validSheetData.length === 0) {
-                resultsContainer.innerHTML = `<p class="text-info">Sheet "${sheetName}" được tìm thấy nhưng không có dữ liệu hợp lệ.</p>`;
-                return;
+    if (validSheetData.length === 0) {
+        resultsContainer.innerHTML = `<p class="text-info">Sheet "${sheetName}" được tìm thấy nhưng không có dữ liệu hợp lệ.</p>`;
+        return;
+    }
+    
+    // --- TẠO MỘT DANH SÁCH RIÊNG ĐỂ TÍNH TOÁN (LỌC TRÙNG) ---
+    const processedEntries = new Set();
+    const uniqueDataForCalculation = [];
+    validSheetData.forEach(row => {
+        const hoTen = row['HO_TEN'];
+        const ngayVaoValue = row['NGAY_VAO'];
+        if (hoTen && ngayVaoValue) {
+            let admissionDate;
+            if (ngayVaoValue instanceof Date) {
+                admissionDate = ngayVaoValue;
+            } else if (typeof ngayVaoValue === 'number' && ngayVaoValue > 1) {
+                admissionDate = new Date(Math.round((ngayVaoValue - 25569) * 86400 * 1000));
+            } else {
+                admissionDate = new Date(ngayVaoValue);
             }
 
-            let overallTotal = 0;
-            const facilityErrorTotals = {};
-            validSheetData.forEach(row => {
-                const amount = parseFloat(row['T_TONGCHI']) || 0;
-                overallTotal += amount;
-                const cskcb = row['MA_CSKCB'];
-                if(cskcb) facilityErrorTotals[cskcb] = (facilityErrorTotals[cskcb] || 0) + amount;
-            });
-            
-            const sortedFacilities = Object.entries(facilityErrorTotals).sort(([,a],[,b]) => b-a);
-            let dashboardHTML = `<div class="dashboard-section bg-light text-dark p-3 mb-4">
-                                    <h4 class="text-danger">Thống Kê Lỗi "Ngày Y Lệnh Sau Ngày Ra Viện" Theo CSKCB</h4>
-                                    <div class="table-responsive" style="max-height: 300px;">
-                                        <table class="table table-striped table-hover table-sm">
-                                            <thead class="table-dark"><tr><th>#</th><th>Cơ Sở KCB</th><th>Tổng Tiền Lỗi</th></tr></thead>
-                                            <tbody>`;
-            sortedFacilities.forEach(([cskcb, amount], index) => {
-                dashboardHTML += `<tr><td>${index + 1}</td><td class="text-start">${getFacilityDisplayName(cskcb)}</td><td>${amount.toLocaleString('vi-VN')} đ</td></tr>`;
-            });
-            dashboardHTML += `</tbody></table></div></div>`;
-            
-            let tableHTML = `<h4 class="text-danger mt-4"> Lỗi Logic: Ngày Y Lệnh Sau Ngày Ra Viện (Tổng tiền XT tất cả: ${overallTotal.toLocaleString('vi-VN')} đ)</h4>
-                             <p>Danh sách các trường hợp có ngày y lệnh sau ngày ra viện. Đây là lỗi logic cần được xử lý ngay mà không cần phân tích AI.</p>
-                             <div class="table-responsive">
-                                 <table class="table table-bordered table-hover">
-                                     <thead class="table-dark">
-                                         <tr>
-                                             <th>Cơ Sở KCB</th>
-                                             <th>Họ Tên</th>
-                                             <th>Ngày Vào</th>
-                                             <th>Ngày Ra</th>
-                                             <th>Ngày Y Lệnh</th>
-                                             <th>Tổng Chi Phí</th>
-                                             <th>Lý Do Xuất Toán (Mặc định)</th>
-                                         </tr>
-                                     </thead>
-                                     <tbody>`;
-            validSheetData.forEach(row => {
-                const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : row['NGAY_VAO'];
-                const ngayRa = row['NGAY_RA'] instanceof Date ? row['NGAY_RA'].toLocaleDateString('vi-VN') : row['NGAY_RA'];
-                const ngayYl = row['NGAY_YL'] instanceof Date ? row['NGAY_YL'].toLocaleDateString('vi-VN') : row['NGAY_YL'];
-                const tongChi = (parseFloat(row['T_TONGCHI']) || 0).toLocaleString('vi-VN') + ' đ';
-
-                tableHTML += `<tr>
-                                <td class="text-start">${getFacilityDisplayName(row['MA_CSKCB'])}</td>
-                                <td>${row['HO_TEN']}</td>
-                                <td>${ngayVao}</td>
-                                <td>${ngayRa}</td>
-                                <td><strong class="text-danger">${ngayYl}</strong></td>
-                                <td>${tongChi}</td>
-                                <td class="text-danger fw-bold">Ngày y lệnh không được sau ngày ra viện</td>
-                              </tr>`;
-            });
-
-            tableHTML += `</tbody></table></div>`;
-            resultsContainer.innerHTML = dashboardHTML + tableHTML;
-        }
-
-        function processData(allData) {
-            allData.forEach(row => {
-                const cskcb = row['MA_CSKCB'];
-                if (cskcb) {
-                    if (!rawDataByCSKCB[cskcb]) rawDataByCSKCB[cskcb] = [];
-                    rawDataByCSKCB[cskcb].push(row);
+            if (admissionDate && !isNaN(admissionDate)) {
+                const dateString = `${admissionDate.getFullYear()}-${String(admissionDate.getMonth() + 1).padStart(2, '0')}-${String(admissionDate.getDate()).padStart(2, '0')}`;
+                const uniqueKey = `${hoTen.toString().trim()}_${dateString}`;
+                
+                if (!processedEntries.has(uniqueKey)) {
+                    processedEntries.add(uniqueKey);
+                    uniqueDataForCalculation.push(row);
                 }
-            });
+            } else {
+                uniqueDataForCalculation.push(row);
+            }
+        } else {
+            uniqueDataForCalculation.push(row);
         }
+    });
+
+    // --- TÍNH TOÁN TỔNG TIỀN DỰA TRÊN DANH SÁCH ĐÃ LỌC TRÙNG ---
+    let overallTotal = 0;
+    const facilityErrorTotals = {};
+    uniqueDataForCalculation.forEach(row => {
+        const amount = parseFloat(row['T_TONGCHI']) || 0;
+        overallTotal += amount;
+        const cskcb = row['MA_CSKCB'];
+        if(cskcb) facilityErrorTotals[cskcb] = (facilityErrorTotals[cskcb] || 0) + amount;
+    });
+    
+    // --- HIỂN THỊ DASHBOARD (DỮ LIỆU TỪ TÍNH TOÁN LỌC TRÙNG) ---
+    const sortedFacilities = Object.entries(facilityErrorTotals).sort(([,a],[,b]) => b-a);
+    let dashboardHTML = `<div class="dashboard-section bg-light text-dark p-3 mb-4">
+                            <h4 class="text-danger">Thống Kê Lỗi Theo Cơ Sở KCB</h4>
+                            <div class="table-responsive" style="max-height: 300px;">
+                                <table class="table table-striped table-hover table-sm">
+                                    <thead class="table-dark"><tr><th>#</th><th>Cơ Sở KCB</th><th>Tổng Tiền Lỗi</th></tr></thead>
+                                    <tbody>`;
+    sortedFacilities.forEach(([cskcb, amount], index) => {
+        dashboardHTML += `<tr><td>${index + 1}</td><td class="text-start">${getFacilityDisplayName(cskcb)}</td><td>${amount.toLocaleString('vi-VN')} đ</td></tr>`;
+    });
+    dashboardHTML += `</tbody></table></div></div>`;
+    
+    // --- HIỂN THỊ BẢNG CHI TIẾT (DÙNG TOÀN BỘ DỮ LIỆU HỢP LỆ, KHÔNG LỌC TRÙNG) ---
+    let tableHTML = `<h4 class="text-danger mt-4"> Lỗi Logic: Ngày Y Lệnh Sau Ngày Ra Viện (Tổng tiền XT: ${overallTotal.toLocaleString('vi-VN')} đ)</h4>
+                     <p>Hiển thị <b>tất cả</b> các trường hợp có lỗi. Lưu ý: Tổng tiền và thống kê chỉ tính một lần cho mỗi bệnh nhân có cùng ngày vào viện.</p>
+                     <div class="table-responsive">
+                         <table class="table table-bordered table-hover">
+                             <thead class="table-dark">
+                                 <tr>
+                                     <th>STT</th>
+                                     <th>Cơ Sở KCB</th>
+                                     <th>Họ Tên</th>
+                                     <th>Ngày Vào</th>
+                                     <th>Ngày Ra</th>
+                                     <th>Ngày Y Lệnh</th>
+                                     <th>Tổng Chi Phí</th>
+                                     <th>Lý Do Xuất Toán (Mặc định)</th>
+                                 </tr>
+                             </thead>
+                             <tbody>`;
+    validSheetData.forEach((row, index) => { // Sử dụng validSheetData để hiển thị tất cả
+        const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : (row['NGAY_VAO'] || '');
+        const ngayRa = row['NGAY_RA'] instanceof Date ? row['NGAY_RA'].toLocaleDateString('vi-VN') : (row['NGAY_RA'] || '');
+        const ngayYl = row['NGAY_YL'] instanceof Date ? row['NGAY_YL'].toLocaleDateString('vi-VN') : (row['NGAY_YL'] || '');
+        const tongChi = (parseFloat(row['T_TONGCHI']) || 0).toLocaleString('vi-VN') + ' đ';
+
+        tableHTML += `<tr>
+                        <td>${index + 1}</td>
+                        <td class="text-start">${getFacilityDisplayName(row['MA_CSKCB'])}</td>
+                        <td>${row['HO_TEN']}</td>
+                        <td>${ngayVao}</td>
+                        <td>${ngayRa}</td>
+                        <td><strong class="text-danger">${ngayYl}</strong></td>
+                        <td>${tongChi}</td>
+                        <td class="text-danger fw-bold">Ngày y lệnh không được sau ngày ra viện</td>
+                      </tr>`;
+    });
+
+    tableHTML += `</tbody></table></div>`;
+    resultsContainer.innerHTML = dashboardHTML + tableHTML;
+}
 
         function updateDashboard() {
             const allRecords = Object.values(rawDataByCSKCB).flat();
@@ -652,7 +679,7 @@
         async function analyzeWithGemini(rowData) {
             if (!geminiApiKey) throw new Error('API key chưa được cấu hình');
             const prompt = `Bạn là chuyên gia giám định BHYT Việt Nam. Giả định việc BHYT từ chối thanh toán là ĐÚNG. LƯU Ý: Chế phẩm này LUÔN THUỘC DANH MỤC BHYT.
-                           THÔNG TIN: Chế phẩm: ${rowData['TEN_CP'] || 'Không có'}, Mã bệnh chính (ICD-10 Phân loại bệnh quốc tế): ${rowData['MA_BENH'] || 'Không có'}, Mã bệnh kèm theo (ICD-10 Phân loại bệnh quốc tế): ${rowData['MA_BENHKHAC'] || 'Không có'}.
+                           THÔNG TIN: Chế phẩm: ${rowData['TEN_CP'] || 'Không có'}, Mã bệnh chính (ICD-10): ${rowData['MA_BENH'] || 'Không có'}, Mã bệnh kèm theo (ICD-10): ${rowData['MA_BENHKHAC'] || 'Không có'}.
                            YÊU CẦU: 1. summary: Tóm tắt lý do chính từ chối.  2. details (Chi tiết)**: Để làm rõ, hãy giải thích tại sao chẩn đoán hiện tại không phù hợp VÀ liệt kê một vài bệnh lý khác (kèm mã ICD-10) mà chế phẩm này chống chỉ định, tương tác thuốc. Tên thuốc	Hoạt chất	Loại cảnh báo	Điều kiện	Mã ICD	Tên ICD	Ghi chú
 Meloxicam	Meloxicam	Chống chỉ định	Loét dạ dày tá tràng	K25	Loét dạ dày	Tăng nguy cơ xuất huyết tiêu hóa – đặc biệt ở người có tiền sử
 Meloxicam	Meloxicam	Thận trọng	Tăng huyết áp	I10	Tăng huyết áp	Có thể gây giữ muối nước – tăng huyết áp
@@ -843,7 +870,7 @@ Omeprazol	Omeprazole	Chống chỉ định	Dị ứng với dẫn xuất benzimi
 Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Viêm loét dạ dày tá tràng tiến triển	K25–K28	Loét dạ dày – tá tràng	Có thể gây xuất huyết do hoạt tính enzyme tiêu protein
 Alpha chymotrypsin	AlphaCHY	Thận trọng	Bệnh gan nặng, người đang chảy máu	R58	Chảy máu chưa xác định nguyên nhân	Tăng nguy cơ chảy máu do ảnh hưởng đông máu
 Alpha chymotrypsin	AlphaCHY	Chống chỉ định	Dị ứng với protein từ bò hoặc alpha-trypsin	T78.1	Phản ứng dị ứng với thức ăn	Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng.
-                           TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ...(đoạn văn 30 - 70 từ"] }`;
+                           TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ..."] }`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
