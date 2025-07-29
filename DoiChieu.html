@@ -941,6 +941,33 @@
             'KHAM_DUOI_5_PHUT': 'Thời gian khám dưới 5 phút'
         };
 
+        const staffNameMap = new Map([
+            ['003539/HCM-CCHN', 'Trương Tấn Hùng'],
+            ['014331/HCM-CCHN', 'Dương Thị Thủy'],
+            ['003960/HCM-CCHN', 'Nguyễn Minh Cang'],
+            ['13075/CCHN-D-SYT-HCM', 'Nguyễn Thanh Tùng'],
+            ['0033048/HCM-CCHN', 'Huỳnh Thanh Danh'],
+            ['0008435/ĐNAI-CCHN', 'Lê Thị Dịu Linh'],
+            ['0025015/HCM-CCHN', 'Huỳnh Thị Thùy Dung'],
+            ['046446/HCM-CCHN', 'Trang Thị Mộng Tuyền'],
+            ['0021030/HCM-CCHN', 'Huỳnh Đức Thọ'],
+            ['0029511/HCM-CCHN', 'Trần Thị Ngọc Mến'],
+            ['051530/HCM-CCHN', 'Võ Nguyễn Lệ Tâm'],
+            ['051522/HCM-CCHN', 'Lâm Tuấn Kiệt'],
+            ['0027596/HCM-CCHN', 'Lê Hồ Ngọc Hạnh'],
+            ['051518/HCM-CCHN', 'Nguyễn Thị Hồng Hải'],
+            ['051532/HCM-CCHN', 'Nguyễn Hoàng Thắng'],
+            ['0033072/HCM-CCHN', 'Lương Hoài Thanh'],
+            ['000465/HCM-GPHN', 'Lê Văn Thương'],
+            ['0032340/HCM-CCHN', 'Huỳnh Thị Hiền'],
+            ['010995/HCM-CCHN', 'Huỳnh Thị Mỹ Lan'],
+            ['0019929/HCM-CCHN', 'Phan Thị Trường An'],
+            ['0019312/HCM-CCHN', 'Trần Thị Diễm'],
+            ['0032357/HCM-CCHN', 'Trần Huỳnh Lý'],
+            ['0032379/HCM-CCHN', 'Công Tằng Tôn Nữ Thị Thanh Xuân'],
+            ['0028445/HCM-CCHNN', 'Hồ Thị Thùy Linh']
+        ]);
+
         // Utility functions
         const formatDateTimeForDisplay = (dateString) => {
             if (!dateString) return '';
@@ -1452,8 +1479,15 @@
 
                 const errorDetails = record.errors.map(e => `<div class="error-detail"><span class="status-badge ${e.severity === 'critical' ? 'status-error' : 'status-warning'}">${ERROR_TYPES[e.type] || e.type}</span> <small>${e.message}</small></div>`).join('');
                 
-                const bsInfo = Array.from(record.bac_si_chi_dinh).join(', ');
-                const nthInfo = Array.from(record.nguoi_thuc_hien).join(', ');
+                const formatStaffInfo = (staffSet) => {
+                    return Array.from(staffSet).map(code => {
+                        const name = staffNameMap.get(code);
+                        return name ? `${name} (${code})` : code;
+                    }).join(',<br>');
+                };
+
+                const bsInfo = formatStaffInfo(record.bac_si_chi_dinh);
+                const nthInfo = formatStaffInfo(record.nguoi_thuc_hien);
 
                 row.innerHTML = `
                     <td>${record.has_xml4 ? '<span class="xml4-indicator"></span>' : ''}${startIndex + index + 1}</td>
@@ -1796,7 +1830,7 @@
                     const excelNgayRaKey = r.excelRec ? findKey(r.excelRec, ['NGAY_RA', 'NGÀY RA']) : null;
                     const excel_ngay_ra = excelNgayRaKey ? formatDateTimeForDisplay(r.excelRec[excelNgayRaKey]) : 'N/A';
 
-                    const excelNgayTToanKey = r.excelRec ? findKey(r.excelRec, ['NGAY_TTOAN', 'NGÀY THANH TOÁN']) : null;
+                    const excelNgayTToanKey = r.excelRec ? findKey(r.excelRec, ['NGAY_TTOAN', 'NGÀY THANH TOÁN', 'NGAY TT', 'NGÀY TT']) : null;
                     const excel_ngay_ttoan = excelNgayTToanKey ? formatDateTimeForDisplay(r.excelRec[excelNgayTToanKey]) : 'N/A';
 
                     const excelChanDoanKey = r.excelRec ? findKey(r.excelRec, ['CHAN_DOAN_RV', 'CHẨN ĐOÁN', 'MA_BENH', 'MÃ BỆNH']) : null;
@@ -1862,7 +1896,7 @@
                 const excelBNCCTKey = r.excelRec ? findKey(r.excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']) : null;
                 const excelNgayVaoKey = r.excelRec ? findKey(r.excelRec, ['NGAY_VAO', 'NGÀY VÀO']) : null;
                 const excelNgayRaKey = r.excelRec ? findKey(r.excelRec, ['NGAY_RA', 'NGÀY RA']) : null;
-                const excelNgayTToanKey = r.excelRec ? findKey(r.excelRec, ['NGAY_TTOAN', 'NGÀY THANH TOÁN']) : null;
+                const excelNgayTToanKey = r.excelRec ? findKey(r.excelRec, ['NGAY_TTOAN', 'NGÀY THANH TOÁN', 'NGAY TT', 'NGÀY TT']) : null;
                 const excelChanDoanKey = r.excelRec ? findKey(r.excelRec, ['CHAN_DOAN_RV', 'CHẨN ĐOÁN', 'MA_BENH', 'MÃ BỆNH']) : null;
 
                 return {
@@ -2157,6 +2191,7 @@
             const sortedDoctors = Array.from(doctorStatsMap.entries()).sort(([,a], [,b]) => b.totalCost - a.totalCost);
             const doctorData = sortedDoctors.map(([maBS, stats]) => ({
                 'Mã Bác Sĩ': maBS,
+                'Tên Bác Sĩ': staffNameMap.get(maBS) || '',
                 'Tổng Chi Phí BHYT TT (phân bổ)': stats.totalCost,
                 'Tổng Số Hồ Sơ': stats.recordCount,
                 'Ngày Khám Đầu Tiên': formatDateTimeForDisplay(stats.firstDate),
@@ -2171,6 +2206,7 @@
             const sortedPerformers = Array.from(performerStatsMap.entries()).sort(([,a], [,b]) => b.totalCost - a.totalCost);
             const performerData = sortedPerformers.map(([maNTH, stats]) => ({
                 'Mã Người Thực Hiện': maNTH,
+                'Tên Người Thực Hiện': staffNameMap.get(maNTH) || '',
                 'Tổng Chi Phí BHYT TT (phân bổ)': stats.totalCost,
                 'Tổng Số Hồ Sơ': stats.recordCount,
                 'Ngày TH Đầu Tiên': formatDateTimeForDisplay(stats.firstDate),
