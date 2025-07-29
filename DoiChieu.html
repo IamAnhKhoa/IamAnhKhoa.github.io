@@ -404,6 +404,15 @@
         .comparator-details li {
             color: #c53030;
         }
+        .copyable {
+            cursor: copy;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            color: #3182ce;
+        }
+        .copyable:hover {
+            color: #2c5282;
+        }
         
         /* Status Badges */
         .status-badge {
@@ -578,12 +587,9 @@
         <div id="dashboardTab" class="tab-content active">
              <div class="filter-actions" style="margin-bottom: 20px;">
                 <button class="btn btn-success" id="exportDashboardButton" onclick="exportDashboardToExcel()">📊 Xuất Excel Dashboard</button>
+                <button class="btn btn-info" onclick="exportDoctorAnalysis()">⚕️ Xuất Phân tích BS</button>
             </div>
             <div class="stats-overview" id="dashboardStats">
-                <div class="stat-card">
-                    <h3 id="totalFiles">0</h3>
-                    <p>Tổng file đã xử lý</p>
-                </div>
                 <div class="stat-card">
                     <h3 id="totalRecords">0</h3>
                     <p>Tổng hồ sơ</p>
@@ -595,6 +601,10 @@
                 <div class="stat-card">
                     <h3 id="totalAmount">0</h3>
                     <p>Tổng chi phí BHYT TT</p>
+                </div>
+                 <div class="stat-card">
+                    <h3 id="totalBncct">0</h3>
+                    <p>Tổng chi phí BN CCT</p>
                 </div>
             </div>
 
@@ -749,7 +759,8 @@
                                 <th>STT</th>
                                 <th>Thông tin BN</th>
                                 <th>Thời gian điều trị</th>
-                                <th>Chi phí BHYT TT</th>
+                                <th>Chi phí</th>
+                                <th>Bác sĩ CĐ / Người TH</th>
                                 <th>Trạng thái</th>
                                 <th>Chi tiết lỗi</th>
                             </tr>
@@ -1000,7 +1011,7 @@
 
             const stats = calculateGlobalStats(globalData.allRecords);
             
-            document.getElementById('totalFiles').textContent = globalData.xmlDataContent ? 1 : 0;
+            document.getElementById('totalBncct').textContent = formatCurrency(stats.totalBncct);
             document.getElementById('totalRecords').textContent = stats.totalRecords.toLocaleString('vi-VN');
             document.getElementById('errorCount').textContent = stats.errorRecordsCount.toLocaleString('vi-VN');
             document.getElementById('totalAmount').textContent = formatCurrency(stats.totalAmount);
@@ -1057,7 +1068,7 @@
         function calculateGlobalStats(records) {
             const totalRecords = records.length;
             if (totalRecords === 0) {
-                 return { totalRecords: 0, errorRecordsCount: 0, errorRate: 0, totalAmount: 0, errorTypes: {}, timeline: {}, departments: {}, amounts: {} };
+                 return { totalRecords: 0, errorRecordsCount: 0, errorRate: 0, totalAmount: 0, totalBncct: 0, errorTypes: {}, timeline: {}, departments: {}, amounts: {} };
             }
 
             const errorRecordsCount = records.filter(r => r.errors && r.errors.length > 0).length;
@@ -1068,6 +1079,7 @@
                 errorRecordsCount,
                 errorRate,
                 totalAmount: 0,
+                totalBncct: 0,
                 errorTypes: {},
                 timeline: {},
                 departments: {},
@@ -1076,6 +1088,7 @@
 
             records.forEach(r => {
                 stats.totalAmount += r.t_bhtt || 0;
+                stats.totalBncct += r.t_bncct || 0;
                 if (r.errors) r.errors.forEach(err => { stats.errorTypes[err.type] = (stats.errorTypes[err.type] || 0) + 1; });
                 if (r.ngayVao) {
                     const day = String(r.ngayVao).substring(0, 8);
@@ -1219,13 +1232,11 @@
                     }
                 }
             }
-            // Sắp xếp hồ sơ theo NGAY_VAO sau khi đọc xong
             records.sort((a, b) => a.ngayVao.localeCompare(b.ngayVao));
             return { records, drugs, services, xml4Details };
         }
         
         function validateSingleHoso(hoso) {
-            // *** SỬA LỖI & CẢI TIẾN LOGIC ĐỌC XML ***
             const getText = (element, selector) => {
                 if (!element) return '';
                 const node = element.querySelector(selector);
@@ -1274,7 +1285,9 @@
                 tong_tien_kham: 0,
                 tong_tien_dvkt_khac: 0,
                 has_kham_and_dvkt: false,
-                has_xml4: !!chiTietCLSNode,
+                has_xml4: !!chiTietCLSNode && !!chiTietCLSNode.querySelector('CHI_TIET_CLS'),
+                bac_si_chi_dinh: new Set(),
+                nguoi_thuc_hien: new Set(),
                 errors: []
             };
             if (!record.maLk || !record.hoTen || !record.ngayVao || !record.ngayRa) return null;
@@ -1290,6 +1303,8 @@
                     });
                     const ngayYl = getText(item, 'NGAY_YL');
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                    const maBacSi = getText(item, 'MA_BAC_SI');
+                    if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
                 });
             }
 
@@ -1312,12 +1327,16 @@
                     }
                     const ngayYl = getText(item, 'NGAY_YL');
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                    const maBacSi = getText(item, 'MA_BAC_SI');
+                    if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
+                    const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN');
+                    if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
                 });
             }
             record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
 
             const xml4Data = [];
-            if(chiTietCLSNode) {
+            if(record.has_xml4) {
                 chiTietCLSNode.querySelectorAll('CHI_TIET_CLS').forEach(cls => {
                     xml4Data.push({
                         ma_dich_vu: getText(cls, 'MA_DICH_VU'), ten_chi_so: getText(cls, 'TEN_CHI_SO'),
@@ -1327,10 +1346,6 @@
                 });
             }
             
-            // Cập nhật lại has_xml4 chỉ khi có dữ liệu thực sự
-            record.has_xml4 = xml4Data.length > 0;
-
-
             if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào [${formatDateTimeForDisplay(record.ngayVao)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
             if (record.ngayTtoan && record.ngayTtoan.substring(0, 8) > record.ngayRa.substring(0, 8)) {
                 record.errors.push({ type: 'NGAY_TTOAN_SAU_RA_VIEN', severity: 'warning', message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
@@ -1437,14 +1452,22 @@
 
                 const errorDetails = record.errors.map(e => `<div class="error-detail"><span class="status-badge ${e.severity === 'critical' ? 'status-error' : 'status-warning'}">${ERROR_TYPES[e.type] || e.type}</span> <small>${e.message}</small></div>`).join('');
                 
+                const bsInfo = Array.from(record.bac_si_chi_dinh).join(', ');
+                const nthInfo = Array.from(record.nguoi_thuc_hien).join(', ');
+
                 row.innerHTML = `
                     <td>${record.has_xml4 ? '<span class="xml4-indicator"></span>' : ''}${startIndex + index + 1}</td>
-                    <td><strong>${record.hoTen}</strong><br><small>LK: ${record.maLk}</small>${record.maBn ? `<br><small>BN: ${record.maBn}</small>` : ''}</td>
+                    <td>
+                        <strong>${record.hoTen}</strong><br>
+                        <small class="copyable" onclick="copyToClipboard(event, '${record.maLk}')">LK: ${record.maLk}</small>
+                        ${record.maBn ? `<br><small class="copyable" onclick="copyToClipboard(event, '${record.maBn}')">BN: ${record.maBn}</small>` : ''}
+                    </td>
                     <td><strong>Vào:</strong> ${formatDateTimeForDisplay(record.ngayVao)}<br><strong>Ra:</strong> ${formatDateTimeForDisplay(record.ngayRa)}</td>
                     <td>
                         ${formatCurrency(record.t_bhtt)}
                         ${record.ngayTtoan ? `<br><small style="color: #555;">TT: ${formatDateTimeForDisplay(record.ngayTtoan)}</small>` : ''}
                     </td>
+                    <td>${bsInfo ? `<strong>BS CĐ:</strong> ${bsInfo}` : ''}${nthInfo ? `<br><strong>Người TH:</strong> ${nthInfo}`: ''}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>${errorDetails || '<span class="status-badge status-success">Không có lỗi</span>'}</td>
                 `;
@@ -1453,6 +1476,16 @@
             updatePagination();
             updateResultsInfo();
         }
+
+        function copyToClipboard(event, text) {
+            event.stopPropagation(); // Ngăn sự kiện click vào hàng
+            navigator.clipboard.writeText(text).then(() => {
+                alert(`Đã sao chép: ${text}`);
+            }).catch(err => {
+                console.error('Không thể sao chép: ', err);
+            });
+        }
+
 
         function updatePagination() {
             const container = document.getElementById('paginationContainer');
@@ -1560,7 +1593,6 @@
         function displayXml4Details(maLk) {
             const details = globalData.allXml4Details.get(maLk);
             if (!details || details.length === 0) {
-                // This case should ideally not be reached due to the check in handleRowClick
                 alert('Không tìm thấy dữ liệu chi tiết CLS (XML4).');
                 return;
             }
@@ -2013,7 +2045,8 @@
                 ['Thống kê tổng quan Dashboard'],
                 ['Tổng số hồ sơ', stats.totalRecords],
                 ['Tổng số hồ sơ lỗi', stats.errorRecordsCount],
-                ['Tổng chi phí BHYT TT', stats.totalAmount]
+                ['Tổng chi phí BHYT TT', stats.totalAmount],
+                ['Tổng chi phí BN CCT', stats.totalBncct]
             ];
             const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
             XLSX.utils.book_append_sheet(wb, wsSummary, 'ThongKeTongQuan');
@@ -2039,6 +2072,36 @@
             XLSX.utils.book_append_sheet(wb, wsServices, 'Top_10_DVKT');
             
             XLSX.writeFile(wb, 'Dashboard_BHYT_Summary.xlsx');
+        }
+
+        function exportDoctorAnalysis() {
+            if (globalData.allRecords.length === 0) {
+                alert('Chưa có dữ liệu để phân tích. Vui lòng xử lý file XML trước.');
+                return;
+            }
+            const doctorCostMap = {};
+            
+            globalData.allRecords.forEach(record => {
+                const doctors = Array.from(record.bac_si_chi_dinh);
+                if (doctors.length > 0) {
+                    // Phân bổ chi phí đều cho các bác sĩ trong cùng một hồ sơ
+                    const costPerDoctor = record.t_bhtt / doctors.length;
+                    doctors.forEach(maBS => {
+                        doctorCostMap[maBS] = (doctorCostMap[maBS] || 0) + costPerDoctor;
+                    });
+                }
+            });
+
+            const sortedDoctors = Object.entries(doctorCostMap).sort(([,a], [,b]) => b - a);
+            const data = sortedDoctors.map(([maBS, totalCost]) => ({
+                'Mã Bác Sĩ': maBS,
+                'Tổng Chi Phí BHYT TT': totalCost
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "PhanTichChiPhi_BacSi");
+            XLSX.writeFile(wb, 'BaoCao_PhanTichChiPhi_BacSi.xlsx');
         }
 
 
