@@ -374,8 +374,23 @@
             vertical-align: top;
         }
         
+        .results-table tr {
+            cursor: pointer;
+        }
+
         .results-table tr:hover {
             background: rgba(102, 126, 234, 0.05);
+        }
+
+        .results-table tr.has-xml4 {
+            background-color: #f0fff0; /* Light green to indicate it's clickable */
+        }
+        .results-table tr.has-xml4:hover {
+            background: rgba(102, 234, 150, 0.2);
+        }
+        .xml4-indicator::before {
+            content: '📄 ';
+            font-size: 1.1em;
         }
 
         .results-table .error-detail {
@@ -486,6 +501,63 @@
             margin: 0 15px;
             font-weight: 600;
             color: #2c3e50;
+        }
+
+        /* XML4 Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 1200px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeInScale 0.4s ease-out;
+        }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.8em;
+            color: #2c3e50;
+        }
+        .close-button {
+            color: #aaa;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: #333;
+        }
+        #xml4DetailsTableContainer {
+            max-height: 60vh;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -644,6 +716,14 @@
                             </select>
                         </div>
 
+                        <div class="filter-group">
+                            <label>Lọc ca thiếu XML4:</label>
+                             <select class="filter-select" id="missingXml4Filter">
+                                <option value="">Tất cả</option>
+                                <option value="yes">Có DVKT & Khám nhưng thiếu XML4</option>
+                            </select>
+                        </div>
+
                     </div>
                     
                     <div class="filter-actions">
@@ -658,7 +738,7 @@
 
             <div class="results-container" id="validatorResults" style="display: none;">
                 <div class="table-header">
-                    <h3>📋 Kết quả kiểm tra</h3>
+                    <h3>📋 Kết quả kiểm tra (Click vào hàng có biểu tượng 📄 để xem chi tiết XML4)</h3>
                     <div id="resultsInfo" style="font-size: 0.9em; opacity: 0.9;"></div>
                 </div>
                 
@@ -810,12 +890,24 @@
         </div>
     </div>
 
+    <div id="xml4Modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="xml4ModalTitle">Chi tiết Cận Lâm Sàng (XML4)</h2>
+                <span class="close-button" onclick="closeXml4Modal()">&times;</span>
+            </div>
+            <div id="xml4DetailsTableContainer">
+                </div>
+        </div>
+    </div>
+
     <script>
         // ============================= GLOBAL VARIABLES & UTILITIES =============================
         let globalData = {
             allRecords: [],
             allDrugs: [],
             allServices: [],
+            allXml4Details: new Map(),
             filteredRecords: [],
             currentPage: 1,
             pageSize: 50,
@@ -832,10 +924,10 @@
         const ERROR_TYPES = {
             'NGAY_YL_THUOC_SAU_RA_VIEN': 'Thuốc - YL sau ra viện',
             'NGAY_YL_DVKT_SAU_RA_VIEN': 'DVKT - YL sau ra viện',
-            'NGAY_YL_THUOC_NGOAI_KHOANG': 'Thuốc - YL ngoài khoảng',
-            'NGAY_YL_DVKT_NGOAI_KHOANG': 'DVKT - YL ngoài khoảng',
+            'NGAY_TTOAN_SAU_RA_VIEN': 'Ngày TT sau ngày ra viện',
             'NGAY_VAO_SAU_NGAY_RA': 'Ngày vào sau ngày ra',
             'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
+            'KHAM_DUOI_5_PHUT': 'Thời gian khám dưới 5 phút'
         };
 
         // Utility functions
@@ -911,7 +1003,7 @@
             document.getElementById('totalFiles').textContent = globalData.xmlDataContent ? 1 : 0;
             document.getElementById('totalRecords').textContent = stats.totalRecords.toLocaleString('vi-VN');
             document.getElementById('errorCount').textContent = stats.errorRecordsCount.toLocaleString('vi-VN');
-            document.getElementById('totalAmount').textContent = formatCurrency(stats.totalAmount); // totalAmount is now T_BHTT
+            document.getElementById('totalAmount').textContent = formatCurrency(stats.totalAmount);
             
             updateChart('errorTypesChart', 'doughnut', {
                 labels: Object.keys(stats.errorTypes).map(key => ERROR_TYPES[key] || key),
@@ -1082,10 +1174,11 @@
                 try {
                     globalData.xmlDataContent = e.target.result;
                     setTimeout(() => {
-                        const { records, drugs, services } = validateXmlContent(globalData.xmlDataContent);
+                        const { records, drugs, services, xml4Details } = validateXmlContent(globalData.xmlDataContent);
                         globalData.allRecords = records;
                         globalData.allDrugs = drugs;
                         globalData.allServices = services;
+                        globalData.allXml4Details = xml4Details;
                         globalData.filteredRecords = records;
                         
                         displayValidatorResults();
@@ -1112,6 +1205,7 @@
             const records = [];
             const drugs = [];
             const services = [];
+            const xml4Details = new Map();
 
             const hosoElements = xmlDoc.getElementsByTagName('HOSO');
             for (let hoso of hosoElements) {
@@ -1120,78 +1214,95 @@
                     records.push(result.record);
                     drugs.push(...result.drugs);
                     services.push(...result.services);
+                    if(result.xml4Data.length > 0) {
+                        xml4Details.set(result.record.maLk, result.xml4Data);
+                    }
                 }
             }
-            return { records, drugs, services };
+            // Sắp xếp hồ sơ theo NGAY_VAO sau khi đọc xong
+            records.sort((a, b) => a.ngayVao.localeCompare(b.ngayVao));
+            return { records, drugs, services, xml4Details };
         }
         
         function validateSingleHoso(hoso) {
-            let tongHop = null, chiTietThuoc = null, chiTietDvkt = null;
-            hoso.querySelectorAll('FILEHOSO').forEach(fileHoso => {
-                const loai = fileHoso.querySelector('LOAIHOSO')?.textContent.trim();
-                const noiDung = fileHoso.querySelector('NOIDUNGFILE');
-                if (loai === 'XML1') tongHop = noiDung?.querySelector('TONG_HOP');
-                if (loai === 'XML2') chiTietThuoc = noiDung;
-                if (loai === 'XML3') chiTietDvkt = noiDung;
-            });
-            if (!tongHop) return null;
+            // *** SỬA LỖI & CẢI TIẾN LOGIC ĐỌC XML ***
+            const getText = (element, selector) => {
+                if (!element) return '';
+                const node = element.querySelector(selector);
+                if (!node) return '';
+                return (node.textContent || "").trim();
+            };
+            
+            const findFileContent = (type) => {
+                for (const fileNode of hoso.children) {
+                    if (fileNode.nodeName === 'FILEHOSO') {
+                        const loaiHoso = getText(fileNode, 'LOAIHOSO');
+                        if (loaiHoso === type) {
+                            return fileNode.querySelector('NOIDUNGFILE');
+                        }
+                    }
+                }
+                return null;
+            };
 
-            const getText = (element, selector) => element?.querySelector(selector)?.textContent.trim() || '';
-            const maLk = getText(tongHop, 'MA_LK');
+            const tongHopNodeContent = findFileContent('XML1');
+            if (!tongHopNodeContent) return null;
+            const tongHopNode = tongHopNodeContent.querySelector('TONG_HOP');
+            if (!tongHopNode) return null;
 
+            const chiTietThuocNode = findFileContent('XML2');
+            const chiTietDvktNode = findFileContent('XML3');
+            const chiTietCLSNode = findFileContent('XML4');
+
+            const maLk = getText(tongHopNode, 'MA_LK');
+            
             const record = {
                 maLk: maLk, 
-                hoTen: getText(tongHop,'HO_TEN'), 
-                ngayVao: getText(tongHop,'NGAY_VAO'),
-                ngayRa: getText(tongHop,'NGAY_RA'), 
-                maBn: getText(tongHop,'MA_BN'), 
-                maThe: getText(tongHop,'MA_THE_BHYT'),
-                t_tongchi: parseFloat(getText(tongHop, 'T_TONGCHI') || '0'),
-                t_bhtt: parseFloat(getText(tongHop, 'T_BHTT') || '0'),
-                t_bncct: parseFloat(getText(tongHop, 'T_BNCCT') || '0'), 
-                gioiTinh: getText(tongHop,'GIOI_TINH'),
-                ngaySinh: getText(tongHop,'NGAY_SINH'), 
-                chanDoan: getText(tongHop,'CHAN_DOAN_RV'),
-                maKhoa: getText(tongHop,'MA_KHOA'), 
+                hoTen: getText(tongHopNode,'HO_TEN'), 
+                ngayVao: getText(tongHopNode,'NGAY_VAO'),
+                ngayRa: getText(tongHopNode,'NGAY_RA'),
+                ngayTtoan: getText(tongHopNode,'NGAY_TTOAN'), 
+                maBn: getText(tongHopNode,'MA_BN'), 
+                maThe: getText(tongHopNode,'MA_THE_BHYT'),
+                t_tongchi: parseFloat(getText(tongHopNode, 'T_TONGCHI') || '0'),
+                t_bhtt: parseFloat(getText(tongHopNode, 'T_BHTT') || '0'),
+                t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'), 
+                gioiTinh: getText(tongHopNode,'GIOI_TINH'),
+                ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
+                chanDoan: getText(tongHopNode,'CHAN_DOAN_RV'),
+                maKhoa: getText(tongHopNode,'MA_KHOA'),
                 tong_tien_kham: 0,
                 tong_tien_dvkt_khac: 0,
                 has_kham_and_dvkt: false,
+                has_xml4: !!chiTietCLSNode,
                 errors: []
             };
             if (!record.maLk || !record.hoTen || !record.ngayVao || !record.ngayRa) return null;
 
             const drugs = [];
-            if (chiTietThuoc) {
-                chiTietThuoc.querySelectorAll('CHI_TIET_THUOC').forEach(item => {
+            if (chiTietThuocNode) {
+                chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach(item => {
+                    const tenThuoc = getText(item, 'TEN_THUOC');
                     drugs.push({
-                        ma_lk: maLk,
-                        ma_thuoc: getText(item, 'MA_THUOC'),
-                        ten_thuoc: getText(item, 'TEN_THUOC'),
+                        ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
                         so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                         thanh_tien_bh: parseFloat(getText(item, 'THANH_TIEN_BH') || '0')
                     });
                     const ngayYl = getText(item, 'NGAY_YL');
-                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${getText(item, 'TEN_THUOC')}": YL sau ngày ra.` });
-                    if (ngayYl && ngayYl < record.ngayVao) record.errors.push({ type: 'NGAY_YL_THUOC_NGOAI_KHOANG', severity: 'warning', message: `Thuốc "${getText(item, 'TEN_THUOC')}": YL trước ngày vào.` });
+                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
                 });
             }
 
             const services = [];
-            let hasKham = false;
-            let hasOtherDvkt = false;
-            if (chiTietDvkt) {
-                chiTietDvkt.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
+            let hasKham = false, hasOtherDvkt = false;
+            if (chiTietDvktNode) {
+                chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
                     const tenDV = getText(item, 'TEN_DICH_VU');
                     const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
-                    
                     services.push({
-                        ma_lk: maLk,
-                        ma_dich_vu: getText(item, 'MA_DICH_VU'),
-                        ten_dich_vu: tenDV,
-                        so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                        thanh_tien_bh: thanhTienBH
+                        ma_lk: maLk, ma_dich_vu: getText(item, 'MA_DICH_VU'), ten_dich_vu: tenDV,
+                        so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'), thanh_tien_bh: thanhTienBH
                     });
-                    
                     if (tenDV.toLowerCase().includes('khám')) {
                         record.tong_tien_kham += thanhTienBH;
                         hasKham = true;
@@ -1199,17 +1310,47 @@
                         record.tong_tien_dvkt_khac += thanhTienBH;
                         hasOtherDvkt = true;
                     }
-
                     const ngayYl = getText(item, 'NGAY_YL');
-                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL sau ngày ra.` });
-                    if (ngayYl && ngayYl < record.ngayVao) record.errors.push({ type: 'NGAY_YL_DVKT_NGOAI_KHOANG', severity: 'warning', message: `DVKT "${tenDV}": YL trước ngày vào.` });
+                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
                 });
             }
             record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
 
-            if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào sau ngày ra.` });
+            const xml4Data = [];
+            if(chiTietCLSNode) {
+                chiTietCLSNode.querySelectorAll('CHI_TIET_CLS').forEach(cls => {
+                    xml4Data.push({
+                        ma_dich_vu: getText(cls, 'MA_DICH_VU'), ten_chi_so: getText(cls, 'TEN_CHI_SO'),
+                        gia_tri: getText(cls, 'GIA_TRI'), don_vi_do: getText(cls, 'DON_VI_DO'),
+                        ngay_kq: formatDateTimeForDisplay(getText(cls, 'NGAY_KQ'))
+                    });
+                });
+            }
             
-            return { record, drugs, services };
+            // Cập nhật lại has_xml4 chỉ khi có dữ liệu thực sự
+            record.has_xml4 = xml4Data.length > 0;
+
+
+            if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào [${formatDateTimeForDisplay(record.ngayVao)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+            if (record.ngayTtoan && record.ngayTtoan.substring(0, 8) > record.ngayRa.substring(0, 8)) {
+                record.errors.push({ type: 'NGAY_TTOAN_SAU_RA_VIEN', severity: 'warning', message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+            }
+            if (record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
+                const dateVao = new Date(
+                    record.ngayVao.substring(0,4), record.ngayVao.substring(4,6)-1, record.ngayVao.substring(6,8),
+                    record.ngayVao.substring(8,10), record.ngayVao.substring(10,12)
+                );
+                const dateRa = new Date(
+                    record.ngayRa.substring(0,4), record.ngayRa.substring(4,6)-1, record.ngayRa.substring(6,8),
+                    record.ngayRa.substring(8,10), record.ngayRa.substring(10,12)
+                );
+                const diffInMinutes = (dateRa - dateVao) / 60000;
+                if(diffInMinutes >= 0 && diffInMinutes < 5) {
+                    record.errors.push({ type: 'KHAM_DUOI_5_PHUT', severity: 'warning', message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
+                }
+            }
+            
+            return { record, drugs, services, xml4Data };
         }
 
         function displayValidatorResults() {
@@ -1240,7 +1381,8 @@
                 amountTo: parseFloat(document.getElementById('amountToFilter').value),
                 gender: document.getElementById('genderFilter').value,
                 bncct: document.getElementById('bncctFilter').value,
-                dvkt: document.getElementById('dvktFilter').value
+                dvkt: document.getElementById('dvktFilter').value,
+                missingXml4: document.getElementById('missingXml4Filter').value
             };
 
             globalData.filteredRecords = globalData.allRecords.filter(r => {
@@ -1263,6 +1405,8 @@
 
                 if (filters.dvkt === 'yes' && !r.has_kham_and_dvkt) return false;
                 if (filters.dvkt === 'no' && r.has_kham_and_dvkt) return false;
+                
+                if (filters.missingXml4 === 'yes' && !(r.has_kham_and_dvkt && !r.has_xml4)) return false;
 
                 return true;
             });
@@ -1279,6 +1423,11 @@
             tbody.innerHTML = '';
             pageRecords.forEach((record, index) => {
                 const row = tbody.insertRow();
+                row.onclick = () => handleRowClick(record);
+                if(record.has_xml4) {
+                    row.classList.add('has-xml4');
+                }
+
                 let statusClass = 'status-success', statusText = '🟢 Hợp lệ';
                 if (record.errors.length > 0) {
                     const isCritical = record.errors.some(e => e.severity === 'critical');
@@ -1289,10 +1438,13 @@
                 const errorDetails = record.errors.map(e => `<div class="error-detail"><span class="status-badge ${e.severity === 'critical' ? 'status-error' : 'status-warning'}">${ERROR_TYPES[e.type] || e.type}</span> <small>${e.message}</small></div>`).join('');
                 
                 row.innerHTML = `
-                    <td>${startIndex + index + 1}</td>
+                    <td>${record.has_xml4 ? '<span class="xml4-indicator"></span>' : ''}${startIndex + index + 1}</td>
                     <td><strong>${record.hoTen}</strong><br><small>LK: ${record.maLk}</small>${record.maBn ? `<br><small>BN: ${record.maBn}</small>` : ''}</td>
                     <td><strong>Vào:</strong> ${formatDateTimeForDisplay(record.ngayVao)}<br><strong>Ra:</strong> ${formatDateTimeForDisplay(record.ngayRa)}</td>
-                    <td>${formatCurrency(record.t_bhtt)}</td>
+                    <td>
+                        ${formatCurrency(record.t_bhtt)}
+                        ${record.ngayTtoan ? `<br><small style="color: #555;">TT: ${formatDateTimeForDisplay(record.ngayTtoan)}</small>` : ''}
+                    </td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>${errorDetails || '<span class="status-badge status-success">Không có lỗi</span>'}</td>
                 `;
@@ -1396,6 +1548,66 @@
              XLSX.writeFile(wb, 'BaoCao_DVKT_va_Kham.xlsx');
         }
 
+        // ============================= XML4 MODAL =============================
+        function handleRowClick(record) {
+            if (record.has_xml4) {
+                displayXml4Details(record.maLk);
+            } else {
+                alert('Không có dữ liệu CLS (XML4) cho hồ sơ này.');
+            }
+        }
+
+        function displayXml4Details(maLk) {
+            const details = globalData.allXml4Details.get(maLk);
+            if (!details || details.length === 0) {
+                // This case should ideally not be reached due to the check in handleRowClick
+                alert('Không tìm thấy dữ liệu chi tiết CLS (XML4).');
+                return;
+            }
+
+            const modal = document.getElementById('xml4Modal');
+            const title = document.getElementById('xml4ModalTitle');
+            const container = document.getElementById('xml4DetailsTableContainer');
+            
+            const record = globalData.allRecords.find(r => r.maLk === maLk);
+            title.textContent = `Chi tiết CLS - BN: ${record.hoTen} (${record.maLk})`;
+
+            let tableHTML = `<table class="results-table"><thead><tr>
+                <th>STT</th>
+                <th>Mã Dịch Vụ</th>
+                <th>Tên Chỉ Số</th>
+                <th>Giá Trị</th>
+                <th>Đơn Vị</th>
+                <th>Ngày Kết Quả</th>
+            </tr></thead><tbody>`;
+
+            details.forEach((item, index) => {
+                tableHTML += `<tr>
+                    <td>${index + 1}</td>
+                    <td>${item.ma_dich_vu}</td>
+                    <td>${item.ten_chi_so}</td>
+                    <td>${item.gia_tri}</td>
+                    <td>${item.don_vi_do}</td>
+                    <td>${item.ngay_kq}</td>
+                </tr>`;
+            });
+
+            tableHTML += '</tbody></table>';
+            container.innerHTML = tableHTML;
+            modal.style.display = 'block';
+        }
+
+        function closeXml4Modal() {
+            document.getElementById('xml4Modal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('xml4Modal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
         // ============================= COMPARATOR FUNCTIONALITY (UPGRADED) =============================
         function initializeComparator() {
             document.getElementById('comparatorXmlInput').addEventListener('change', (e) => handleFileUpload(e, 'xml'));
@@ -1419,7 +1631,7 @@
             try {
                 // 1. Read XML File
                 const xmlContent = await globalData.xmlFile.text();
-                const { records: xmlRecordsRaw } = validateXmlContent(xmlContent); // Only need records for comparison
+                const { records: xmlRecordsRaw } = validateXmlContent(xmlContent);
                 globalData.xmlRecords.clear();
                 xmlRecordsRaw.forEach(r => globalData.xmlRecords.set(r.maLk, r));
 
@@ -1448,7 +1660,7 @@
                     }
                 });
                 
-                // 3. Compare Data from XML1
+                // 3. Compare Data
                 const allKeys = new Set([...globalData.xmlRecords.keys(), ...globalData.excelRecords.keys()]);
                 globalData.comparisonResults = [];
                 for (const key of allKeys) {
