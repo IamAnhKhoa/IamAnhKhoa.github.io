@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check BHYT Toàn diện (79764) - Anh Khoa IT</title>
+    <title>Dashboard BHYT Toàn diện</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -567,14 +567,14 @@
         #xml4DetailsTableContainer {
             max-height: 60vh;
             overflow-y: auto;
-        }Check BHYT Toàn diện (79764) - Anh Khoa IT
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>🏥 Check BHYT Toàn diện (79764)</h1>
-            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - Anh Khoa IT</p>
+            <h1>🏥 Dashboard BHYT Toàn diện</h1>
+            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh</p>
         </header>
 
         <nav class="tab-nav">
@@ -938,7 +938,9 @@
             'NGAY_TTOAN_SAU_RA_VIEN': 'Ngày TT sau ngày ra viện',
             'NGAY_VAO_SAU_NGAY_RA': 'Ngày vào sau ngày ra',
             'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
-            'KHAM_DUOI_5_PHUT': 'Thời gian khám dưới 5 phút'
+            'KHAM_DUOI_5_PHUT': 'Thời gian khám dưới 5 phút',
+            'NGAY_THYL_TRUOC_VAOVIEN': 'Ngày THYL trước ngày vào viện',
+            'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện'
         };
 
         const staffNameMap = new Map([
@@ -1289,7 +1291,7 @@
         }
         
         function validateSingleHoso(hoso) {
-            const getText = (element, ...selectors) => {
+             const getText = (element, ...selectors) => {
                 if (!element) return '';
                 for (const selector of selectors) {
                     const node = element.querySelector(selector);
@@ -1362,6 +1364,16 @@
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
                     const maBacSi = getText(item, 'MA_BAC_SI');
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
+
+                    const ngayThYl = getText(item, 'NGAY_TH_YL');
+                    if (ngayThYl) {
+                        if (ngayThYl < record.ngayVao) {
+                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]` });
+                        }
+                        if (ngayThYl > record.ngayRa) {
+                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                        }
+                    }
                 });
             }
 
@@ -1388,6 +1400,16 @@
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
                     const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
                     if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
+                    
+                    const ngayThYl = getText(item, 'NGAY_TH_YL');
+                    if (ngayThYl) {
+                        if (ngayThYl < record.ngayVao) {
+                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]` });
+                        }
+                        if (ngayThYl > record.ngayRa) {
+                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                        }
+                    }
                 });
             }
             record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
@@ -1734,14 +1756,13 @@
                 // 2. Read Excel/CSV File
                 globalData.excelRecords.clear();
                 const file = globalData.excelFile;
-                let excelJson;
                 
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const data = e.target.result;
                     const workbook = XLSX.read(data, { type: 'array' });
                     const sheetName = workbook.SheetNames[0];
-                    excelJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { cellDates: true });
+                    const excelJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { cellDates: true });
 
                     excelJson.forEach(row => {
                         const maLkKey = findKey(row, ['MA_LK', 'MÃ LK', 'MÃ LIÊN KẾT']);
@@ -2283,5 +2304,3 @@
         });
 
     </script>
-</body>
-</html>
