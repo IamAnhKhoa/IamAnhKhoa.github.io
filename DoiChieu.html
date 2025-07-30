@@ -413,6 +413,13 @@
         .copyable:hover {
             color: #2c5282;
         }
+        .difference {
+            font-weight: bold;
+            color: #c53030;
+        }
+        .match {
+            color: #155724;
+        }
         
         /* Status Badges */
         .status-badge {
@@ -581,6 +588,7 @@
             <button class="tab-button active" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
             <button class="tab-button" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
             <button class="tab-button" onclick="openTab(event, 'comparatorTab')">🔄 Đối chiếu</button>
+            <button class="tab-button" onclick="openTab(event, 'comparison7980Tab')">📊 Đối chiếu 79/80</button>
             <button class="tab-button" onclick="openTab(event, 'reportsTab')">📈 Báo cáo</button>
         </nav>
 
@@ -679,8 +687,13 @@
                         </div>
                         
                         <div class="filter-group">
-                            <label>Tìm kiếm:</label>
-                            <input type="text" class="filter-input" id="searchBox" placeholder="Tên, mã LK, mã BN...">
+                            <label>Tìm kiếm (Tên, Mã LK, Mã BN):</label>
+                            <input type="text" class="filter-input" id="searchBox" placeholder="Nhập từ khóa...">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Tên Bác sĩ / Người TH:</label>
+                            <input type="text" class="filter-input" id="maBsFilter" placeholder="Nhập tên nhân viên y tế...">
                         </div>
                         
                         <div class="filter-group">
@@ -688,14 +701,6 @@
                             <div class="date-range-group">
                                 <input type="date" class="filter-input" id="dateFromFilter">
                                 <input type="date" class="filter-input" id="dateToFilter">
-                            </div>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label>Khoảng chi phí BHYT TT (VNĐ):</label>
-                            <div class="date-range-group">
-                                <input type="number" class="filter-input" id="amountFromFilter" placeholder="Từ">
-                                <input type="number" class="filter-input" id="amountToFilter" placeholder="Đến">
                             </div>
                         </div>
                         
@@ -856,6 +861,51 @@
                 </div>
             </div>
         </div>
+        
+        <div id="comparison7980Tab" class="tab-content">
+             <div class="upload-area">
+                <h2>📊 Đối chiếu Báo cáo 79/80</h2>
+                <p>Tải lên file XML tổng hợp và file báo cáo 79/80 (Excel hoặc CSV) để đối chiếu tổng chi phí.</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                    <div>
+                        <h3>📄 File XML Tổng hợp</h3>
+                        <div class="file-input-wrapper" style="width: 100%;">
+                            <input type="file" class="file-input" id="comparison7980XmlInput" accept=".xml">
+                            <button class="file-button" style="width: 100%;">Chọn file XML</button>
+                        </div>
+                        <div id="xml7980Status" style="margin-top: 10px; font-size: 0.9em;"></div>
+                    </div>
+                    
+                    <div>
+                        <h3>📈 File Báo cáo 79/80 (Excel/CSV)</h3>
+                        <div class="file-input-wrapper" style="width: 100%;">
+                            <input type="file" class="file-input" id="comparison7980CsvInput" accept=".xlsx,.xls,.csv">
+                            <button class="file-button" style="width: 100%;">Chọn file Excel/CSV</button>
+                        </div>
+                        <div id="csv7980Status" style="margin-top: 10px; font-size: 0.9em;"></div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn btn-primary" id="compare7980Button" disabled>⚡ Đối chiếu ngay</button>
+                </div>
+            </div>
+            
+            <div class="loading" id="comparison7980Loading">
+                <div class="spinner"></div>
+                <p>Đang tính toán và đối chiếu dữ liệu...</p>
+            </div>
+
+            <div class="results-container" id="comparison7980Results" style="display: none;">
+                 <div class="table-header">
+                    <h3>📋 Kết quả Đối chiếu Báo cáo 79/80</h3>
+                </div>
+                 <div style="overflow-x: auto;" id="comparison7980ResultsTableWrapper">
+                     </div>
+            </div>
+        </div>
+
 
         <div id="reportsTab" class="tab-content">
              <div class="advanced-filters">
@@ -929,6 +979,10 @@
             excelRecords: new Map(),
             comparisonResults: [],
             filteredComparisonResults: [],
+            comparison7980: {
+                xmlFile: null,
+                csvFile: null
+            },
             charts: {}
         };
 
@@ -1336,7 +1390,16 @@
                 maThe: getText(tongHopNode,'MA_THE_BHYT'),
                 t_tongchi: parseFloat(getText(tongHopNode, 'T_TONGCHI') || '0'),
                 t_bhtt: parseFloat(getText(tongHopNode, 'T_BHTT') || '0'),
-                t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'), 
+                t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'),
+                t_thuoc: parseFloat(getText(tongHopNode, 'T_THUOC') || '0'),
+                t_vtyt: parseFloat(getText(tongHopNode, 'T_VTYT') || '0'),
+                t_xn: parseFloat(getText(tongHopNode, 'T_XN') || '0'),
+                t_cdha: parseFloat(getText(tongHopNode, 'T_CDHA') || '0'),
+                t_kham: parseFloat(getText(tongHopNode, 'T_KHAM') || '0'),
+                t_giuong: parseFloat(getText(tongHopNode, 'T_GIUONG') || '0'),
+                t_mau: parseFloat(getText(tongHopNode, 'T_MAU') || '0'),
+                t_pttt: parseFloat(getText(tongHopNode, 'T_PTTT') || '0'),
+                t_vanchuyen: parseFloat(getText(tongHopNode, 'T_VANCHUYEN') || '0'),
                 gioiTinh: getText(tongHopNode,'GIOI_TINH'),
                 ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
                 chanDoan: getText(tongHopNode,'CHAN_DOAN_RV', 'MA_BENH'),
@@ -1384,8 +1447,12 @@
                     const tenDV = getText(item, 'TEN_DICH_VU');
                     const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
                     services.push({
-                        ma_lk: maLk, ma_dich_vu: getText(item, 'MA_DICH_VU'), ten_dich_vu: tenDV,
-                        so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'), thanh_tien_bh: thanhTienBH
+                        ma_lk: maLk,
+                        ma_dich_vu: getText(item, 'MA_DICH_VU'),
+                        ten_dich_vu: tenDV,
+                        ma_nhom: getText(item, 'MA_NHOM'),
+                        so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
+                        thanh_tien_bh: thanhTienBH
                     });
                     if (tenDV.toLowerCase().includes('khám')) {
                         record.tong_tien_kham += thanhTienBH;
@@ -1469,10 +1536,9 @@
                 errorType: document.getElementById('errorTypeFilter').value,
                 severity: document.getElementById('severityFilter').value,
                 searchText: document.getElementById('searchBox').value.toLowerCase(),
+                staffName: document.getElementById('maBsFilter').value.toLowerCase().trim(),
                 dateFrom: document.getElementById('dateFromFilter').value.replace(/-/g, ''),
                 dateTo: document.getElementById('dateToFilter').value.replace(/-/g, ''),
-                amountFrom: parseFloat(document.getElementById('amountFromFilter').value),
-                amountTo: parseFloat(document.getElementById('amountToFilter').value),
                 gender: document.getElementById('genderFilter').value,
                 bncct: document.getElementById('bncctFilter').value,
                 dvkt: document.getElementById('dvktFilter').value,
@@ -1487,11 +1553,19 @@
                     if (filters.severity === 'warning' && (!r.errors.some(e => e.severity === 'warning') || r.errors.some(e => e.severity === 'critical'))) return false;
                 }
                 if (filters.searchText && !`${r.hoTen} ${r.maLk} ${r.maBn}`.toLowerCase().includes(filters.searchText)) return false;
+                
+                if (filters.staffName) {
+                    const staffCodes = [...r.bac_si_chi_dinh, ...r.nguoi_thuc_hien];
+                    const hasMatchingStaff = staffCodes.some(code => {
+                        const name = staffNameMap.get(code);
+                        return name && name.toLowerCase().includes(filters.staffName);
+                    });
+                    if (!hasMatchingStaff) return false;
+                }
+
                 const recordDate = String(r.ngayVao).substring(0, 8);
                 if (filters.dateFrom && recordDate < filters.dateFrom) return false;
                 if (filters.dateTo && recordDate > filters.dateTo) return false;
-                if (!isNaN(filters.amountFrom) && r.t_bhtt < filters.amountFrom) return false;
-                if (!isNaN(filters.amountTo) && r.t_bhtt > filters.amountTo) return false;
                 if (filters.gender && r.gioiTinh !== filters.gender) return false;
                 
                 if (filters.bncct === 'yes' && (!r.t_bncct || r.t_bncct <= 0)) return false;
@@ -1974,6 +2048,157 @@
             XLSX.writeFile(wb, "BaoCaoDoiChieu_BHYT.xlsx");
         }
 
+        // ============================= 79/80 COMPARISON FUNCTIONALITY =============================
+        function initialize7980Comparator() {
+            document.getElementById('comparison7980XmlInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                globalData.comparison7980.xmlFile = file;
+                document.getElementById('xml7980Status').textContent = `File: ${file.name}`;
+                document.getElementById('compare7980Button').disabled = !(globalData.comparison7980.xmlFile && globalData.comparison7980.csvFile);
+            });
+             document.getElementById('comparison7980CsvInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                globalData.comparison7980.csvFile = file;
+                document.getElementById('csv7980Status').textContent = `File: ${file.name}`;
+                document.getElementById('compare7980Button').disabled = !(globalData.comparison7980.xmlFile && globalData.comparison7980.csvFile);
+            });
+            document.getElementById('compare7980Button').addEventListener('click', perform7980Comparison);
+        }
+
+        async function perform7980Comparison() {
+            if (!globalData.comparison7980.xmlFile || !globalData.comparison7980.csvFile) {
+                alert('Vui lòng tải lên cả 2 file XML và file Báo cáo 79/80.');
+                return;
+            }
+            showLoading('comparison7980Loading');
+            
+            try {
+                // 1. Process XML File
+                const xmlContent = await globalData.comparison7980.xmlFile.text();
+                const { records, drugs, services } = validateXmlContent(xmlContent);
+                
+                // Calculate totals from XML1 records for fields not manually calculated
+                const otherTotals = records.reduce((totals, record) => {
+                    totals.T_VTYT = (totals.T_VTYT || 0) + (record.t_vtyt || 0);
+                    totals.T_CDHA = (totals.T_CDHA || 0) + (record.t_cdha || 0);
+                    totals.T_GIUONG = (totals.T_GIUONG || 0) + (record.t_giuong || 0);
+                    totals.T_MAU = (totals.T_MAU || 0) + (record.t_mau || 0);
+                    totals.T_PTTT = (totals.T_PTTT || 0) + (record.t_pttt || 0);
+                    totals.T_VANCHUYEN = (totals.T_VANCHUYEN || 0) + (record.t_vanchuyen || 0);
+                    return totals;
+                }, {});
+
+                // Rule 1: T_BHTT from XML1
+                const total_T_BHTT = records.reduce((sum, record) => sum + (record.t_bhtt || 0), 0);
+                // Rule 2: Tiền thuốc from XML2
+                const total_T_THUOC = drugs.reduce((sum, drug) => sum + (drug.thanh_tien_bh || 0), 0);
+                // Rule 3: Tiền khám from XML3
+                const total_T_KHAM = services
+                    .filter(s => s.ten_dich_vu && s.ten_dich_vu.toLowerCase().includes('khám'))
+                    .reduce((sum, s) => sum + (s.thanh_tien_bh || 0), 0);
+                // New Rule: Tiền xét nghiệm from XML3 based on MA_NHOM = 1
+                const total_T_XN = services
+                    .filter(s => s.ma_nhom === '1')
+                    .reduce((sum, s) => sum + (s.thanh_tien_bh || 0), 0);
+                
+                const finalXmlTotals = {
+                    ...otherTotals,
+                    T_BHTT: total_T_BHTT,
+                    T_THUOC: total_T_THUOC,
+                    T_KHAM: total_T_KHAM,
+                    T_XN: total_T_XN,
+                };
+
+
+                // 2. Process CSV File
+                const csvFile = globalData.comparison7980.csvFile;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const csvJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                    
+                    const csvTotals = {};
+                    if(csvJson.length > 0){
+                        const headerRow = csvJson[0];
+                        for(const key in headerRow){
+                             const isNumericColumn = csvJson.every(row => typeof row[key] === 'number' || !isNaN(parseFloat(row[key])));
+                             if(isNumericColumn){
+                                 csvTotals[key] = csvJson.reduce((sum, row) => sum + (parseFloat(row[key]) || 0), 0);
+                             }
+                        }
+                    }
+                    
+                    // 3. Compare and Display
+                    display7980Results(finalXmlTotals, csvTotals);
+                    hideLoading('comparison7980Loading');
+                    document.getElementById('comparison7980Results').style.display = 'block';
+                };
+                reader.readAsArrayBuffer(csvFile);
+
+            } catch (error) {
+                 hideLoading('comparison7980Loading');
+                 console.error("79/80 Comparison Error:", error);
+                 alert(`Lỗi đối chiếu 79/80: ${error.message}`);
+            }
+        }
+        
+        function display7980Results(xmlTotals, csvTotals) {
+             const wrapper = document.getElementById('comparison7980ResultsTableWrapper');
+             
+             const comparisonMap = {
+                 'T_BHTT': { name: 'Tổng chi BHYT thanh toán', csvKeys: ['thanh_tien', 't_bhtt', 'Tổng chi BHYT thanh toán'] },
+                 'T_THUOC': { name: 'Tiền thuốc', csvKeys: ['t_thuoc', 'Tiền thuốc'] },
+                 'T_KHAM': { name: 'Tiền khám', csvKeys: ['t_kham', 'Tiền khám'] },
+                 'T_XN': { name: 'Tiền xét nghiệm', csvKeys: ['t_xn', 'Tiền xét nghiệm'] },
+                 'T_CDHA': { name: 'Tiền CĐHA, TDCN', csvKeys: ['t_cdha'] },
+                 'T_PTTT': { name: 'Tiền Phẫu thuật, thủ thuật', csvKeys: ['t_pttt'] },
+                 'T_VTYT': { name: 'Tiền vật tư y tế', csvKeys: ['t_vtyt'] },
+                 'T_GIUONG': { name: 'Tiền giường', csvKeys: ['t_giuong'] },
+                 'T_MAU': { name: 'Tiền máu', csvKeys: ['t_mau'] },
+                 'T_VANCHUYEN': { name: 'Tiền vận chuyển', csvKeys: ['t_vanchuyen'] },
+             };
+
+             let tableHTML = `<table class="results-table"><thead><tr>
+                <th>Hạng mục</th>
+                <th>Tổng tiền từ XML</th>
+                <th>Tổng tiền từ Báo cáo 79/80</th>
+                <th>Chênh lệch</th>
+            </tr></thead><tbody>`;
+
+             for (const xmlKey in comparisonMap) {
+                 const config = comparisonMap[xmlKey];
+                 const xmlValue = xmlTotals[xmlKey] || 0;
+                 let csvValue = 0;
+                 
+                 for(const csvKey of config.csvKeys){
+                     const foundKey = findKey(csvTotals, [csvKey]);
+                     if(foundKey) {
+                         csvValue = csvTotals[foundKey];
+                         break;
+                     }
+                 }
+
+                 const difference = xmlValue - csvValue;
+                 const diffClass = Math.abs(difference) > 1 ? 'difference' : 'match';
+
+                 tableHTML += `
+                    <tr>
+                        <td><strong>${config.name}</strong></td>
+                        <td>${formatCurrency(xmlValue)}</td>
+                        <td>${formatCurrency(csvValue)}</td>
+                        <td class="${diffClass}">${formatCurrency(difference)}</td>
+                    </tr>
+                 `;
+             }
+
+             tableHTML += `</tbody></table>`;
+             wrapper.innerHTML = tableHTML;
+        }
+
         // ============================= REPORTS TAB =============================
         function generateReport() {
             if (globalData.allRecords.length === 0) {
@@ -2150,47 +2375,6 @@
             XLSX.writeFile(wb, fileName);
         }
 
-        function exportDashboardToExcel() {
-            if (globalData.allRecords.length === 0) {
-                alert('Chưa có dữ liệu để xuất dashboard. Vui lòng xử lý file XML trước.');
-                return;
-            }
-            const wb = XLSX.utils.book_new();
-
-            const stats = calculateGlobalStats(globalData.allRecords);
-            const summaryData = [
-                ['Thống kê tổng quan Dashboard'],
-                ['Tổng số hồ sơ', stats.totalRecords],
-                ['Tổng số hồ sơ lỗi', stats.errorRecordsCount],
-                ['Tổng chi phí BHYT TT', stats.totalAmount],
-                ['Tổng chi phí BN CCT', stats.totalBncct]
-            ];
-            const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-            XLSX.utils.book_append_sheet(wb, wsSummary, 'ThongKeTongQuan');
-
-            const drugCosts = {};
-            globalData.allDrugs.forEach(drug => {
-                const key = `${drug.ten_thuoc} (${drug.ma_thuoc})`;
-                drugCosts[key] = (drugCosts[key] || 0) + drug.thanh_tien_bh;
-            });
-            const topDrugs = Object.entries(drugCosts).sort(([,a],[,b]) => b-a).slice(0, 10);
-            const drugsData = topDrugs.map(([name, cost]) => ({ 'Tên thuốc': name, 'Tổng chi phí BHYT': cost }));
-            const wsDrugs = XLSX.utils.json_to_sheet(drugsData);
-            XLSX.utils.book_append_sheet(wb, wsDrugs, 'Top_10_Thuoc');
-            
-            const serviceCosts = {};
-            globalData.allServices.forEach(service => {
-                const key = `${service.ten_dich_vu} (${service.ma_dich_vu})`;
-                serviceCosts[key] = (serviceCosts[key] || 0) + service.thanh_tien_bh;
-            });
-            const topServices = Object.entries(serviceCosts).sort(([,a],[,b]) => b-a).slice(0, 10);
-            const servicesData = topServices.map(([name, cost]) => ({ 'Tên DVKT': name, 'Tổng chi phí BHYT': cost }));
-            const wsServices = XLSX.utils.json_to_sheet(servicesData);
-            XLSX.utils.book_append_sheet(wb, wsServices, 'Top_10_DVKT');
-            
-            XLSX.writeFile(wb, 'Dashboard_BHYT_Summary.xlsx');
-        }
-
         function exportDoctorAnalysis() {
             if (globalData.allRecords.length === 0) {
                 alert('Chưa có dữ liệu để phân tích. Vui lòng xử lý file XML trước.');
@@ -2277,6 +2461,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializeValidator();
             initializeComparator();
+            initialize7980Comparator();
             
             document.querySelectorAll('.filter-content').forEach(el => {
                 const parent = el.parentElement;
