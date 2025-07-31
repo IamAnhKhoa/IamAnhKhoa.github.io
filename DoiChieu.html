@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard BHYT Toàn diện</title>
+    <title>Check BHYT Toàn diện (79764)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -580,8 +580,8 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>🏥 Dashboard BHYT Toàn diện</h1>
-            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh</p>
+            <h1>🏥 Check BHYT Toàn diện (79764)</h1>
+            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - Anh Khoa IT</p>
         </header>
 
         <nav class="tab-nav">
@@ -863,6 +863,26 @@
         </div>
         
         <div id="denialTab" class="tab-content">
+             <div class="advanced-filters">
+                <div class="filter-header">
+                    <h3>🔍 Lọc theo ngày vào viện</h3>
+                </div>
+                <div class="filter-grid" style="grid-template-columns: 1fr 1fr;">
+                     <div class="filter-group">
+                        <label>Từ ngày:</label>
+                        <input type="date" class="filter-input" id="denialDateFrom">
+                    </div>
+                    <div class="filter-group">
+                        <label>Đến ngày:</label>
+                        <input type="date" class="filter-input" id="denialDateTo">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary" onclick="updateDenialProjectionTab()">🔍 Áp dụng</button>
+                    <button class="btn btn-warning" onclick="clearDenialFilters()">🔄 Xóa Lọc</button>
+                </div>
+            </div>
+
              <div class="stats-overview" id="denialStats">
                 <div class="stat-card">
                     <h3 id="totalDeniedAmount">0</h3>
@@ -1887,8 +1907,7 @@
                                 result.details.push(`BN CCT: XML=${formatCurrency(t_bncct_xml)} vs Excel=${formatCurrency(t_bncct_excel)}`);
                             }
 
-                            // Date Comparisons
-                         // Date Comparisons (Comparing the final display format for WYSIWYG results)
+                            // Date Comparisons (Comparing the final display format for WYSIWYG results)
                             const displayVaoXML = flexibleFormatDate(xmlRec.ngayVao);
                             const excelVaoKey = findKey(excelRec, ['NGAY_VAO', 'NGÀY VÀO']);
                             const displayVaoExcel = flexibleFormatDate(excelRec[excelVaoKey]);
@@ -2102,26 +2121,50 @@
                 return;
             }
 
+            const dateFrom = document.getElementById('denialDateFrom').value.replace(/-/g, '');
+            const dateTo = document.getElementById('denialDateTo').value.replace(/-/g, '');
+
+            const filteredRecords = globalData.allRecords.filter(r => {
+                if (!dateFrom && !dateTo) return true;
+                const recordDate = String(r.ngayVao).substring(0, 8);
+                if (dateFrom && recordDate < dateFrom) return false;
+                if (dateTo && recordDate > dateTo) return false;
+                return true;
+            });
+
             let totalDeniedAmount = 0;
             const recordsWithErrors = new Set();
             let totalDeniedItemCount = 0;
             const deniedItems = {};
 
-            globalData.allRecords.forEach(record => {
+            filteredRecords.forEach(record => {
                 const itemErrors = record.errors.filter(e => e.cost > 0 && e.itemName);
-                if (itemErrors.length > 0) {
-                    recordsWithErrors.add(record.maLk);
-                    itemErrors.forEach(error => {
-                        totalDeniedAmount += error.cost;
-                        totalDeniedItemCount++;
-                        if (!deniedItems[error.itemName]) {
-                            deniedItems[error.itemName] = { count: 0, totalCost: 0, errorTypes: new Set() };
-                        }
-                        deniedItems[error.itemName].count++;
-                        deniedItems[error.itemName].totalCost += error.cost;
-                        deniedItems[error.itemName].errorTypes.add(ERROR_TYPES[error.type] || error.type);
-                    });
+                if (itemErrors.length === 0) {
+                    return; // Bỏ qua hồ sơ không có lỗi liên quan đến chi phí
                 }
+
+                recordsWithErrors.add(record.maLk);
+                const countedItemsInRecord = new Set(); // Theo dõi các mục đã tính trong hồ sơ này
+
+                itemErrors.forEach(error => {
+                    const itemKey = error.itemName;
+
+                    // Luôn tổng hợp thông tin cho bảng chi tiết
+                    if (!deniedItems[itemKey]) {
+                        deniedItems[itemKey] = { count: 0, totalCost: 0, errorTypes: new Set() };
+                    }
+                    deniedItems[itemKey].count++;
+                    deniedItems[itemKey].errorTypes.add(ERROR_TYPES[error.type] || error.type);
+
+                    // Chỉ cộng dồn chi phí và cập nhật bảng nếu mục này chưa được tính trong hồ sơ này
+                    if (!countedItemsInRecord.has(itemKey)) {
+                        totalDeniedAmount += error.cost;
+                        deniedItems[itemKey].totalCost += error.cost;
+                        countedItemsInRecord.add(itemKey);
+                    }
+                });
+                
+                totalDeniedItemCount += countedItemsInRecord.size;
             });
 
             document.getElementById('totalDeniedAmount').textContent = formatCurrency(totalDeniedAmount);
@@ -2143,7 +2186,7 @@
             </tr></thead><tbody>`;
 
             if (tableData.length === 0) {
-                 tableHTML += `<tr><td colspan="5" style="text-align:center;">Không tìm thấy lỗi nào liên quan đến chi phí thuốc/DVKT.</td></tr>`;
+                 tableHTML += `<tr><td colspan="5" style="text-align:center; padding: 20px; color: #155724; font-weight: bold;">🎉 Chúc mừng! Không tìm thấy mục nào bị xuất toán trong khoảng thời gian đã chọn.</td></tr>`;
             } else {
                 tableData.forEach((item, index) => {
                     tableHTML += `
@@ -2161,6 +2204,13 @@
             tableHTML += '</tbody></table>';
             document.getElementById('denialResultsTableWrapper').innerHTML = tableHTML;
         }
+
+        function clearDenialFilters() {
+            document.getElementById('denialDateFrom').value = '';
+            document.getElementById('denialDateTo').value = '';
+            updateDenialProjectionTab();
+        }
+
 
         // ============================= REPORTS TAB =============================
         function generateReport() {
