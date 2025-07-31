@@ -882,7 +882,7 @@
                     <h3>📋 Chi tiết các mục dự kiến xuất toán</h3>
                 </div>
                  <div style="overflow-x: auto; max-height: 600px;" id="denialResultsTableWrapper">
-                     </div>
+                       </div>
             </div>
         </div>
 
@@ -1022,7 +1022,6 @@
         const flexibleFormatDate = (dateInput) => {
             if (!dateInput) return 'N/A';
 
-            // If it's a JavaScript Date object (from Excel with cellDates: true)
             if (dateInput instanceof Date) {
                 const day = String(dateInput.getDate()).padStart(2, '0');
                 const month = String(dateInput.getMonth() + 1).padStart(2, '0');
@@ -1035,13 +1034,51 @@
                 return `${day}/${month}/${year} ${hours}:${minutes}`;
             }
             
-            // If it's the BHYT string format
             if (typeof dateInput === 'string' && /^\d{8,}/.test(dateInput)) {
                 return formatDateTimeForDisplay(dateInput);
             }
 
-            // Fallback for other string formats or types
             return dateInput.toString();
+        };
+
+        const normalizeDate = (dateInput) => {
+            if (!dateInput) return null;
+            if (dateInput instanceof Date) {
+                const year = dateInput.getFullYear();
+                const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+                const day = String(dateInput.getDate()).padStart(2, '0');
+                return `${year}${month}${day}`;
+            }
+            if (typeof dateInput === 'string' && dateInput.length >= 8) {
+                return dateInput.substring(0, 8);
+            }
+            return null;
+        };
+        
+        const normalizeDateTime = (dateInput) => {
+            if (!dateInput) return null;
+
+            // Xử lý đối tượng Date từ file Excel
+            if (dateInput instanceof Date) {
+                const year = dateInput.getFullYear();
+                const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+                const day = String(dateInput.getDate()).padStart(2, '0');
+                const hours = String(dateInput.getHours()).padStart(2, '0');
+                const minutes = String(dateInput.getMinutes()).padStart(2, '0');
+                return `${year}${month}${day}${hours}${minutes}`;
+            }
+
+            // Xử lý chuỗi từ file XML
+            if (typeof dateInput === 'string') {
+                const s = dateInput.trim();
+                if (s.length >= 12) {
+                    return s.substring(0, 12); // Lấy YYYYMMDDHHmm
+                }
+                if (s.length >= 8) {
+                    return s.substring(0, 8); // Fallback nếu không có giờ phút
+                }
+            }
+            return null;
         };
 
         const formatCurrency = (amount) => {
@@ -1079,14 +1116,14 @@
             if (filterContent.style.display === 'none' || !filterContent.style.display) {
                 filterContent.style.display = 'grid';
                  if(document.querySelector(`#${filterContainerId} .filter-actions`)) {
-                    document.querySelector(`#${filterContainerId} .filter-actions`).style.display = 'flex';
-                }
+                     document.querySelector(`#${filterContainerId} .filter-actions`).style.display = 'flex';
+                 }
                 toggleButton.textContent = 'Thu gọn';
             } else {
                 filterContent.style.display = 'none';
                  if(document.querySelector(`#${filterContainerId} .filter-actions`)) {
-                    document.querySelector(`#${filterContainerId} .filter-actions`).style.display = 'none';
-                }
+                     document.querySelector(`#${filterContainerId} .filter-actions`).style.display = 'none';
+                 }
                 toggleButton.textContent = 'Mở rộng';
             }
         }
@@ -1287,7 +1324,6 @@
                         document.getElementById('validatorResults').style.display = 'block';
                         
                         updateDashboard();
-                        // Also update the new denial tab in the background
                         updateDenialProjectionTab();
                     }, 100);
                 } catch (error) {
@@ -1326,28 +1362,28 @@
         
         function validateSingleHoso(hoso) {
              const getText = (element, ...selectors) => {
-                if (!element) return '';
-                for (const selector of selectors) {
-                    const node = element.querySelector(selector);
-                    if (node && node.textContent) {
-                        const text = node.textContent.trim();
-                        if (text) return text;
-                    }
-                }
-                return '';
-            };
+                 if (!element) return '';
+                 for (const selector of selectors) {
+                     const node = element.querySelector(selector);
+                     if (node && node.textContent) {
+                         const text = node.textContent.trim();
+                         if (text) return text;
+                     }
+                 }
+                 return '';
+             };
             
-            const findFileContent = (type) => {
-                for (const fileNode of hoso.children) {
-                    if (fileNode.nodeName === 'FILEHOSO') {
-                        const loaiHoso = getText(fileNode, 'LOAIHOSO');
-                        if (loaiHoso === type) {
-                            return fileNode.querySelector('NOIDUNGFILE');
-                        }
-                    }
-                }
-                return null;
-            };
+             const findFileContent = (type) => {
+                 for (const fileNode of hoso.children) {
+                     if (fileNode.nodeName === 'FILEHOSO') {
+                         const loaiHoso = getText(fileNode, 'LOAIHOSO');
+                         if (loaiHoso === type) {
+                             return fileNode.querySelector('NOIDUNGFILE');
+                         }
+                     }
+                 }
+                 return null;
+             };
 
             const tongHopNodeContent = findFileContent('XML1');
             if (!tongHopNodeContent) return null;
@@ -1836,6 +1872,7 @@
                         let result = { key, xmlRec, excelRec, status: 'mismatch', details: [] };
                         
                         if (xmlRec && excelRec) {
+                            // Cost Comparisons
                             const t_bhtt_xml = xmlRec.t_bhtt || 0;
                             const t_bhtt_excel_key = findKey(excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']);
                             const t_bhtt_excel = t_bhtt_excel_key ? (parseFloat(excelRec[t_bhtt_excel_key]) || 0) : 0;
@@ -1846,8 +1883,34 @@
                             const t_bncct_xml = xmlRec.t_bncct || 0;
                             const t_bncct_excel_key = findKey(excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']);
                             const t_bncct_excel = t_bncct_excel_key ? (parseFloat(excelRec[t_bncct_excel_key]) || 0) : 0;
-                             if(Math.abs(t_bncct_xml - t_bncct_excel) > 1) {
+                            if(Math.abs(t_bncct_xml - t_bncct_excel) > 1) {
                                 result.details.push(`BN CCT: XML=${formatCurrency(t_bncct_xml)} vs Excel=${formatCurrency(t_bncct_excel)}`);
+                            }
+
+                            // Date Comparisons
+                         // Date Comparisons (Comparing the final display format for WYSIWYG results)
+                            const displayVaoXML = flexibleFormatDate(xmlRec.ngayVao);
+                            const excelVaoKey = findKey(excelRec, ['NGAY_VAO', 'NGÀY VÀO']);
+                            const displayVaoExcel = flexibleFormatDate(excelRec[excelVaoKey]);
+
+                            if (displayVaoXML !== 'N/A' && displayVaoExcel !== 'N/A' && displayVaoXML !== displayVaoExcel) {
+                                result.details.push(`Ngày vào: XML=${displayVaoXML} vs Excel=${displayVaoExcel}`);
+                            }
+
+                            const displayRaXML = flexibleFormatDate(xmlRec.ngayRa);
+                            const excelRaKey = findKey(excelRec, ['NGAY_RA', 'NGÀY RA']);
+                            const displayRaExcel = flexibleFormatDate(excelRec[excelRaKey]);
+
+                            if (displayRaXML !== 'N/A' && displayRaExcel !== 'N/A' && displayRaXML !== displayRaExcel) {
+                                result.details.push(`Ngày ra: XML=${displayRaXML} vs Excel=${displayRaExcel}`);
+                            }
+
+                            // ICD Code Comparison (Prefix check)
+                            const xmlChanDoan = (xmlRec.chanDoan || '').trim().toUpperCase();
+                            const excelChanDoanKey = findKey(excelRec, ['CHAN_DOAN_RV', 'CHẨN ĐOÁN', 'MA_BENH', 'MÃ BỆNH']);
+                            const excelChanDoan = excelChanDoanKey ? (String(excelRec[excelChanDoanKey]) || '').trim().toUpperCase() : '';
+                            if (xmlChanDoan && excelChanDoan && !xmlChanDoan.startsWith(excelChanDoan)) {
+                                result.details.push(`Chẩn đoán: XML=${xmlChanDoan} vs Excel=${excelChanDoan}`);
                             }
                             
                             result.status = result.details.length === 0 ? 'match' : 'mismatch';
@@ -1959,17 +2022,21 @@
                             <td><span class="status-badge ${statusMap[r.status].class}">${statusMap[r.status].text}</span></td>
                             <td>
                                 <strong>${xmlName}</strong><br>
-                                <span ${isMismatch ? 'style="color:red;"':''}>BHYT TT: ${xml_t_bhtt}</span><br>
-                                <span ${isMismatch ? 'style="color:red;"':''}>BN CCT: ${xml_t_bncct}</span><br>
-                                <small>Vào: ${xml_ngay_vao} | Ra: ${xml_ngay_ra}</small><br>
-                                <small>TT: ${xml_ngay_ttoan} | CĐ: ${xml_chan_doan}</small>
+                                <span ${isMismatch && r.details.some(d => d.startsWith('BHYT')) ? 'style="color:red;"':''}>BHYT TT: ${xml_t_bhtt}</span><br>
+                                <span ${isMismatch && r.details.some(d => d.startsWith('BN CCT')) ? 'style="color:red;"':''}>BN CCT: ${xml_t_bncct}</span><br>
+                                <small ${isMismatch && r.details.some(d => d.startsWith('Ngày vào')) ? 'style="color:red;"':''}>Vào: ${xml_ngay_vao}</small> | 
+                                <small ${isMismatch && r.details.some(d => d.startsWith('Ngày ra')) ? 'style="color:red;"':''}>Ra: ${xml_ngay_ra}</small><br>
+                                <small>TT: ${xml_ngay_ttoan} | </small>
+                                <small ${isMismatch && r.details.some(d => d.startsWith('Chẩn đoán')) ? 'style="color:red;"':''}>CĐ: ${xml_chan_doan}</small>
                             </td>
                             <td>
                                 <strong>${excelName}</strong><br>
-                                <span ${isMismatch ? 'style="color:red;"':''}>BHYT TT: ${excel_t_bhtt}</span><br>
-                                <span ${isMismatch ? 'style="color:red;"':''}>BN CCT: ${excel_t_bncct}</span><br>
-                                <small>Vào: ${excel_ngay_vao} | Ra: ${excel_ngay_ra}</small><br>
-                                <small>TT: ${excel_ngay_ttoan} | CĐ: ${excel_chan_doan}</small>
+                                <span ${isMismatch && r.details.some(d => d.startsWith('BHYT')) ? 'style="color:red;"':''}>BHYT TT: ${excel_t_bhtt}</span><br>
+                                <span ${isMismatch && r.details.some(d => d.startsWith('BN CCT')) ? 'style="color:red;"':''}>BN CCT: ${excel_t_bncct}</span><br>
+                                <small ${isMismatch && r.details.some(d => d.startsWith('Ngày vào')) ? 'style="color:red;"':''}>Vào: ${excel_ngay_vao}</small> | 
+                                <small ${isMismatch && r.details.some(d => d.startsWith('Ngày ra')) ? 'style="color:red;"':''}>Ra: ${excel_ngay_ra}</small><br>
+                                <small>TT: ${excel_ngay_ttoan} | </small>
+                                <small ${isMismatch && r.details.some(d => d.startsWith('Chẩn đoán')) ? 'style="color:red;"':''}>CĐ: ${excel_chan_doan}</small>
                             </td>
                             <td>${detailsHtml}</td>
                         </tr>
@@ -1993,7 +2060,6 @@
             if (globalData.filteredComparisonResults.length === 0) return alert('Không có dữ liệu để xuất!');
             
             const data = globalData.filteredComparisonResults.map(r => {
-                // Find keys for Excel data
                 const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN']) : null;
                 const excelBHTTKey = r.excelRec ? findKey(r.excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']) : null;
                 const excelBNCCTKey = r.excelRec ? findKey(r.excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']) : null;
@@ -2039,7 +2105,7 @@
             let totalDeniedAmount = 0;
             const recordsWithErrors = new Set();
             let totalDeniedItemCount = 0;
-            const deniedItems = {}; // { itemName: { count: 1, totalCost: 10000, errorTypes: Set('...') } }
+            const deniedItems = {};
 
             globalData.allRecords.forEach(record => {
                 const itemErrors = record.errors.filter(e => e.cost > 0 && e.itemName);
@@ -2058,19 +2124,16 @@
                 }
             });
 
-            // Update summary cards
             document.getElementById('totalDeniedAmount').textContent = formatCurrency(totalDeniedAmount);
             document.getElementById('recordsWithDenial').textContent = recordsWithErrors.size.toLocaleString('vi-VN');
             document.getElementById('totalDeniedItems').textContent = totalDeniedItemCount.toLocaleString('vi-VN');
 
-            // Create and sort table data
             const tableData = Object.entries(deniedItems).map(([name, data]) => ({
                 name,
                 ...data
             }));
             tableData.sort((a, b) => b.totalCost - a.totalCost);
 
-            // Render table
             let tableHTML = `<table class="results-table"><thead><tr>
                 <th>STT</th>
                 <th>Tên Thuốc / Dịch vụ Kỹ thuật</th>
@@ -2098,7 +2161,6 @@
             tableHTML += '</tbody></table>';
             document.getElementById('denialResultsTableWrapper').innerHTML = tableHTML;
         }
-
 
         // ============================= REPORTS TAB =============================
         function generateReport() {
@@ -2174,9 +2236,9 @@
 
                      const costByDay = {};
                      filteredForReport.forEach(r => {
-                          const day = String(r.ngayVao).substring(0, 8);
-                          costByDay[day] = (costByDay[day] || 0) + r.t_bhtt;
-                     });
+                         const day = String(r.ngayVao).substring(0, 8);
+                         costByDay[day] = (costByDay[day] || 0) + r.t_bhtt;
+                    });
                     const sortedCostByDay = Object.entries(costByDay).sort(([a], [b]) => a.localeCompare(b));
                     chart2Type = 'bar';
                     chart2Data = {
@@ -2202,12 +2264,12 @@
                         name: name || 'Không xác định',
                         cost: costByDept[name] || 0
                     }));
-                     chart2Type = 'bar';
-                     chart2Data = {
+                      chart2Type = 'bar';
+                      chart2Data = {
                          labels: sortedCostDepts.map(d => d.name),
                         datasets: [{ label: 'Tổng Chi Phí BHYT TT (VNĐ)', data: sortedCostDepts.map(d => d.cost), backgroundColor: 'rgba(153, 102, 255, 0.8)' }]
-                     };
-                     chart2Title = 'Top 15 Khoa Theo Tổng Chi Phí BHYT TT';
+                      };
+                      chart2Title = 'Top 15 Khoa Theo Tổng Chi Phí BHYT TT';
                     break;
             }
             updateChart('reportChart1', chart1Type, chart1Data, chart1Title);
