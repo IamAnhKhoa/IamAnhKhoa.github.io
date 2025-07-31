@@ -588,7 +588,7 @@
             <button class="tab-button active" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
             <button class="tab-button" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
             <button class="tab-button" onclick="openTab(event, 'comparatorTab')">🔄 Đối chiếu</button>
-            <button class="tab-button" onclick="openTab(event, 'comparison7980Tab')">📊 Đối chiếu 79/80</button>
+            <button class="tab-button" onclick="openTab(event, 'denialTab')">💸 Dự kiến Xuất toán</button>
             <button class="tab-button" onclick="openTab(event, 'reportsTab')">📈 Báo cáo</button>
         </nav>
 
@@ -862,46 +862,26 @@
             </div>
         </div>
         
-        <div id="comparison7980Tab" class="tab-content">
-             <div class="upload-area">
-                <h2>📊 Đối chiếu Báo cáo 79/80</h2>
-                <p>Tải lên file XML tổng hợp và file báo cáo 79/80 (Excel hoặc CSV) để đối chiếu tổng chi phí.</p>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
-                    <div>
-                        <h3>📄 File XML Tổng hợp</h3>
-                        <div class="file-input-wrapper" style="width: 100%;">
-                            <input type="file" class="file-input" id="comparison7980XmlInput" accept=".xml">
-                            <button class="file-button" style="width: 100%;">Chọn file XML</button>
-                        </div>
-                        <div id="xml7980Status" style="margin-top: 10px; font-size: 0.9em;"></div>
-                    </div>
-                    
-                    <div>
-                        <h3>📈 File Báo cáo 79/80 (Excel/CSV)</h3>
-                        <div class="file-input-wrapper" style="width: 100%;">
-                            <input type="file" class="file-input" id="comparison7980CsvInput" accept=".xlsx,.xls,.csv">
-                            <button class="file-button" style="width: 100%;">Chọn file Excel/CSV</button>
-                        </div>
-                        <div id="csv7980Status" style="margin-top: 10px; font-size: 0.9em;"></div>
-                    </div>
+        <div id="denialTab" class="tab-content">
+             <div class="stats-overview" id="denialStats">
+                <div class="stat-card">
+                    <h3 id="totalDeniedAmount">0</h3>
+                    <p>Tổng tiền dự kiến xuất toán</p>
                 </div>
-                
-                <div style="text-align: center; margin-top: 30px;">
-                    <button class="btn btn-primary" id="compare7980Button" disabled>⚡ Đối chiếu ngay</button>
+                <div class="stat-card">
+                    <h3 id="recordsWithDenial">0</h3>
+                    <p>Số hồ sơ có lỗi</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalDeniedItems">0</h3>
+                    <p>Số dịch vụ/thuốc bị lỗi</p>
                 </div>
             </div>
-            
-            <div class="loading" id="comparison7980Loading">
-                <div class="spinner"></div>
-                <p>Đang tính toán và đối chiếu dữ liệu...</p>
-            </div>
-
-            <div class="results-container" id="comparison7980Results" style="display: none;">
+            <div class="results-container" id="denialResultsContainer">
                  <div class="table-header">
-                    <h3>📋 Kết quả Đối chiếu Báo cáo 79/80</h3>
+                    <h3>📋 Chi tiết các mục dự kiến xuất toán</h3>
                 </div>
-                 <div style="overflow-x: auto;" id="comparison7980ResultsTableWrapper">
+                 <div style="overflow-x: auto; max-height: 600px;" id="denialResultsTableWrapper">
                      </div>
             </div>
         </div>
@@ -979,10 +959,6 @@
             excelRecords: new Map(),
             comparisonResults: [],
             filteredComparisonResults: [],
-            comparison7980: {
-                xmlFile: null,
-                csvFile: null
-            },
             charts: {}
         };
 
@@ -1090,6 +1066,8 @@
             
             if (tabName === 'dashboardTab' && globalData.allRecords.length > 0) {
                 updateDashboard();
+            } else if (tabName === 'denialTab' && globalData.allRecords.length > 0) {
+                updateDenialProjectionTab();
             } else if (tabName === 'reportsTab' && globalData.allRecords.length > 0) {
                  generateReport();
             }
@@ -1309,6 +1287,8 @@
                         document.getElementById('validatorResults').style.display = 'block';
                         
                         updateDashboard();
+                        // Also update the new denial tab in the background
+                        updateDenialProjectionTab();
                     }, 100);
                 } catch (error) {
                     hideLoading('validatorLoading');
@@ -1418,23 +1398,24 @@
             if (chiTietThuocNode) {
                 chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach(item => {
                     const tenThuoc = getText(item, 'TEN_THUOC');
+                    const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
                     drugs.push({
                         ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
                         so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                        thanh_tien_bh: parseFloat(getText(item, 'THANH_TIEN_BH') || '0')
+                        thanh_tien_bh: thanhTienBH
                     });
                     const ngayYl = getText(item, 'NGAY_YL');
-                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
                     const maBacSi = getText(item, 'MA_BAC_SI');
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
 
                     const ngayThYl = getText(item, 'NGAY_TH_YL');
                     if (ngayThYl) {
                         if (ngayThYl < record.ngayVao) {
-                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]` });
+                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenThuoc });
                         }
                         if (ngayThYl > record.ngayRa) {
-                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
                         }
                     }
                 });
@@ -1462,7 +1443,7 @@
                         hasOtherDvkt = true;
                     }
                     const ngayYl = getText(item, 'NGAY_YL');
-                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                    if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
                     const maBacSi = getText(item, 'MA_BAC_SI');
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
                     const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
@@ -1471,10 +1452,10 @@
                     const ngayThYl = getText(item, 'NGAY_TH_YL');
                     if (ngayThYl) {
                         if (ngayThYl < record.ngayVao) {
-                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]` });
+                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenDV });
                         }
                         if (ngayThYl > record.ngayRa) {
-                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
                         }
                     }
                 });
@@ -2048,156 +2029,76 @@
             XLSX.writeFile(wb, "BaoCaoDoiChieu_BHYT.xlsx");
         }
 
-        // ============================= 79/80 COMPARISON FUNCTIONALITY =============================
-        function initialize7980Comparator() {
-            document.getElementById('comparison7980XmlInput').addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                globalData.comparison7980.xmlFile = file;
-                document.getElementById('xml7980Status').textContent = `File: ${file.name}`;
-                document.getElementById('compare7980Button').disabled = !(globalData.comparison7980.xmlFile && globalData.comparison7980.csvFile);
-            });
-             document.getElementById('comparison7980CsvInput').addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                globalData.comparison7980.csvFile = file;
-                document.getElementById('csv7980Status').textContent = `File: ${file.name}`;
-                document.getElementById('compare7980Button').disabled = !(globalData.comparison7980.xmlFile && globalData.comparison7980.csvFile);
-            });
-            document.getElementById('compare7980Button').addEventListener('click', perform7980Comparison);
-        }
-
-        async function perform7980Comparison() {
-            if (!globalData.comparison7980.xmlFile || !globalData.comparison7980.csvFile) {
-                alert('Vui lòng tải lên cả 2 file XML và file Báo cáo 79/80.');
+        // ============================= DENIAL PROJECTION FUNCTIONALITY =============================
+        function updateDenialProjectionTab() {
+            if (globalData.allRecords.length === 0) {
+                document.getElementById('denialResultsTableWrapper').innerHTML = '<p style="text-align:center; padding: 20px;">Chưa có dữ liệu. Vui lòng xử lý một file XML tại tab "Kiểm tra XML" trước.</p>';
                 return;
             }
-            showLoading('comparison7980Loading');
-            
-            try {
-                // 1. Process XML File
-                const xmlContent = await globalData.comparison7980.xmlFile.text();
-                const { records, drugs, services } = validateXmlContent(xmlContent);
-                
-                // Calculate totals from XML1 records for fields not manually calculated
-                const otherTotals = records.reduce((totals, record) => {
-                    totals.T_VTYT = (totals.T_VTYT || 0) + (record.t_vtyt || 0);
-                    totals.T_CDHA = (totals.T_CDHA || 0) + (record.t_cdha || 0);
-                    totals.T_GIUONG = (totals.T_GIUONG || 0) + (record.t_giuong || 0);
-                    totals.T_MAU = (totals.T_MAU || 0) + (record.t_mau || 0);
-                    totals.T_PTTT = (totals.T_PTTT || 0) + (record.t_pttt || 0);
-                    totals.T_VANCHUYEN = (totals.T_VANCHUYEN || 0) + (record.t_vanchuyen || 0);
-                    return totals;
-                }, {});
 
-                // Rule 1: T_BHTT from XML1
-                const total_T_BHTT = records.reduce((sum, record) => sum + (record.t_bhtt || 0), 0);
-                // Rule 2: Tiền thuốc from XML2
-                const total_T_THUOC = drugs.reduce((sum, drug) => sum + (drug.thanh_tien_bh || 0), 0);
-                // Rule 3: Tiền khám from XML3
-                const total_T_KHAM = services
-                    .filter(s => s.ten_dich_vu && s.ten_dich_vu.toLowerCase().includes('khám'))
-                    .reduce((sum, s) => sum + (s.thanh_tien_bh || 0), 0);
-                // New Rule: Tiền xét nghiệm from XML3 based on MA_NHOM = 1
-                const total_T_XN = services
-                    .filter(s => s.ma_nhom === '1')
-                    .reduce((sum, s) => sum + (s.thanh_tien_bh || 0), 0);
-                
-                const finalXmlTotals = {
-                    ...otherTotals,
-                    T_BHTT: total_T_BHTT,
-                    T_THUOC: total_T_THUOC,
-                    T_KHAM: total_T_KHAM,
-                    T_XN: total_T_XN,
-                };
+            let totalDeniedAmount = 0;
+            const recordsWithErrors = new Set();
+            let totalDeniedItemCount = 0;
+            const deniedItems = {}; // { itemName: { count: 1, totalCost: 10000, errorTypes: Set('...') } }
 
-
-                // 2. Process CSV File
-                const csvFile = globalData.comparison7980.csvFile;
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const data = e.target.result;
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const csvJson = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                    
-                    const csvTotals = {};
-                    if(csvJson.length > 0){
-                        const headerRow = csvJson[0];
-                        for(const key in headerRow){
-                             const isNumericColumn = csvJson.every(row => typeof row[key] === 'number' || !isNaN(parseFloat(row[key])));
-                             if(isNumericColumn){
-                                 csvTotals[key] = csvJson.reduce((sum, row) => sum + (parseFloat(row[key]) || 0), 0);
-                             }
+            globalData.allRecords.forEach(record => {
+                const itemErrors = record.errors.filter(e => e.cost > 0 && e.itemName);
+                if (itemErrors.length > 0) {
+                    recordsWithErrors.add(record.maLk);
+                    itemErrors.forEach(error => {
+                        totalDeniedAmount += error.cost;
+                        totalDeniedItemCount++;
+                        if (!deniedItems[error.itemName]) {
+                            deniedItems[error.itemName] = { count: 0, totalCost: 0, errorTypes: new Set() };
                         }
-                    }
-                    
-                    // 3. Compare and Display
-                    display7980Results(finalXmlTotals, csvTotals);
-                    hideLoading('comparison7980Loading');
-                    document.getElementById('comparison7980Results').style.display = 'block';
-                };
-                reader.readAsArrayBuffer(csvFile);
+                        deniedItems[error.itemName].count++;
+                        deniedItems[error.itemName].totalCost += error.cost;
+                        deniedItems[error.itemName].errorTypes.add(ERROR_TYPES[error.type] || error.type);
+                    });
+                }
+            });
 
-            } catch (error) {
-                 hideLoading('comparison7980Loading');
-                 console.error("79/80 Comparison Error:", error);
-                 alert(`Lỗi đối chiếu 79/80: ${error.message}`);
-            }
-        }
-        
-        function display7980Results(xmlTotals, csvTotals) {
-             const wrapper = document.getElementById('comparison7980ResultsTableWrapper');
-             
-             const comparisonMap = {
-                 'T_BHTT': { name: 'Tổng chi BHYT thanh toán', csvKeys: ['thanh_tien', 't_bhtt', 'Tổng chi BHYT thanh toán'] },
-                 'T_THUOC': { name: 'Tiền thuốc', csvKeys: ['t_thuoc', 'Tiền thuốc'] },
-                 'T_KHAM': { name: 'Tiền khám', csvKeys: ['t_kham', 'Tiền khám'] },
-                 'T_XN': { name: 'Tiền xét nghiệm', csvKeys: ['t_xn', 'Tiền xét nghiệm'] },
-                 'T_CDHA': { name: 'Tiền CĐHA, TDCN', csvKeys: ['t_cdha'] },
-                 'T_PTTT': { name: 'Tiền Phẫu thuật, thủ thuật', csvKeys: ['t_pttt'] },
-                 'T_VTYT': { name: 'Tiền vật tư y tế', csvKeys: ['t_vtyt'] },
-                 'T_GIUONG': { name: 'Tiền giường', csvKeys: ['t_giuong'] },
-                 'T_MAU': { name: 'Tiền máu', csvKeys: ['t_mau'] },
-                 'T_VANCHUYEN': { name: 'Tiền vận chuyển', csvKeys: ['t_vanchuyen'] },
-             };
+            // Update summary cards
+            document.getElementById('totalDeniedAmount').textContent = formatCurrency(totalDeniedAmount);
+            document.getElementById('recordsWithDenial').textContent = recordsWithErrors.size.toLocaleString('vi-VN');
+            document.getElementById('totalDeniedItems').textContent = totalDeniedItemCount.toLocaleString('vi-VN');
 
-             let tableHTML = `<table class="results-table"><thead><tr>
-                <th>Hạng mục</th>
-                <th>Tổng tiền từ XML</th>
-                <th>Tổng tiền từ Báo cáo 79/80</th>
-                <th>Chênh lệch</th>
+            // Create and sort table data
+            const tableData = Object.entries(deniedItems).map(([name, data]) => ({
+                name,
+                ...data
+            }));
+            tableData.sort((a, b) => b.totalCost - a.totalCost);
+
+            // Render table
+            let tableHTML = `<table class="results-table"><thead><tr>
+                <th>STT</th>
+                <th>Tên Thuốc / Dịch vụ Kỹ thuật</th>
+                <th>Loại Lỗi</th>
+                <th>Số Lượng Lỗi</th>
+                <th>Tổng Tiền Xuất Toán</th>
             </tr></thead><tbody>`;
 
-             for (const xmlKey in comparisonMap) {
-                 const config = comparisonMap[xmlKey];
-                 const xmlValue = xmlTotals[xmlKey] || 0;
-                 let csvValue = 0;
-                 
-                 for(const csvKey of config.csvKeys){
-                     const foundKey = findKey(csvTotals, [csvKey]);
-                     if(foundKey) {
-                         csvValue = csvTotals[foundKey];
-                         break;
-                     }
-                 }
+            if (tableData.length === 0) {
+                 tableHTML += `<tr><td colspan="5" style="text-align:center;">Không tìm thấy lỗi nào liên quan đến chi phí thuốc/DVKT.</td></tr>`;
+            } else {
+                tableData.forEach((item, index) => {
+                    tableHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${item.name}</td>
+                            <td>${Array.from(item.errorTypes).join(', ')}</td>
+                            <td>${item.count}</td>
+                            <td>${formatCurrency(item.totalCost)}</td>
+                        </tr>
+                    `;
+                });
+            }
 
-                 const difference = xmlValue - csvValue;
-                 const diffClass = Math.abs(difference) > 1 ? 'difference' : 'match';
-
-                 tableHTML += `
-                    <tr>
-                        <td><strong>${config.name}</strong></td>
-                        <td>${formatCurrency(xmlValue)}</td>
-                        <td>${formatCurrency(csvValue)}</td>
-                        <td class="${diffClass}">${formatCurrency(difference)}</td>
-                    </tr>
-                 `;
-             }
-
-             tableHTML += `</tbody></table>`;
-             wrapper.innerHTML = tableHTML;
+            tableHTML += '</tbody></table>';
+            document.getElementById('denialResultsTableWrapper').innerHTML = tableHTML;
         }
+
 
         // ============================= REPORTS TAB =============================
         function generateReport() {
@@ -2461,7 +2362,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializeValidator();
             initializeComparator();
-            initialize7980Comparator();
             
             document.querySelectorAll('.filter-content').forEach(el => {
                 const parent = el.parentElement;
