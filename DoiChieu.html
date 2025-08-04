@@ -992,7 +992,13 @@
             'NGAY_THYL_TRUOC_VAOVIEN': 'Ngày THYL trước ngày vào viện',
             'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện',
             'MA_MAY_TRUNG_THOI_GIAN': 'Trùng máy thực hiện cùng thời điểm',
-            'BS_TRUNG_THOI_GIAN': 'Bác sĩ cho y lệnh trùng thời điểm'
+            'BS_TRUNG_THOI_GIAN': 'Bác sĩ cho y lệnh trùng thời điểm',
+            'DVKT_YL_TRUNG_NGAY_VAO': 'DVKT - Y lệnh trùng ngày vào',
+            'DVKT_YL_TRUNG_NGAY_RA': 'DVKT - Y lệnh trùng ngày ra',
+            'DVKT_THYL_TRUNG_NGAY_VAO': 'DVKT - THYL trùng ngày vào',
+            'DVKT_THYL_TRUNG_NGAY_RA': 'DVKT - THYL trùng ngày ra',
+            'YL_NGOAI_GIO_HC': 'Y lệnh ngoài giờ hành chính',
+            'THYL_NGOAI_GIO_HC': 'Thực hiện YL ngoài giờ hành chính'
         };
 
         const staffNameMap = new Map([
@@ -1112,6 +1118,23 @@
             }).format(num);
         };
         
+        const isOutsideWorkingHours = (dateTimeString) => {
+            if (!dateTimeString || dateTimeString.length < 12) {
+                return false;
+            }
+            const timePart = parseInt(dateTimeString.substring(8, 12)); // HHmm
+            
+            const morningStart = 730;
+            const morningEnd = 1130;
+            const afternoonStart = 1330;
+            const afternoonEnd = 1630;
+
+            const isMorning = timePart >= morningStart && timePart <= morningEnd;
+            const isAfternoon = timePart >= afternoonStart && timePart <= afternoonEnd;
+
+            return !(isMorning || isAfternoon);
+        };
+
         const showLoading = (id) => document.getElementById(id).classList.add('show');
         const hideLoading = (id) => document.getElementById(id).classList.remove('show');
 
@@ -1360,25 +1383,23 @@
             const machineTimeMap = new Map();
             const doctorTimeMap = new Map();
 
-            // Step 1: Populate maps for both checks
+            // Step 1: Populate maps
             records.forEach(record => {
-                // MA_MAY check
                 if (record.services) {
                     record.services.forEach(service => {
                         if (service.ma_may && service.ngay_th_yl) {
                             const key = `${service.ma_may}_${service.ngay_th_yl}`;
                             if (!machineTimeMap.has(key)) machineTimeMap.set(key, []);
-                            machineTimeMap.get(key).push({ maLk: record.maLk, tenDv: service.ten_dich_vu });
+                            machineTimeMap.get(key).push({ maLk: record.maLk, tenDv: service.ten_dich_vu, cost: service.thanh_tien_bh });
                         }
                     });
                 }
-                // MA_BAC_SI check for drugs
                 if (record.drugs) {
                     record.drugs.forEach(drug => {
                         if (drug.ma_bac_si && drug.ngay_yl) {
                             const key = `${drug.ma_bac_si}_${drug.ngay_yl}`;
                             if (!doctorTimeMap.has(key)) doctorTimeMap.set(key, []);
-                            doctorTimeMap.get(key).push({ maLk: record.maLk, tenThuoc: drug.ten_thuoc });
+                            doctorTimeMap.get(key).push({ maLk: record.maLk, tenThuoc: drug.ten_thuoc, cost: drug.thanh_tien_bh });
                         }
                     });
                 }
@@ -1387,22 +1408,19 @@
             // Step 2: Find MA_MAY conflicts and apply errors
             machineTimeMap.forEach((conflicts, key) => {
                 const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
-
                 if (uniqueMaLksInConflict.length > 1) {
                     const [maMay, ngayThYl] = key.split('_');
-                    
                     uniqueMaLksInConflict.forEach(currentMaLk => {
                         const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                         if (recordToUpdate) {
                             const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
-                            const tenDv = firstConflictForThisPatient.tenDv;
                             const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).join(', ');
-                            
                             recordToUpdate.errors.push({
                                 type: 'MA_MAY_TRUNG_THOI_GIAN',
                                 severity: 'critical',
-                                message: `DV "${tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
-                                cost: 0
+                                message: `DV "${firstConflictForThisPatient.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
+                                cost: firstConflictForThisPatient.cost,
+                                itemName: firstConflictForThisPatient.tenDv
                             });
                         }
                     });
@@ -1412,29 +1430,27 @@
             // Step 3: Find MA_BAC_SI conflicts and apply errors
             doctorTimeMap.forEach((conflicts, key) => {
                 const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
-                
                 if (uniqueMaLksInConflict.length > 1) {
                     const [maBs, ngayYl] = key.split('_');
                     const tenBacSi = staffNameMap.get(maBs) || maBs;
-
                     uniqueMaLksInConflict.forEach(currentMaLk => {
                         const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                         if (recordToUpdate) {
                             const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
-                            const tenThuoc = firstConflictForThisPatient.tenThuoc;
                             const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).join(', ');
-
                             recordToUpdate.errors.push({
                                 type: 'BS_TRUNG_THOI_GIAN',
                                 severity: 'warning',
-                                message: `BS ${tenBacSi} cho y lệnh thuốc "${tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca khác: ${otherMaLks}`,
-                                cost: 0 
+                                message: `BS ${tenBacSi} cho y lệnh thuốc "${firstConflictForThisPatient.tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca khác: ${otherMaLks}`,
+                                cost: firstConflictForThisPatient.cost,
+                                itemName: firstConflictForThisPatient.tenThuoc
                             });
                         }
                     });
                 }
             });
         }
+
 
         function validateXmlContent(xmlString) {
             const parser = new DOMParser();
@@ -1544,6 +1560,7 @@
                     const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
                     const maBacSi = getText(item, 'MA_BAC_SI');
                     const ngayYl = getText(item, 'NGAY_YL');
+                    const ngayThYl = getText(item, 'NGAY_TH_YL');
 
                     drugsForGlobalList.push({
                         ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
@@ -1554,22 +1571,25 @@
                         record.drugs.push({
                             ma_bac_si: maBacSi,
                             ngay_yl: ngayYl,
-                            ten_thuoc: tenThuoc
+                            ten_thuoc: tenThuoc,
+                            thanh_tien_bh: thanhTienBH
                         });
                     }
 
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
-                    if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
-
-                    const ngayThYl = getText(item, 'NGAY_TH_YL');
                     if (ngayThYl) {
-                        if (ngayThYl < record.ngayVao) {
-                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenThuoc });
-                        }
-                        if (ngayThYl > record.ngayRa) {
-                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
-                        }
+                        if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenThuoc });
+                        if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
                     }
+
+                    if (isOutsideWorkingHours(ngayYl)) {
+                        record.errors.push({ type: 'YL_NGOAI_GIO_HC', severity: 'warning', message: `Thuốc "${tenThuoc}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, cost: 0, itemName: tenThuoc });
+                    }
+                    if (isOutsideWorkingHours(ngayThYl)) {
+                         record.errors.push({ type: 'THYL_NGOAI_GIO_HC', severity: 'warning', message: `Thuốc "${tenThuoc}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, cost: 0, itemName: tenThuoc });
+                    }
+
+                    if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
                 });
             }
 
@@ -1578,6 +1598,9 @@
                 chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
                     const tenDV = getText(item, 'TEN_DICH_VU');
                     const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
+                    const ngayYl = getText(item, 'NGAY_YL');
+                    const ngayThYl = getText(item, 'NGAY_TH_YL');
+
                     record.services.push({
                         ma_lk: maLk,
                         ma_dich_vu: getText(item, 'MA_DICH_VU'),
@@ -1586,8 +1609,9 @@
                         so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                         thanh_tien_bh: thanhTienBH,
                         ma_may: getText(item, 'MA_MAY'),
-                        ngay_th_yl: getText(item, 'NGAY_TH_YL')
+                        ngay_th_yl: ngayThYl
                     });
+
                     if (tenDV.toLowerCase().includes('khám')) {
                         record.tong_tien_kham += thanhTienBH;
                         hasKham = true;
@@ -1595,22 +1619,31 @@
                         record.tong_tien_dvkt_khac += thanhTienBH;
                         hasOtherDvkt = true;
                     }
-                    const ngayYl = getText(item, 'NGAY_YL');
+
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
+                    if (ngayThYl) {
+                        if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenDV });
+                        if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
+                    }
+                     
+                    if (!tenDV.toLowerCase().includes('khám')) {
+                        if (ngayYl && ngayYl === record.ngayVao) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_VAO', severity: 'warning', message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày vào viện.`, cost: 0, itemName: tenDV });
+                        if (ngayYl && ngayYl === record.ngayRa) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_RA', severity: 'warning', message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày ra viện.`, cost: 0, itemName: tenDV });
+                        if (ngayThYl && ngayThYl === record.ngayVao) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_VAO', severity: 'warning', message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày vào viện.`, cost: 0, itemName: tenDV });
+                        if (ngayThYl && ngayThYl === record.ngayRa) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_RA', severity: 'warning', message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày ra viện.`, cost: 0, itemName: tenDV });
+
+                        if (isOutsideWorkingHours(ngayYl)) {
+                            record.errors.push({ type: 'YL_NGOAI_GIO_HC', severity: 'warning', message: `DVKT "${tenDV}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, cost: 0, itemName: tenDV });
+                        }
+                        if (isOutsideWorkingHours(ngayThYl)) {
+                             record.errors.push({ type: 'THYL_NGOAI_GIO_HC', severity: 'warning', message: `DVKT "${tenDV}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, cost: 0, itemName: tenDV });
+                        }
+                    }
+
                     const maBacSi = getText(item, 'MA_BAC_SI');
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
                     const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
                     if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
-                    
-                    const ngayThYl = getText(item, 'NGAY_TH_YL');
-                    if (ngayThYl) {
-                        if (ngayThYl < record.ngayVao) {
-                            record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenDV });
-                        }
-                        if (ngayThYl > record.ngayRa) {
-                            record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
-                        }
-                    }
                 });
             }
             record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
