@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check BHYT Toàn diện (79764)</title>
+    <title>Dashboard BHYT Toàn diện</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -580,8 +580,8 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>🏥 Check BHYT Toàn diện (79764)</h1>
-            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - Anh Khoa IT</p>
+            <h1>🏥 Dashboard BHYT Toàn diện</h1>
+            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh</p>
         </header>
 
         <nav class="tab-nav">
@@ -990,7 +990,9 @@
             'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
             'KHAM_DUOI_5_PHUT': 'Thời gian khám dưới 5 phút',
             'NGAY_THYL_TRUOC_VAOVIEN': 'Ngày THYL trước ngày vào viện',
-            'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện'
+            'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện',
+            'MA_MAY_TRUNG_THOI_GIAN': 'Trùng máy thực hiện cùng thời điểm',
+            'BS_TRUNG_THOI_GIAN': 'Bác sĩ cho y lệnh trùng thời điểm'
         };
 
         const staffNameMap = new Map([
@@ -1354,14 +1356,89 @@
             reader.readAsText(file, 'UTF-8');
         }
 
+        function performCrossRecordValidation(records) {
+            const machineTimeMap = new Map();
+            const doctorTimeMap = new Map();
+
+            // Step 1: Populate maps
+            records.forEach(record => {
+                // MA_MAY check
+                if (record.services) {
+                    record.services.forEach(service => {
+                        if (service.ma_may && service.ngay_th_yl) {
+                            const key = `${service.ma_may}_${service.ngay_th_yl}`;
+                            if (!machineTimeMap.has(key)) machineTimeMap.set(key, []);
+                            machineTimeMap.get(key).push({ maLk: record.maLk, tenDv: service.ten_dich_vu });
+                        }
+                    });
+                }
+                // MA_BAC_SI check for drugs
+                if (record.drugs) {
+                    record.drugs.forEach(drug => {
+                        if (drug.ma_bac_si && drug.ngay_yl) {
+                            const key = `${drug.ma_bac_si}_${drug.ngay_yl}`;
+                            if (!doctorTimeMap.has(key)) doctorTimeMap.set(key, []);
+                            doctorTimeMap.get(key).push({ maLk: record.maLk, tenThuoc: drug.ten_thuoc });
+                        }
+                    });
+                }
+            });
+
+            // Step 2: Find MA_MAY conflicts and apply errors
+            machineTimeMap.forEach((conflicts, key) => {
+                const uniqueMaLks = new Set(conflicts.map(c => c.maLk));
+                if (uniqueMaLks.size > 1) { // A true conflict only exists for different patients
+                    const conflictingMaLks = Array.from(uniqueMaLks);
+                    const [maMay, ngayThYl] = key.split('_');
+                    
+                    conflicts.forEach(conflict => {
+                        const recordToUpdate = records.find(r => r.maLk === conflict.maLk);
+                        if (recordToUpdate) {
+                            const otherMaLks = conflictingMaLks.filter(maLk => maLk !== conflict.maLk).join(', ');
+                            recordToUpdate.errors.push({
+                                type: 'MA_MAY_TRUNG_THOI_GIAN',
+                                severity: 'critical',
+                                message: `DV "${conflict.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
+                                cost: 0
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Step 3: Find MA_BAC_SI conflicts and apply errors
+            doctorTimeMap.forEach((conflicts, key) => {
+                const uniqueMaLks = new Set(conflicts.map(c => c.maLk));
+                if (uniqueMaLks.size > 1) { // A true conflict only exists for different patients
+                    const conflictingMaLks = Array.from(uniqueMaLks);
+                    const [maBs, ngayYl] = key.split('_');
+                    const tenBacSi = staffNameMap.get(maBs) || maBs;
+
+                    conflicts.forEach(conflict => {
+                        const recordToUpdate = records.find(r => r.maLk === conflict.maLk);
+                        if (recordToUpdate) {
+                            const otherMaLks = conflictingMaLks.filter(maLk => maLk !== conflict.maLk).join(', ');
+                            recordToUpdate.errors.push({
+                                type: 'BS_TRUNG_THOI_GIAN',
+                                severity: 'warning',
+                                message: `BS ${tenBacSi} cho y lệnh thuốc "${conflict.tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca: ${otherMaLks}`,
+                                cost: 0 
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+
         function validateXmlContent(xmlString) {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
             if (xmlDoc.querySelector('parsererror')) throw new Error('File XML không hợp lệ.');
 
             const records = [];
-            const drugs = [];
-            const services = [];
+            let allDrugs = []; 
+            let allServices = []; 
             const xml4Details = new Map();
 
             const hosoElements = xmlDoc.getElementsByTagName('HOSO');
@@ -1369,15 +1446,18 @@
                 const result = validateSingleHoso(hoso);
                 if (result) {
                     records.push(result.record);
-                    drugs.push(...result.drugs);
-                    services.push(...result.services);
+                    allDrugs.push(...result.drugs);
+                    allServices.push(...result.record.services);
                     if(result.xml4Data.length > 0) {
                         xml4Details.set(result.record.maLk, result.xml4Data);
                     }
                 }
             }
+
+            performCrossRecordValidation(records);
+
             records.sort((a, b) => a.ngayVao.localeCompare(b.ngayVao));
-            return { records, drugs, services, xml4Details };
+            return { records, drugs: allDrugs, services: allServices, xml4Details };
         }
         
         function validateSingleHoso(hoso) {
@@ -1446,23 +1526,34 @@
                 has_xml4: !!chiTietCLSNode && !!chiTietCLSNode.querySelector('CHI_TIET_CLS'),
                 bac_si_chi_dinh: new Set(),
                 nguoi_thuc_hien: new Set(),
-                errors: []
+                errors: [],
+                services: [],
+                drugs: []
             };
             if (!record.maLk || !record.hoTen || !record.ngayVao || !record.ngayRa) return null;
 
-            const drugs = [];
+            const drugsForGlobalList = [];
             if (chiTietThuocNode) {
                 chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach(item => {
                     const tenThuoc = getText(item, 'TEN_THUOC');
                     const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
-                    drugs.push({
+                    const maBacSi = getText(item, 'MA_BAC_SI');
+                    const ngayYl = getText(item, 'NGAY_YL');
+
+                    drugsForGlobalList.push({
                         ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
                         so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                         thanh_tien_bh: thanhTienBH
                     });
-                    const ngayYl = getText(item, 'NGAY_YL');
+                     if(maBacSi && ngayYl) {
+                        record.drugs.push({
+                            ma_bac_si: maBacSi,
+                            ngay_yl: ngayYl,
+                            ten_thuoc: tenThuoc
+                        });
+                    }
+
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
-                    const maBacSi = getText(item, 'MA_BAC_SI');
                     if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
 
                     const ngayThYl = getText(item, 'NGAY_TH_YL');
@@ -1477,19 +1568,20 @@
                 });
             }
 
-            const services = [];
             let hasKham = false, hasOtherDvkt = false;
             if (chiTietDvktNode) {
                 chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
                     const tenDV = getText(item, 'TEN_DICH_VU');
                     const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
-                    services.push({
+                    record.services.push({
                         ma_lk: maLk,
                         ma_dich_vu: getText(item, 'MA_DICH_VU'),
                         ten_dich_vu: tenDV,
                         ma_nhom: getText(item, 'MA_NHOM'),
                         so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                        thanh_tien_bh: thanhTienBH
+                        thanh_tien_bh: thanhTienBH,
+                        ma_may: getText(item, 'MA_MAY'),
+                        ngay_th_yl: getText(item, 'NGAY_TH_YL')
                     });
                     if (tenDV.toLowerCase().includes('khám')) {
                         record.tong_tien_kham += thanhTienBH;
@@ -1548,7 +1640,7 @@
                 }
             }
             
-            return { record, drugs, services, xml4Data };
+            return { record, drugs: drugsForGlobalList, xml4Data };
         }
 
         function displayValidatorResults() {
@@ -2140,23 +2232,21 @@
             filteredRecords.forEach(record => {
                 const itemErrors = record.errors.filter(e => e.cost > 0 && e.itemName);
                 if (itemErrors.length === 0) {
-                    return; // Bỏ qua hồ sơ không có lỗi liên quan đến chi phí
+                    return;
                 }
 
                 recordsWithErrors.add(record.maLk);
-                const countedItemsInRecord = new Set(); // Theo dõi các mục đã tính trong hồ sơ này
+                const countedItemsInRecord = new Set(); 
 
                 itemErrors.forEach(error => {
                     const itemKey = error.itemName;
 
-                    // Luôn tổng hợp thông tin cho bảng chi tiết
                     if (!deniedItems[itemKey]) {
                         deniedItems[itemKey] = { count: 0, totalCost: 0, errorTypes: new Set() };
                     }
                     deniedItems[itemKey].count++;
                     deniedItems[itemKey].errorTypes.add(ERROR_TYPES[error.type] || error.type);
 
-                    // Chỉ cộng dồn chi phí và cập nhật bảng nếu mục này chưa được tính trong hồ sơ này
                     if (!countedItemsInRecord.has(itemKey)) {
                         totalDeniedAmount += error.cost;
                         deniedItems[itemKey].totalCost += error.cost;
