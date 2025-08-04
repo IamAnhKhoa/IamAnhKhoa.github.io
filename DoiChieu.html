@@ -370,7 +370,7 @@
         .results-table td {
             padding: 15px;
             border-bottom: 1px solid #dee2e6;
-            transition: background-color 0.3s ease;
+            transition: background-color: 0.3s ease;
             vertical-align: top;
         }
         
@@ -1360,7 +1360,7 @@
             const machineTimeMap = new Map();
             const doctorTimeMap = new Map();
 
-            // Step 1: Populate maps
+            // Step 1: Populate maps for both checks
             records.forEach(record => {
                 // MA_MAY check
                 if (record.services) {
@@ -1386,19 +1386,22 @@
 
             // Step 2: Find MA_MAY conflicts and apply errors
             machineTimeMap.forEach((conflicts, key) => {
-                const uniqueMaLks = new Set(conflicts.map(c => c.maLk));
-                if (uniqueMaLks.size > 1) { // A true conflict only exists for different patients
-                    const conflictingMaLks = Array.from(uniqueMaLks);
+                const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
+
+                if (uniqueMaLksInConflict.length > 1) {
                     const [maMay, ngayThYl] = key.split('_');
                     
-                    conflicts.forEach(conflict => {
-                        const recordToUpdate = records.find(r => r.maLk === conflict.maLk);
+                    uniqueMaLksInConflict.forEach(currentMaLk => {
+                        const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                         if (recordToUpdate) {
-                            const otherMaLks = conflictingMaLks.filter(maLk => maLk !== conflict.maLk).join(', ');
+                            const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
+                            const tenDv = firstConflictForThisPatient.tenDv;
+                            const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).join(', ');
+                            
                             recordToUpdate.errors.push({
                                 type: 'MA_MAY_TRUNG_THOI_GIAN',
                                 severity: 'critical',
-                                message: `DV "${conflict.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
+                                message: `DV "${tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
                                 cost: 0
                             });
                         }
@@ -1408,20 +1411,23 @@
 
             // Step 3: Find MA_BAC_SI conflicts and apply errors
             doctorTimeMap.forEach((conflicts, key) => {
-                const uniqueMaLks = new Set(conflicts.map(c => c.maLk));
-                if (uniqueMaLks.size > 1) { // A true conflict only exists for different patients
-                    const conflictingMaLks = Array.from(uniqueMaLks);
+                const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
+                
+                if (uniqueMaLksInConflict.length > 1) {
                     const [maBs, ngayYl] = key.split('_');
                     const tenBacSi = staffNameMap.get(maBs) || maBs;
 
-                    conflicts.forEach(conflict => {
-                        const recordToUpdate = records.find(r => r.maLk === conflict.maLk);
+                    uniqueMaLksInConflict.forEach(currentMaLk => {
+                        const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                         if (recordToUpdate) {
-                            const otherMaLks = conflictingMaLks.filter(maLk => maLk !== conflict.maLk).join(', ');
+                            const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
+                            const tenThuoc = firstConflictForThisPatient.tenThuoc;
+                            const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).join(', ');
+
                             recordToUpdate.errors.push({
                                 type: 'BS_TRUNG_THOI_GIAN',
                                 severity: 'warning',
-                                message: `BS ${tenBacSi} cho y lệnh thuốc "${conflict.tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca: ${otherMaLks}`,
+                                message: `BS ${tenBacSi} cho y lệnh thuốc "${tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca khác: ${otherMaLks}`,
                                 cost: 0 
                             });
                         }
@@ -1429,7 +1435,6 @@
                 }
             });
         }
-
 
         function validateXmlContent(xmlString) {
             const parser = new DOMParser();
@@ -1693,8 +1698,8 @@
                 }
 
                 const recordDate = String(r.ngayVao).substring(0, 8);
-                if (filters.dateFrom && recordDate < filters.dateFrom) return false;
-                if (filters.dateTo && recordDate > filters.dateTo) return false;
+                if (filters.dateFrom && recordDate < dateFrom) return false;
+                if (filters.dateTo && recordDate > dateTo) return false;
                 if (filters.gender && r.gioiTinh !== filters.gender) return false;
                 
                 if (filters.bncct === 'yes' && (!r.t_bncct || r.t_bncct <= 0)) return false;
