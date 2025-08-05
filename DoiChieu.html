@@ -575,6 +575,50 @@
             max-height: 60vh;
             overflow-y: auto;
         }
+
+        /* Summary Modal */
+        .summary-modal-content {
+            margin: 15% auto;
+            width: 90%;
+            max-width: 500px;
+        }
+        .summary-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px 0;
+        }
+        .summary-item {
+            display: flex;
+            align-items: center;
+            font-size: 1.2em;
+        }
+        .summary-item .icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+        }
+        .summary-item .icon-total { color: #667eea; }
+        .summary-item .icon-error { color: #dc3545; }
+        .summary-item .icon-valid { color: #28a745; }
+        .summary-item .text {
+            font-weight: 500;
+        }
+        .summary-item .value {
+            margin-left: auto;
+            font-weight: 700;
+            background: #f1f3f5;
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+        .summary-modal-footer {
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            margin-top: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -962,6 +1006,35 @@
         </div>
     </div>
 
+    <div id="summaryModal" class="modal">
+        <div class="modal-content summary-modal-content">
+            <div class="modal-header">
+                <h2>🔎 Kết Quả Kiểm Tra</h2>
+                <span class="close-button" onclick="closeSummaryPopup()">&times;</span>
+            </div>
+            <div class="summary-modal-body">
+                <div class="summary-item">
+                    <span class="icon icon-total">🗂️</span>
+                    <span class="text">Tổng hồ sơ kiểm tra:</span>
+                    <span class="value" id="summaryTotal">0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="icon icon-error">❌</span>
+                    <span class="text">Số hồ sơ lỗi:</span>
+                    <span class="value" id="summaryError">0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="icon icon-valid">✔️</span>
+                    <span class="text">Số hồ sơ đúng:</span>
+                    <span class="value" id="summaryValid">0</span>
+                </div>
+            </div>
+            <div class="summary-modal-footer">
+                <button class="btn btn-primary" onclick="closeSummaryPopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================= GLOBAL VARIABLES & UTILITIES =============================
         let globalData = {
@@ -993,6 +1066,7 @@
             'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện',
             'MA_MAY_TRUNG_THOI_GIAN': 'Trùng máy thực hiện cùng thời điểm',
             'BS_TRUNG_THOI_GIAN': 'Bác sĩ cho y lệnh trùng thời điểm',
+            'BS_KHAM_CHONG_LAN': 'BS khám chồng giờ (ca thuốc không CLS)',
             'DVKT_YL_TRUNG_NGAY_VAO': 'DVKT - Y lệnh trùng ngày vào',
             'DVKT_YL_TRUNG_NGAY_RA': 'DVKT - Y lệnh trùng ngày ra',
             'DVKT_THYL_TRUNG_NGAY_VAO': 'DVKT - THYL trùng ngày vào',
@@ -1370,6 +1444,11 @@
                         
                         updateDashboard();
                         updateDenialProjectionTab();
+
+                        const total = globalData.allRecords.length;
+                        const error = globalData.allRecords.filter(r => r.errors.length > 0).length;
+                        showSummaryPopup({ total: total, error: error, valid: total - error });
+
                     }, 100);
                 } catch (error) {
                     hideLoading('validatorLoading');
@@ -1382,9 +1461,11 @@
         function performCrossRecordValidation(records) {
             const machineTimeMap = new Map();
             const doctorTimeMap = new Map();
+            const doctorScheduleMap = new Map();
 
             // Step 1: Populate maps
             records.forEach(record => {
+                // MA_MAY check
                 if (record.services) {
                     record.services.forEach(service => {
                         if (service.ma_may && service.ngay_th_yl) {
@@ -1394,6 +1475,7 @@
                         }
                     });
                 }
+                // MA_BAC_SI check for drugs
                 if (record.drugs) {
                     record.drugs.forEach(drug => {
                         if (drug.ma_bac_si && drug.ngay_yl) {
@@ -1401,6 +1483,17 @@
                             if (!doctorTimeMap.has(key)) doctorTimeMap.set(key, []);
                             doctorTimeMap.get(key).push({ maLk: record.maLk, tenThuoc: drug.ten_thuoc, cost: drug.thanh_tien_bh });
                         }
+                    });
+                }
+                // Overlapping simple-case visits check
+                if (record.isSimpleCase && record.mainDoctor) {
+                    if (!doctorScheduleMap.has(record.mainDoctor)) {
+                        doctorScheduleMap.set(record.mainDoctor, []);
+                    }
+                    doctorScheduleMap.get(record.mainDoctor).push({
+                        maLk: record.maLk,
+                        start: parseInt(record.ngayVao.substring(0, 12)),
+                        end: parseInt(record.ngayRa.substring(0, 12))
                     });
                 }
             });
@@ -1446,6 +1539,40 @@
                                 itemName: firstConflictForThisPatient.tenThuoc
                             });
                         }
+                    });
+                }
+            });
+            
+            // Step 4: Find overlapping simple-case visits and apply errors
+            const overlapConflictMap = new Map();
+            doctorScheduleMap.forEach((visits, maBs) => {
+                if (visits.length < 2) return;
+                visits.sort((a, b) => a.start - b.start);
+                for (let i = 0; i < visits.length; i++) {
+                    for (let j = i + 1; j < visits.length; j++) {
+                        const visitA = visits[i];
+                        const visitB = visits[j];
+                        if (visitA.start < visitB.end && visitB.start < visitA.end) {
+                             if (!overlapConflictMap.has(visitA.maLk)) overlapConflictMap.set(visitA.maLk, new Set());
+                             if (!overlapConflictMap.has(visitB.maLk)) overlapConflictMap.set(visitB.maLk, new Set());
+                             overlapConflictMap.get(visitA.maLk).add(visitB.maLk);
+                             overlapConflictMap.get(visitB.maLk).add(visitA.maLk);
+                        }
+                    }
+                }
+            });
+
+            overlapConflictMap.forEach((conflictingMaLks, maLk) => {
+                const recordToUpdate = records.find(r => r.maLk === maLk);
+                if (recordToUpdate) {
+                    const tenBacSi = staffNameMap.get(recordToUpdate.mainDoctor) || recordToUpdate.mainDoctor;
+                    const otherMaLks = Array.from(conflictingMaLks).join(', ');
+                    recordToUpdate.errors.push({
+                        type: 'BS_KHAM_CHONG_LAN',
+                        severity: 'warning',
+                        message: `BS ${tenBacSi} có lịch khám chồng lấn thời gian với các ca: ${otherMaLks}`,
+                        cost: 0,
+                        itemName: 'Lịch khám'
                     });
                 }
             });
@@ -1541,8 +1668,8 @@
                 ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
                 chanDoan: getText(tongHopNode,'CHAN_DOAN_RV', 'MA_BENH'),
                 maKhoa: getText(tongHopNode,'MA_KHOA'),
-                tong_tien_kham: 0,
-                tong_tien_dvkt_khac: 0,
+                isSimpleCase: false,
+                mainDoctor: null,
                 has_kham_and_dvkt: false,
                 has_xml4: !!chiTietCLSNode && !!chiTietCLSNode.querySelector('CHI_TIET_CLS'),
                 bac_si_chi_dinh: new Set(),
@@ -1574,6 +1701,9 @@
                             ten_thuoc: tenThuoc,
                             thanh_tien_bh: thanhTienBH
                         });
+                        if (!record.mainDoctor) {
+                            record.mainDoctor = maBacSi;
+                        }
                     }
 
                     if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
@@ -1594,6 +1724,7 @@
             }
 
             let hasKham = false, hasOtherDvkt = false;
+            let tongTienDVKTKhacKham = 0;
             if (chiTietDvktNode) {
                 chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
                     const tenDV = getText(item, 'TEN_DICH_VU');
@@ -1613,10 +1744,9 @@
                     });
 
                     if (tenDV.toLowerCase().includes('khám')) {
-                        record.tong_tien_kham += thanhTienBH;
                         hasKham = true;
                     } else {
-                        record.tong_tien_dvkt_khac += thanhTienBH;
+                        tongTienDVKTKhacKham += thanhTienBH;
                         hasOtherDvkt = true;
                     }
 
@@ -1677,6 +1807,10 @@
                     record.errors.push({ type: 'KHAM_DUOI_5_PHUT', severity: 'warning', message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
                 }
             }
+            
+            // Xác định ca đơn giản (chỉ lãnh thuốc, không CLS)
+            const hasCLS = record.t_xn > 0 || record.t_cdha > 0 || record.t_pttt > 0 || record.t_vtyt > 0 || record.t_mau > 0 || record.t_giuong > 0 || tongTienDVKTKhacKham > 0;
+            record.isSimpleCase = record.t_thuoc > 0 && !hasCLS;
             
             return { record, drugs: drugsForGlobalList, xml4Data };
         }
@@ -1765,10 +1899,11 @@
 
                 let statusClass = 'status-success', statusText = '🟢 Hợp lệ';
                 if (record.errors.length > 0) {
-                    const isCritical = record.errors.some(e => e.severity === 'critical');
-                    statusClass = isCritical ? 'status-error' : 'status-warning';
-                    statusText = isCritical ? `🔴 Có ${record.errors.length} lỗi` : `🟡 Có ${record.errors.length} cảnh báo`;
+                    const hasCritical = record.errors.some(e => e.severity === 'critical');
+                    statusClass = hasCritical ? 'status-error' : 'status-warning';
+                    statusText = hasCritical ? `🔴 Có ${record.errors.length} lỗi` : `🟡 Có ${record.errors.length} cảnh báo`;
                 }
+
 
                 const errorDetails = record.errors.map(e => `<div class="error-detail"><span class="status-badge ${e.severity === 'critical' ? 'status-error' : 'status-warning'}">${ERROR_TYPES[e.type] || e.type}</span> <small>${e.message}</small></div>`).join('');
                 
@@ -1960,10 +2095,26 @@
             document.getElementById('xml4Modal').style.display = 'none';
         }
 
+        // ============================= SUMMARY POPUP =============================
+        function showSummaryPopup(stats) {
+            document.getElementById('summaryTotal').textContent = stats.total.toLocaleString('vi-VN');
+            document.getElementById('summaryError').textContent = stats.error.toLocaleString('vi-VN');
+            document.getElementById('summaryValid').textContent = stats.valid.toLocaleString('vi-VN');
+            document.getElementById('summaryModal').style.display = 'block';
+        }
+
+        function closeSummaryPopup() {
+            document.getElementById('summaryModal').style.display = 'none';
+        }
+
         window.onclick = function(event) {
-            const modal = document.getElementById('xml4Modal');
-            if (event.target == modal) {
-                modal.style.display = "none";
+            const xmlModal = document.getElementById('xml4Modal');
+            const summaryModal = document.getElementById('summaryModal');
+            if (event.target == xmlModal) {
+                xmlModal.style.display = "none";
+            }
+            if (event.target == summaryModal) {
+                summaryModal.style.display = "none";
             }
         }
 
