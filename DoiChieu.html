@@ -624,8 +624,8 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>🏥 Dashboard BHYT Toàn diện</h1>
-            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh</p>
+            <h1>🏥 Giám sát hồ sơ BHYT Toàn diện</h1>
+            <p>Hệ thống quản lý và phân tích dữ liệu BHYT - 79764 - IT Anh Khoa</p>
         </header>
 
         <nav class="tab-nav">
@@ -1066,7 +1066,7 @@
             'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện',
             'MA_MAY_TRUNG_THOI_GIAN': 'Trùng máy thực hiện cùng thời điểm',
             'BS_TRUNG_THOI_GIAN': 'Bác sĩ cho y lệnh trùng thời điểm',
-            'BS_KHAM_CHONG_LAN': 'BS khám chồng giờ (ca thuốc không CLS)',
+            'BS_KHAM_CHONG_LAN': 'Chưa kết thúc BN cũ → khám BN mới (lãnh thuốc ko cls)',
             'DVKT_YL_TRUNG_NGAY_VAO': 'DVKT - Y lệnh trùng ngày vào',
             'DVKT_YL_TRUNG_NGAY_RA': 'DVKT - Y lệnh trùng ngày ra',
             'DVKT_THYL_TRUNG_NGAY_VAO': 'DVKT - THYL trùng ngày vào',
@@ -1465,7 +1465,6 @@
 
             // Step 1: Populate maps
             records.forEach(record => {
-                // MA_MAY check
                 if (record.services) {
                     record.services.forEach(service => {
                         if (service.ma_may && service.ngay_th_yl) {
@@ -1475,7 +1474,6 @@
                         }
                     });
                 }
-                // MA_BAC_SI check for drugs
                 if (record.drugs) {
                     record.drugs.forEach(drug => {
                         if (drug.ma_bac_si && drug.ngay_yl) {
@@ -1485,7 +1483,6 @@
                         }
                     });
                 }
-                // Overlapping simple-case visits check
                 if (record.isSimpleCase && record.mainDoctor) {
                     if (!doctorScheduleMap.has(record.mainDoctor)) {
                         doctorScheduleMap.set(record.mainDoctor, []);
@@ -1498,52 +1495,62 @@
                 }
             });
 
-            // Step 2: Find MA_MAY conflicts and apply errors
+            // Step 2: Find MA_MAY conflicts
             machineTimeMap.forEach((conflicts, key) => {
-                const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
-                if (uniqueMaLksInConflict.length > 1) {
+                const uniqueMaLks = Array.from(new Set(conflicts.map(c => c.maLk)));
+                if (uniqueMaLks.length > 1) {
                     const [maMay, ngayThYl] = key.split('_');
-                    uniqueMaLksInConflict.forEach(currentMaLk => {
+                    uniqueMaLks.forEach(currentMaLk => {
                         const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                         if (recordToUpdate) {
-                            const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
-                            const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).join(', ');
+                            const firstConflict = conflicts.find(c => c.maLk === currentMaLk);
+                            const otherMaLks = uniqueMaLks
+                                .filter(maLk => maLk !== currentMaLk)
+                                .map(maLk => {
+                                    const r = records.find(rec => rec.maLk === maLk);
+                                    return r ? `${r.hoTen} (${maLk})` : maLk;
+                                }).join(', ');
                             recordToUpdate.errors.push({
                                 type: 'MA_MAY_TRUNG_THOI_GIAN',
                                 severity: 'critical',
-                                message: `DV "${firstConflictForThisPatient.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
-                                cost: firstConflictForThisPatient.cost,
-                                itemName: firstConflictForThisPatient.tenDv
+                                message: `DV "${firstConflict.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
+                                cost: firstConflict.cost,
+                                itemName: firstConflict.tenDv
                             });
                         }
                     });
                 }
             });
 
-            // Step 3: Find MA_BAC_SI conflicts and apply errors
+            // Step 3: Find MA_BAC_SI conflicts
             doctorTimeMap.forEach((conflicts, key) => {
-                const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
-                if (uniqueMaLksInConflict.length > 1) {
+                const uniqueMaLks = Array.from(new Set(conflicts.map(c => c.maLk)));
+                if (uniqueMaLks.length > 1) {
                     const [maBs, ngayYl] = key.split('_');
                     const tenBacSi = staffNameMap.get(maBs) || maBs;
-                    uniqueMaLksInConflict.forEach(currentMaLk => {
+                    uniqueMaLks.forEach(currentMaLk => {
                         const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                         if (recordToUpdate) {
-                            const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
-                            const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).join(', ');
+                            const firstConflict = conflicts.find(c => c.maLk === currentMaLk);
+                            const otherMaLks = uniqueMaLks
+                                .filter(maLk => maLk !== currentMaLk)
+                                .map(maLk => {
+                                    const r = records.find(rec => rec.maLk === maLk);
+                                    return r ? `${r.hoTen} (${maLk})` : maLk;
+                                }).join(', ');
                             recordToUpdate.errors.push({
                                 type: 'BS_TRUNG_THOI_GIAN',
                                 severity: 'warning',
-                                message: `BS ${tenBacSi} cho y lệnh thuốc "${firstConflictForThisPatient.tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca khác: ${otherMaLks}`,
-                                cost: firstConflictForThisPatient.cost,
-                                itemName: firstConflictForThisPatient.tenThuoc
+                                message: `BS ${tenBacSi} cho y lệnh thuốc "${firstConflict.tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca khác: ${otherMaLks}`,
+                                cost: firstConflict.cost,
+                                itemName: firstConflict.tenThuoc
                             });
                         }
                     });
                 }
             });
             
-            // Step 4: Find overlapping simple-case visits and apply errors
+            // Step 4: Find overlapping simple-case visits
             const overlapConflictMap = new Map();
             doctorScheduleMap.forEach((visits, maBs) => {
                 if (visits.length < 2) return;
@@ -1566,11 +1573,15 @@
                 const recordToUpdate = records.find(r => r.maLk === maLk);
                 if (recordToUpdate) {
                     const tenBacSi = staffNameMap.get(recordToUpdate.mainDoctor) || recordToUpdate.mainDoctor;
-                    const otherMaLks = Array.from(conflictingMaLks).join(', ');
+                    const otherMaLks = Array.from(conflictingMaLks)
+                        .map(otherLk => {
+                            const r = records.find(rec => rec.maLk === otherLk);
+                            return r ? `${r.hoTen} (${otherLk})` : otherLk;
+                        }).join(', ');
                     recordToUpdate.errors.push({
                         type: 'BS_KHAM_CHONG_LAN',
                         severity: 'warning',
-                        message: `BS ${tenBacSi} có lịch khám chồng lấn thời gian với các ca: ${otherMaLks}`,
+                        message: `BS ${tenBacSi} khám chồng với các ca: ${otherMaLks}`,
                         cost: 0,
                         itemName: 'Lịch khám'
                     });
@@ -1807,10 +1818,17 @@
                     record.errors.push({ type: 'KHAM_DUOI_5_PHUT', severity: 'warning', message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
                 }
             }
-            
-            // Xác định ca đơn giản (chỉ lãnh thuốc, không CLS)
-            const hasCLS = record.t_xn > 0 || record.t_cdha > 0 || record.t_pttt > 0 || record.t_vtyt > 0 || record.t_mau > 0 || record.t_giuong > 0 || tongTienDVKTKhacKham > 0;
-            record.isSimpleCase = record.t_thuoc > 0 && !hasCLS;
+
+            const isSimple = record.t_thuoc > 0 &&
+                record.t_xn === 0 &&
+                record.t_cdha === 0 &&
+                record.t_pttt === 0 &&
+                record.t_vtyt === 0 &&
+                record.t_mau === 0 &&
+                record.t_giuong === 0 &&
+                record.t_vanchuyen === 0 &&
+                tongTienDVKTKhacKham === 0;
+            record.isSimpleCase = isSimple;
             
             return { record, drugs: drugsForGlobalList, xml4Data };
         }
