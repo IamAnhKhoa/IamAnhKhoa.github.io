@@ -37,7 +37,8 @@ const ERROR_TYPES = {
     'THUOC_THYL_NGOAI_GIO_HC': 'Thuốc - Thực hiện YL ngoài giờ HC',
     'DVKT_YL_NGOAI_GIO_HC': 'DVKT - Y lệnh ngoài giờ HC',
     'DVKT_THYL_NGOAI_GIO_HC': 'DVKT - Thực hiện YL ngoài giờ HC',
-    'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ'
+    'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
+    'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)'
 };
 
 let validationSettings = {};
@@ -697,6 +698,7 @@ function validateSingleHoso(hoso) {
         mainDoctor: null,
         has_kham_and_dvkt: false,
         has_xml4: !!chiTietCLSNode && !!chiTietCLSNode.querySelector('CHI_TIET_CLS'),
+        has_xml14: !!findFileContent('XML14'), // <-- KIỂM TRA SỰ TỒN TẠI CỦA XML14
         bac_si_chi_dinh: new Set(),
         nguoi_thuc_hien: new Set(),
         errors: [],
@@ -885,6 +887,19 @@ function validateSingleHoso(hoso) {
         if(diffInMinutes >= 0 && diffInMinutes < 5) {
             record.errors.push({ type: ruleKhamNgan, severity: validationSettings[ruleKhamNgan].severity, message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
         }
+    }
+    
+    // <-- LOGIC MỚI ĐƯỢC THÊM TẠI ĐÂY -->
+    const ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
+    const ruleKeyTaiKham = 'NGAY_TAI_KHAM_NO_XML14';
+    if (validationSettings[ruleKeyTaiKham]?.enabled && ngayTaiKham && !record.has_xml14) {
+        record.errors.push({
+            type: ruleKeyTaiKham,
+            severity: validationSettings[ruleKeyTaiKham].severity,
+            message: `Có ngày tái khám [${formatDateTimeForDisplay(ngayTaiKham)}] nhưng không có Giấy hẹn khám lại (XML14).`,
+            cost: record.t_bhtt, // Chi phí xuất toán là toàn bộ chi phí BHYT của hồ sơ
+            itemName: `Hồ sơ có hẹn tái khám`
+        });
     }
     
     const isSimple = record.t_thuoc > 0 &&
@@ -1900,7 +1915,8 @@ function initializeValidationSettings() {
         'BS_KHAM_CHONG_LAN', 'DVKT_YL_TRUNG_NGAY_VAO', 'DVKT_YL_TRUNG_NGAY_RA',
         'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA', 
         'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
-        'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC'
+        'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC',
+        'NGAY_TAI_KHAM_NO_XML14' // <-- ĐÃ SỬA LẠI TÊN QUY TẮC
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
