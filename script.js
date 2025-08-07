@@ -403,10 +403,42 @@ function processXmlContent(xmlContent) {
     updateDashboard();
     updateDenialProjectionTab();
 
+    // === CALCULATION LOGIC FOR SUMMARY POPUP ===
     const total = globalData.allRecords.length;
-    const error = globalData.allRecords.filter(r => r.errors.length > 0).length;
-    showSummaryPopup({ total: total, error: error, valid: total - error });
+    let totalErrorRecords = 0;
+    let criticalErrorRecords = 0;
+    let warningOnlyRecords = 0;
+    let totalDenialAmount = 0;
+
+    globalData.allRecords.forEach(r => {
+        if (r.errors.length > 0) {
+            totalErrorRecords++;
+            const hasCritical = r.errors.some(e => e.severity === 'critical');
+            if (hasCritical) {
+                criticalErrorRecords++;
+            } else {
+                warningOnlyRecords++;
+            }
+
+            r.errors.forEach(e => {
+                if (e.severity === 'critical' && e.cost > 0) {
+                    totalDenialAmount += e.cost;
+                }
+            });
+        }
+    });
+    // === END OF LOGIC ===
+    
+    showSummaryPopup({ 
+        total: total, 
+        totalError: totalErrorRecords,
+        criticalError: criticalErrorRecords,
+        warningOnly: warningOnlyRecords,
+        denialAmount: totalDenialAmount,
+        valid: total - totalErrorRecords 
+    });
 }
+
 
 function processXmlFile() {
     const file = document.getElementById('validatorFileInput').files[0];
@@ -832,10 +864,15 @@ function validateSingleHoso(hoso) {
     }
     
     if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào [${formatDateTimeForDisplay(record.ngayVao)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
-    if (record.ngayTtoan && record.ngayTtoan.substring(0, 8) > record.ngayRa.substring(0, 8)) {
-        record.errors.push({ type: 'NGAY_TTOAN_SAU_RA_VIEN', severity: 'warning', message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+    
+    // Check for rules that are always enabled but not configurable
+    const ruleNgayTToan = 'NGAY_TTOAN_SAU_RA_VIEN';
+    if (validationSettings[ruleNgayTToan]?.enabled && record.ngayTtoan && record.ngayTtoan.substring(0, 8) > record.ngayRa.substring(0, 8)) {
+        record.errors.push({ type: ruleNgayTToan, severity: validationSettings[ruleNgayTToan].severity, message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
     }
-    if (record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
+
+    const ruleKhamNgan = 'KHAM_DUOI_5_PHUT';
+    if (validationSettings[ruleKhamNgan]?.enabled && record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
         const dateVao = new Date(
             record.ngayVao.substring(0,4), record.ngayVao.substring(4,6)-1, record.ngayVao.substring(6,8),
             record.ngayVao.substring(8,10), record.ngayVao.substring(10,12)
@@ -846,7 +883,7 @@ function validateSingleHoso(hoso) {
         );
         const diffInMinutes = (dateRa - dateVao) / 60000;
         if(diffInMinutes >= 0 && diffInMinutes < 5) {
-            record.errors.push({ type: 'KHAM_DUOI_5_PHUT', severity: 'warning', message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
+            record.errors.push({ type: ruleKhamNgan, severity: validationSettings[ruleKhamNgan].severity, message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
         }
     }
     
@@ -914,8 +951,8 @@ function applyFilters() {
         }
 
         const recordDate = String(r.ngayVao).substring(0, 8);
-        if (filters.dateFrom && recordDate < dateFrom) return false;
-        if (filters.dateTo && recordDate > dateTo) return false;
+        if (filters.dateFrom && recordDate < filters.dateFrom) return false;
+        if (filters.dateTo && recordDate > filters.dateTo) return false;
         if (filters.gender && r.gioiTinh !== filters.gender) return false;
         
         if (filters.bncct === 'yes' && (!r.t_bncct || r.t_bncct <= 0)) return false;
@@ -1147,10 +1184,14 @@ function closeXml4Modal() {
 // ============================= SUMMARY POPUP =============================
 function showSummaryPopup(stats) {
     document.getElementById('summaryTotal').textContent = stats.total.toLocaleString('vi-VN');
-    document.getElementById('summaryError').textContent = stats.error.toLocaleString('vi-VN');
+    document.getElementById('summaryError').textContent = stats.totalError.toLocaleString('vi-VN');
+    document.getElementById('summaryCritical').textContent = stats.criticalError.toLocaleString('vi-VN');
+    document.getElementById('summaryWarningOnly').textContent = stats.warningOnly.toLocaleString('vi-VN');
+    document.getElementById('summaryDenialAmount').textContent = formatCurrency(stats.denialAmount);
     document.getElementById('summaryValid').textContent = stats.valid.toLocaleString('vi-VN');
     document.getElementById('summaryModal').style.display = 'block';
 }
+
 
 function closeSummaryPopup() {
     document.getElementById('summaryModal').style.display = 'none';
@@ -1162,6 +1203,7 @@ function openSettingsModal() {
     tbody.innerHTML = ''; 
 
     Object.entries(validationSettings).forEach(([key, setting]) => {
+        // THIS IS THE KEY CHANGE: Only show rules that are configurable.
         if (!setting.isConfigurable) return;
 
         const row = tbody.insertRow();
@@ -1850,34 +1892,54 @@ function exportDoctorAnalysis() {
 }
 
 
-// ============================= INITIALIZATION =============================
+// ============================= INITIALIZATION (UPDATED) =============================
 function initializeValidationSettings() {
-    const configurableWarnings = [
-        'NGAY_TTOAN_SAU_RA_VIEN', 'KHAM_DUOI_5_PHUT', 'BS_TRUNG_THOI_GIAN', 
+    // Rules that users can configure (enable/disable, change severity)
+    const configurableRules = [
+        'BS_TRUNG_THOI_GIAN', 
         'BS_KHAM_CHONG_LAN', 'DVKT_YL_TRUNG_NGAY_VAO', 'DVKT_YL_TRUNG_NGAY_RA',
         'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA', 
         'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
         'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC'
     ];
+
+    // Rules that are always treated as 'warnings' and are NOT configurable
+    const fixedWarnings = [
+        'NGAY_TTOAN_SAU_RA_VIEN', 
+        'KHAM_DUOI_5_PHUT'
+    ];
+
+    // Rules that are always treated as 'critical' errors and are NOT configurable
     const criticalErrors = [
         'NGAY_YL_THUOC_SAU_RA_VIEN', 'NGAY_YL_DVKT_SAU_RA_VIEN', 'NGAY_VAO_SAU_NGAY_RA',
         'THE_BHYT_HET_HAN', 'NGAY_THYL_TRUOC_VAOVIEN', 'NGAY_THYL_SAU_RAVIEN',
         'MA_MAY_TRUNG_THOI_GIAN', 'XML4_MISSING_MA_BS_DOC_KQ'
     ];
 
-    configurableWarnings.forEach(key => {
+    // Setup for configurable rules
+    configurableRules.forEach(key => {
         validationSettings[key] = {
             enabled: true,
             severity: 'warning',
-            isConfigurable: true
+            isConfigurable: true // Will be shown in the settings modal
+        };
+    });
+    
+    // Setup for fixed warnings
+    fixedWarnings.forEach(key => {
+        validationSettings[key] = {
+            enabled: true,
+            severity: 'warning',
+            isConfigurable: false // Will NOT be shown in the settings modal
         };
     });
 
+    // Setup for critical errors
     criticalErrors.forEach(key => {
         validationSettings[key] = {
             enabled: true,
             severity: 'critical',
-            isConfigurable: false 
+            isConfigurable: false // Will NOT be shown in the settings modal
         };
     });
 }
