@@ -33,8 +33,11 @@ const ERROR_TYPES = {
     'DVKT_YL_TRUNG_NGAY_RA': 'DVKT - Y lệnh trùng ngày ra',
     'DVKT_THYL_TRUNG_NGAY_VAO': 'DVKT - THYL trùng ngày vào',
     'DVKT_THYL_TRUNG_NGAY_RA': 'DVKT - THYL trùng ngày ra',
-    'YL_NGOAI_GIO_HC': 'Y lệnh ngoài giờ hành chính',
-    'THYL_NGOAI_GIO_HC': 'Thực hiện YL ngoài giờ hành chính'
+    'THUOC_YL_NGOAI_GIO_HC': 'Thuốc - Y lệnh ngoài giờ HC',
+    'THUOC_THYL_NGOAI_GIO_HC': 'Thuốc - Thực hiện YL ngoài giờ HC',
+    'DVKT_YL_NGOAI_GIO_HC': 'DVKT - Y lệnh ngoài giờ HC',
+    'DVKT_THYL_NGOAI_GIO_HC': 'DVKT - Thực hiện YL ngoài giờ HC',
+    'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ'
 };
 
 let validationSettings = {};
@@ -559,7 +562,7 @@ function performCrossRecordValidation(records) {
                 recordToUpdate.errors.push({
                     type: ruleKey,
                     severity: validationSettings[ruleKey].severity,
-                    message: `BS ${tenBacSi} có lịch khám chồng lấn với các ca: ${otherMaLks}`,
+                    message: `BS ${tenBacSi} khám chồng với các ca: ${otherMaLks}`,
                     cost: 0,
                     itemName: 'Lịch khám'
                 });
@@ -702,11 +705,25 @@ function validateSingleHoso(hoso) {
                 if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
             }
 
-            if (isOutsideWorkingHours(ngayYl)) {
-                record.errors.push({ type: 'YL_NGOAI_GIO_HC', severity: 'warning', message: `Thuốc "${tenThuoc}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, cost: 0, itemName: tenThuoc });
+            const ruleKeyYlThuoc = 'THUOC_YL_NGOAI_GIO_HC';
+            if (validationSettings[ruleKeyYlThuoc]?.enabled && isOutsideWorkingHours(ngayYl)) {
+                 record.errors.push({ 
+                    type: ruleKeyYlThuoc, 
+                    severity: validationSettings[ruleKeyYlThuoc].severity, 
+                    message: `Thuốc "${tenThuoc}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
+                    cost: 0, 
+                    itemName: tenThuoc 
+                });
             }
-            if (isOutsideWorkingHours(ngayThYl)) {
-                record.errors.push({ type: 'THYL_NGOAI_GIO_HC', severity: 'warning', message: `Thuốc "${tenThuoc}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, cost: 0, itemName: tenThuoc });
+            const ruleKeyThylThuoc = 'THUOC_THYL_NGOAI_GIO_HC';
+            if (validationSettings[ruleKeyThylThuoc]?.enabled && isOutsideWorkingHours(ngayThYl)) {
+                 record.errors.push({ 
+                    type: ruleKeyThylThuoc, 
+                    severity: validationSettings[ruleKeyThylThuoc].severity, 
+                    message: `Thuốc "${tenThuoc}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
+                    cost: 0, 
+                    itemName: tenThuoc 
+                });
             }
 
             if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
@@ -752,11 +769,25 @@ function validateSingleHoso(hoso) {
                 if (ngayThYl && ngayThYl === record.ngayVao) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_VAO', severity: 'warning', message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày vào viện.`, cost: 0, itemName: tenDV });
                 if (ngayThYl && ngayThYl === record.ngayRa) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_RA', severity: 'warning', message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày ra viện.`, cost: 0, itemName: tenDV });
 
-                if (isOutsideWorkingHours(ngayYl)) {
-                    record.errors.push({ type: 'YL_NGOAI_GIO_HC', severity: 'warning', message: `DVKT "${tenDV}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, cost: 0, itemName: tenDV });
+                const ruleKeyYlDvkt = 'DVKT_YL_NGOAI_GIO_HC';
+                if (validationSettings[ruleKeyYlDvkt]?.enabled && isOutsideWorkingHours(ngayYl)) {
+                    record.errors.push({ 
+                        type: ruleKeyYlDvkt, 
+                        severity: validationSettings[ruleKeyYlDvkt].severity, 
+                        message: `DVKT "${tenDV}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
+                        cost: 0, 
+                        itemName: tenDV 
+                    });
                 }
-                if (isOutsideWorkingHours(ngayThYl)) {
-                    record.errors.push({ type: 'THYL_NGOAI_GIO_HC', severity: 'warning', message: `DVKT "${tenDV}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, cost: 0, itemName: tenDV });
+                const ruleKeyThylDvkt = 'DVKT_THYL_NGOAI_GIO_HC';
+                if (validationSettings[ruleKeyThylDvkt]?.enabled && isOutsideWorkingHours(ngayThYl)) {
+                    record.errors.push({ 
+                        type: ruleKeyThylDvkt, 
+                        severity: validationSettings[ruleKeyThylDvkt].severity, 
+                        message: `DVKT "${tenDV}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
+                        cost: 0, 
+                        itemName: tenDV 
+                    });
                 }
             }
 
@@ -769,13 +800,34 @@ function validateSingleHoso(hoso) {
     record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
 
     const xml4Data = [];
-    if(record.has_xml4) {
+    if (record.has_xml4) {
         chiTietCLSNode.querySelectorAll('CHI_TIET_CLS').forEach(cls => {
+            const maDichVu = getText(cls, 'MA_DICH_VU');
+            const tenChiSo = getText(cls, 'TEN_CHI_SO');
+            const maBsDocKq = getText(cls, 'MA_BS_DOC_KQ');
+
             xml4Data.push({
-                ma_dich_vu: getText(cls, 'MA_DICH_VU'), ten_chi_so: getText(cls, 'TEN_CHI_SO'),
-                gia_tri: getText(cls, 'GIA_TRI'), don_vi_do: getText(cls, 'DON_VI_DO'),
+                ma_dich_vu: maDichVu,
+                ten_chi_so: tenChiSo,
+                gia_tri: getText(cls, 'GIA_TRI'),
+                don_vi_do: getText(cls, 'DON_VI_DO'),
                 ngay_kq: formatDateTimeForDisplay(getText(cls, 'NGAY_KQ'))
             });
+
+            const ruleKey = 'XML4_MISSING_MA_BS_DOC_KQ';
+            if (validationSettings[ruleKey]?.enabled && !maBsDocKq) {
+                const associatedService = record.services.find(s => s.ma_dich_vu === maDichVu);
+                const serviceCost = associatedService ? associatedService.thanh_tien_bh : 0;
+                const serviceName = associatedService ? associatedService.ten_dich_vu : `DV có mã ${maDichVu}`;
+
+                record.errors.push({
+                    type: ruleKey,
+                    severity: validationSettings[ruleKey].severity,
+                    message: `CLS "${serviceName}" thiếu mã bác sĩ đọc kết quả.`,
+                    cost: serviceCost,
+                    itemName: serviceName
+                });
+            }
         });
     }
     
@@ -1803,13 +1855,14 @@ function initializeValidationSettings() {
     const configurableWarnings = [
         'NGAY_TTOAN_SAU_RA_VIEN', 'KHAM_DUOI_5_PHUT', 'BS_TRUNG_THOI_GIAN', 
         'BS_KHAM_CHONG_LAN', 'DVKT_YL_TRUNG_NGAY_VAO', 'DVKT_YL_TRUNG_NGAY_RA',
-        'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA', 'YL_NGOAI_GIO_HC', 
-        'THYL_NGOAI_GIO_HC'
+        'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA', 
+        'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
+        'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC'
     ];
     const criticalErrors = [
         'NGAY_YL_THUOC_SAU_RA_VIEN', 'NGAY_YL_DVKT_SAU_RA_VIEN', 'NGAY_VAO_SAU_NGAY_RA',
         'THE_BHYT_HET_HAN', 'NGAY_THYL_TRUOC_VAOVIEN', 'NGAY_THYL_SAU_RAVIEN',
-        'MA_MAY_TRUNG_THOI_GIAN'
+        'MA_MAY_TRUNG_THOI_GIAN', 'XML4_MISSING_MA_BS_DOC_KQ'
     ];
 
     configurableWarnings.forEach(key => {
