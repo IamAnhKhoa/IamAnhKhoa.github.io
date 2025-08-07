@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
+      
         /* Global Styles */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -28,13 +29,13 @@
         
         /* Header */
         .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
         
         .header::before {
             content: '';
@@ -585,7 +586,7 @@
         .summary-modal-content {
             margin: 15% auto;
             width: 90%;
-            max-width: 500px;
+            max-width: 550px; /* Increased width */
         }
         .summary-modal-body {
             display: flex;
@@ -749,9 +750,9 @@
                     <div class="filter-grid">
                         <div class="filter-group">
                              <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <label>Loại lỗi:</label>
-                                <button class="settings-btn" onclick="openSettingsModal()" title="Cài đặt quy tắc kiểm tra">⚙️</button>
-                            </div>
+                                 <label>Loại lỗi:</label>
+                                 <button class="settings-btn" onclick="openSettingsModal()" title="Cài đặt quy tắc kiểm tra">⚙️</button>
+                             </div>
                             <select class="filter-select" id="errorTypeFilter">
                                 <option value="">Tất cả loại lỗi</option>
                             </select>
@@ -1008,14 +1009,30 @@
                     <span class="value" id="summaryTotal">0</span>
                 </div>
                 <div class="summary-item">
+                    <span class="icon icon-valid">✔️</span>
+                    <span class="text">Số hồ sơ hợp lệ:</span>
+                    <span class="value" id="summaryValid">0</span>
+                </div>
+                <hr>
+                <div class="summary-item">
                     <span class="icon icon-error">❌</span>
-                    <span class="text">Số hồ sơ lỗi:</span>
+                    <span class="text">Tổng số hồ sơ lỗi:</span>
                     <span class="value" id="summaryError">0</span>
                 </div>
                 <div class="summary-item">
-                    <span class="icon icon-valid">✔️</span>
-                    <span class="text">Số hồ sơ đúng:</span>
-                    <span class="value" id="summaryValid">0</span>
+                    <span class="icon icon-error" style="color: #c82333;">🔴</span>
+                    <span class="text">Hồ sơ lỗi nghiêm trọng:</span>
+                    <span class="value" id="summaryCritical">0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="icon icon-error" style="color: #ffc107;">🟡</span>
+                    <span class="text">Hồ sơ chỉ có cảnh báo:</span>
+                    <span class="value" id="summaryWarningOnly">0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="icon icon-total" style="color: #dc3545;">💸</span>
+                    <span class="text">Tổng tiền dự kiến XT:</span>
+                    <span class="value" id="summaryDenialAmount">0</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1023,7 +1040,6 @@
             </div>
         </div>
     </div>
-
     <div id="settingsModal" class="modal">
         <div class="modal-content settings-modal-content">
             <div class="modal-header">
