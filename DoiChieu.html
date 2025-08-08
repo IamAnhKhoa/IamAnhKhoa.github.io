@@ -16,7 +16,6 @@
             min-height: 100vh; 
             padding: 20px; 
             line-height: 1.6; 
-            color: #1f2d3d;
         }
         
         .container { 
@@ -671,41 +670,6 @@
         #settingsTable input:checked + .slider:before {
             transform: translateX(26px);
         }
-
-        /* ===================== */
-        /* Dark theme overrides  */
-        /* ===================== */
-        html[data-theme="dark"] body {
-          background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
-          color: #e2e8f0;
-        }
-        html[data-theme="dark"] .container { background: #0f172a; color: #e2e8f0; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
-        html[data-theme="dark"] .header { background: linear-gradient(135deg, #0b132b 0%, #1e3a8a 100%); }
-        html[data-theme="dark"] .tab-nav { background: #0b1220; border-color: #1f2a44; }
-        html[data-theme="dark"] .tab-button { color: #cbd5e1; }
-        html[data-theme="dark"] .tab-button:hover { background: rgba(100,116,139,0.08); color:#fff; }
-        html[data-theme="dark"] .tab-button.active { box-shadow: 0 4px 15px rgba(88, 28, 135, 0.5); }
-
-        html[data-theme="dark"] .advanced-filters { background: linear-gradient(135deg, #0b1220 0%, #111827 100%); border-color:#1f2a44; }
-        html[data-theme="dark"] .upload-area { background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%); border-color:#334155; }
-        html[data-theme="dark"] .results-container { background:#0f172a; border-color:#1f2a44; }
-        html[data-theme="dark"] .table-header { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
-        html[data-theme="dark"] .results-table th { background: #0b1324; color:#e2e8f0; border-bottom-color:#1f2a44; }
-        html[data-theme="dark"] .results-table td { border-bottom-color:#1f2a44; }
-        html[data-theme="dark"] .results-table tr:hover { background: rgba(148,163,184,0.08); }
-
-        html[data-theme="dark"] .stat-card { background: linear-gradient(135deg, #1f2937 0%, #374151 100%); }
-        /* keep charts light for readability */
-        html[data-theme="dark"] .chart-container { background: #ffffff; }
-
-        html[data-theme="dark"] .pagination { background:#0b1220; border-top:1px solid #1f2a44; }
-        html[data-theme="dark"] .pagination button { background:#0f172a; color:#e2e8f0; border-color:#1f2a44; }
-        html[data-theme="dark"] .pagination button:hover:not(:disabled) { background:#1e293b; }
-
-        html[data-theme="dark"] .modal { background: rgba(2,6,23,0.6); }
-        html[data-theme="dark"] .modal-content { background:#0b1324; color:#e2e8f0; border-color:#1f2a44; }
-        html[data-theme="dark"] .close-button { color:#cbd5e1; }
-
     </style>
 </head>
 <body>
@@ -715,17 +679,52 @@
             <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - 79764 - IT Anh Khoa</p>
         </header>
 
-        <!-- Reordered: Kiểm tra XML lên đầu & đặt active -->
         <nav class="tab-nav">
-            <button class="tab-button active" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
-            <button class="tab-button" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
+            <button class="tab-button active" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
+            <button class="tab-button" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
             <button class="tab-button" onclick="openTab(event, 'comparatorTab')">🔄 Đối chiếu</button>
             <button class="tab-button" onclick="openTab(event, 'denialTab')">💸 Dự kiến Xuất toán</button>
             <button class="tab-button" onclick="openTab(event, 'reportsTab')">📈 Báo cáo</button>
         </nav>
 
-        <!-- Validator FIRST and ACTIVE -->
-        <div id="validatorTab" class="tab-content active">
+        <div id="dashboardTab" class="tab-content active">
+             <div class="filter-actions" style="margin-bottom: 20px;">
+                 <button class="btn btn-success" id="exportDashboardButton" onclick="exportDashboardToExcel()">📊 Xuất Excel Dashboard</button>
+                 <button class="btn btn-info" onclick="exportDoctorAnalysis()">⚕️ Xuất Phân tích NVYT</button>
+             </div>
+            <div class="stats-overview" id="dashboardStats">
+                <div class="stat-card">
+                    <h3 id="totalRecords">0</h3>
+                    <p>Tổng hồ sơ</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="errorCount">0</h3>
+                    <p>Số hồ sơ lỗi</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalAmount">0</h3>
+                    <p>Tổng chi phí BHYT TT</p>
+                </div>
+                 <div class="stat-card">
+                    <h3 id="totalBncct">0</h3>
+                    <p>Tổng chi phí BN CCT</p>
+                </div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="chart-container"><canvas id="errorTypesChart"></canvas></div>
+                <div class="chart-container"><canvas id="timelineChart"></canvas></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="chart-container"><canvas id="departmentChart"></canvas></div>
+                <div class="chart-container"><canvas id="amountChart"></canvas></div>
+            </div>
+             <div class="dashboard-grid">
+                <div class="chart-container"><canvas id="topDrugsChart"></canvas></div>
+                <div class="chart-container"><canvas id="topServicesChart"></canvas></div>
+            </div>
+        </div>
+
+        <div id="validatorTab" class="tab-content">
             <div class="upload-area" id="validatorUploadArea">
                 <h2>📁 Tải lên file XML BHYT</h2>
                 <p>Kéo thả file XML vào đây hoặc click để chọn file</p>
@@ -845,44 +844,6 @@
                     </table>
                 </div>
                 <div class="pagination" id="paginationContainer"></div>
-            </div>
-        </div>
-
-        <!-- Dashboard (now second, not active by default) -->
-        <div id="dashboardTab" class="tab-content">
-             <div class="filter-actions" style="margin-bottom: 20px;">
-                 <button class="btn btn-success" id="exportDashboardButton" onclick="exportDashboardToExcel()">📊 Xuất Excel Dashboard</button>
-                 <button class="btn btn-info" onclick="exportDoctorAnalysis()">⚕️ Xuất Phân tích NVYT</button>
-             </div>
-            <div class="stats-overview" id="dashboardStats">
-                <div class="stat-card">
-                    <h3 id="totalRecords">0</h3>
-                    <p>Tổng hồ sơ</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="errorCount">0</h3>
-                    <p>Số hồ sơ lỗi</p>
-                </div>
-                <div class="stat-card">
-                    <h3 id="totalAmount">0</h3>
-                    <p>Tổng chi phí BHYT TT</p>
-                </div>
-                 <div class="stat-card">
-                    <h3 id="totalBncct">0</h3>
-                    <p>Tổng chi phí BN CCT</p>
-                </div>
-            </div>
-            <div class="dashboard-grid">
-                <div class="chart-container"><canvas id="errorTypesChart"></canvas></div>
-                <div class="chart-container"><canvas id="timelineChart"></canvas></div>
-            </div>
-            <div class="dashboard-grid">
-                <div class="chart-container"><canvas id="departmentChart"></canvas></div>
-                <div class="chart-container"><canvas id="amountChart"></canvas></div>
-            </div>
-             <div class="dashboard-grid">
-                <div class="chart-container"><canvas id="topDrugsChart"></canvas></div>
-                <div class="chart-container"><canvas id="topServicesChart"></canvas></div>
             </div>
         </div>
 
