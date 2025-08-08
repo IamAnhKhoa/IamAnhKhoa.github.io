@@ -1152,8 +1152,7 @@
         </div>
     </div>
 
-    <!-- ========== JS BỔ SUNG NHẸ: Theme + Tab mặc định + Fallback hover ==========
-         (Không đụng script.js gốc) -->
+    <!-- ========== JS BỔ SUNG NHẸ: Theme + Tab mặc định + Fallback hover ========== -->
     <script>
       // Áp dụng theme theo localStorage (ưu tiên), fallback theo hệ thống
       (function applyInitialTheme(){
@@ -1210,5 +1209,114 @@
 
     <!-- Logic gốc của bạn -->
     <script src="script.js" defer></script>
+
+    <!-- ========== BỔ SUNG HIỆU ỨNG ICON 💸 / 🎉 (KHÔNG ĐỤNG LOGIC GỐC) ========== -->
+    <style>
+      /* Chuẩn bị cho icon animation */
+      .summary-item .icon { position: relative; display: inline-block; }
+
+      /* Lấp lánh */
+      @keyframes sparkle {
+        0%, 100% { filter: drop-shadow(0 0 2px gold) drop-shadow(0 0 6px gold); transform: rotate(0deg); }
+        50% { filter: drop-shadow(0 0 4px gold) drop-shadow(0 0 12px gold); transform: rotate(10deg); }
+      }
+
+      /* Bay vèo vèo */
+      @keyframes fly {
+        0% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+        100% { transform: translateX(80px) translateY(-40px) rotate(30deg); opacity: 0; }
+      }
+
+      /* Nhún mừng */
+      @keyframes bounceHappy {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.25); }
+      }
+
+      .icon-money.sparkle {
+        animation: sparkle 1.2s infinite ease-in-out;
+      }
+
+      .icon-money.fly::after {
+        content: "💸";
+        position: absolute;
+        left: 0;
+        top: 0;
+        animation: fly 0.8s ease-out forwards;
+        pointer-events: none;
+      }
+
+      .icon-money.happy {
+        animation: bounceHappy 0.8s infinite;
+      }
+    </style>
+
+    <script>
+      // Chuẩn hóa số tiền: loại bỏ dấu . , khoảng trắng, ký tự tiền tệ
+      function parseVnAmount(text) {
+        if (!text) return 0;
+        const cleaned = String(text).replace(/[^0-9\-]/g, ''); // giữ số và dấu -
+        const n = parseInt(cleaned, 10);
+        return isNaN(n) ? 0 : n;
+      }
+
+      // Cập nhật hiệu ứng icon tiền dựa trên giá trị #summaryDenialAmount
+      function updateMoneyIconEffect() {
+        const valueEl = document.getElementById('summaryDenialAmount');
+        if (!valueEl) return;
+
+        // Lấy đúng icon trong cùng .summary-item (không dùng previousElementSibling vì đó là span.text)
+        const container = valueEl.closest('.summary-item');
+        if (!container) return;
+        const iconEl = container.querySelector('.icon');
+        if (!iconEl) return;
+
+        const amount = parseVnAmount(valueEl.textContent);
+
+        iconEl.classList.remove('sparkle','fly','happy','icon-money');
+        iconEl.classList.add('icon-money');
+
+        if (amount > 0) {
+          iconEl.textContent = '💸';
+          iconEl.classList.add('sparkle');
+
+          // “Bay vèo vèo” mỗi lần cập nhật >0
+          setTimeout(() => {
+            iconEl.classList.add('fly');
+            setTimeout(() => iconEl.classList.remove('fly'), 900);
+          }, 200);
+
+        } else {
+          iconEl.textContent = '🎉';
+          iconEl.classList.add('happy');
+        }
+      }
+
+      // Tự động theo dõi khi giá trị thay đổi (script gốc set textContent)
+      document.addEventListener('DOMContentLoaded', () => {
+        const val = document.getElementById('summaryDenialAmount');
+        if (!val) return;
+
+        // Quan sát thay đổi text
+        const mo = new MutationObserver(updateMoneyIconEffect);
+        mo.observe(val, { childList: true, characterData: true, subtree: true });
+
+        // Gọi 1 lần khi trang sẵn sàng (trường hợp đã có sẵn giá trị)
+        setTimeout(updateMoneyIconEffect, 300);
+
+        // Nếu modal được bật/tắt bằng cách đổi style.display
+        const summaryModal = document.getElementById('summaryModal');
+        if (summaryModal) {
+          const modalMo = new MutationObserver(() => {
+            const visible = window.getComputedStyle(summaryModal).display !== 'none';
+            if (visible) setTimeout(updateMoneyIconEffect, 150);
+          });
+          modalMo.observe(summaryModal, { attributes: true, attributeFilter: ['style','class'] });
+        }
+
+        // Expose nhẹ để bạn có thể gọi thủ công trong script gốc nếu muốn
+        window.__updateMoneyIconEffect = updateMoneyIconEffect;
+      });
+    </script>
 </body>
 </html>
