@@ -1135,9 +1135,7 @@ function updateResultsTable() {
             </td>
             <td><strong>Vào:</strong> ${formatDateTimeForDisplay(record.ngayVao)}<br><strong>Ra:</strong> ${formatDateTimeForDisplay(record.ngayRa)}</td>
             <td>
-            const costIfCritical = (ruleKey, base) =>
-  (validationSettings[ruleKey]?.severity === 'critical' ? (Number(base) || 0) : 0);
-  
+            
                 ${formatCurrency(record.t_bhtt)}
                 ${record.ngayTtoan ? `<br><small style="color: #555;">TT: ${formatDateTimeForDisplay(record.ngayTtoan)}</small>` : ''}
             </td>
