@@ -6,6 +6,8 @@
     <title>Giám sát BHYT Toàn diện</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+    <!-- ========== CSS GỐC CỦA BẠN (GIỮ NGUYÊN) ========== -->
     <style>
       
         /* Global Styles */
@@ -671,23 +673,106 @@
             transform: translateX(26px);
         }
     </style>
+
+    <!-- ========== CSS BỔ SUNG (ADD-ON) – không phá CSS cũ ========== -->
+    <style>
+        /* NÚT LIGHT/DARK trong header – giữ nguyên header cũ */
+        .theme-toggle{
+          position:absolute; right:18px; top:18px;
+          border:none; background: rgba(255,255,255,.12); color:#fff;
+          width:56px; height:40px; border-radius:12px; cursor:pointer;
+          display:grid; place-items:center; backdrop-filter: blur(6px);
+          box-shadow:0 10px 25px rgba(0,0,0,.18);
+          transition: transform .15s ease, box-shadow .2s ease;
+        }
+        .theme-toggle:hover{ transform: translateY(-2px); box-shadow: 0 14px 30px rgba(0,0,0,.22); }
+        .theme-toggle .icon{ font-size:1.1rem; }
+        .theme-toggle .icon-moon{ display:none; }
+        body.dark .theme-toggle .icon-sun{ display:none; }
+        body.dark .theme-toggle .icon-moon{ display:block; }
+
+        /* Mượt mà hơn khi hover bảng */
+        .results-table td, .results-table tr {
+          transition: background-color .15s ease, transform .12s ease, box-shadow .12s ease;
+        }
+
+        /* WOW hover khi hàng chứa LỖI/CẢNH BÁO – ưu tiên “không đụng” style cũ */
+        .results-table tr:has(.status-badge.status-error):hover {
+          background: rgba(220,53,69,.10) !important;
+          box-shadow: inset 0 0 0 2px rgba(220,53,69,.45);
+          transform: translateY(-1px);
+        }
+        .results-table tr:has(.status-badge.status-warning):hover {
+          background: rgba(255,193,7,.14) !important;
+          box-shadow: inset 0 0 0 2px rgba(255,193,7,.45);
+          transform: translateY(-1px);
+        }
+
+        /* Fallback nếu browser không hỗ trợ :has (JS sẽ gắn class) */
+        .results-table tr.row-errorish:hover {
+          background: rgba(220,53,69,.10) !important;
+          box-shadow: inset 0 0 0 2px rgba(220,53,69,.45);
+          transform: translateY(-1px);
+        }
+        .results-table tr.row-warningish:hover {
+          background: rgba(255,193,7,.14) !important;
+          box-shadow: inset 0 0 0 2px rgba(255,193,7,.45);
+          transform: translateY(-1px);
+        }
+
+        /* Dark Mode – chỉ override màu, không đổi font/bố cục */
+        body.dark { background: linear-gradient(135deg, #111827 0%, #0f172a 100%); color:#e5e7eb; }
+        body.dark .container { background:#0b1220; box-shadow: 0 24px 70px rgba(0,0,0,.5); }
+        body.dark .header { background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%); }
+        body.dark .tab-nav { background:#0b1220; border-bottom-color:#243244; }
+        body.dark .tab-button { color:#a0aec0; }
+        body.dark .tab-button:hover { background: rgba(99,102,241,.12); color:#c7d2fe; }
+        body.dark .tab-button.active { color:white; box-shadow: 0 6px 18px rgba(99,102,241,.35) inset, 0 8px 22px rgba(99,102,241,.25); }
+
+        body.dark .chart-container,
+        body.dark .results-container { background:#0f172a; box-shadow: 0 12px 28px rgba(0,0,0,.45); }
+        body.dark .results-table th { background:#0b1220; color:#e5e7eb; border-bottom-color:#243244; }
+        body.dark .results-table td { border-bottom-color:#243244; }
+
+        body.dark .advanced-filters {
+          background: linear-gradient(135deg,#0b1220 0%,#0f172a 100%);
+          border-color:#1f2a3a;
+        }
+        body.dark .filter-input, body.dark .filter-select {
+          background:#0b1220; color:#e5e7eb; border-color:#243244;
+        }
+        body.dark .upload-area {
+          background: linear-gradient(135deg,#0b1220 0%,#0f172a 100%);
+          border-color:#3b82f6;
+        }
+        body.dark .table-header { background: linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%); }
+        body.dark .pagination { background:#0b1220; }
+    </style>
 </head>
 <body>
     <div class="container">
         <header class="header">
             <h1>🏥 Giám sát BHYT Toàn diện</h1>
             <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - 79764 - IT Anh Khoa</p>
+
+            <!-- Nút chuyển Light/Dark (mới) -->
+            <button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark">
+              <span class="icon icon-sun">☀️</span>
+              <span class="icon icon-moon">🌙</span>
+            </button>
         </header>
 
         <nav class="tab-nav">
-            <button class="tab-button active" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
-            <button class="tab-button" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
+            <!-- Đổi tab mặc định: để validatorTab active khi tải trang -->
+            <button class="tab-button" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
+            <button class="tab-button active" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
             <button class="tab-button" onclick="openTab(event, 'comparatorTab')">🔄 Đối chiếu</button>
             <button class="tab-button" onclick="openTab(event, 'denialTab')">💸 Dự kiến Xuất toán</button>
             <button class="tab-button" onclick="openTab(event, 'reportsTab')">📈 Báo cáo</button>
         </nav>
 
-        <div id="dashboardTab" class="tab-content active">
+        <!-- Dashboard: KHÔNG active mặc định -->
+        <div id="dashboardTab" class="tab-content">
              <div class="filter-actions" style="margin-bottom: 20px;">
                  <button class="btn btn-success" id="exportDashboardButton" onclick="exportDashboardToExcel()">📊 Xuất Excel Dashboard</button>
                  <button class="btn btn-info" onclick="exportDoctorAnalysis()">⚕️ Xuất Phân tích NVYT</button>
@@ -724,7 +809,8 @@
             </div>
         </div>
 
-        <div id="validatorTab" class="tab-content">
+        <!-- Kiểm tra XML: ACTIVE mặc định -->
+        <div id="validatorTab" class="tab-content active">
             <div class="upload-area" id="validatorUploadArea">
                 <h2>📁 Tải lên file XML BHYT</h2>
                 <p>Kéo thả file XML vào đây hoặc click để chọn file</p>
@@ -1066,6 +1152,63 @@
         </div>
     </div>
 
+    <!-- ========== JS BỔ SUNG NHẸ: Theme + Tab mặc định + Fallback hover ==========
+         (Không đụng script.js gốc) -->
+    <script>
+      // Áp dụng theme theo localStorage (ưu tiên), fallback theo hệ thống
+      (function applyInitialTheme(){
+        try {
+          const saved = localStorage.getItem('theme');
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const useDark = saved ? saved === 'dark' : prefersDark;
+          if (useDark) document.body.classList.add('dark');
+        } catch(e){}
+      })();
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // 1) Đặt tab mặc định: "Kiểm tra XML"
+        const validatorBtn = document.querySelector("button[onclick*=\"'validatorTab'\"]");
+        if (validatorBtn) {
+          if (typeof openTab === 'function') {
+            openTab({ currentTarget: validatorBtn }, 'validatorTab');
+          } else {
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            validatorBtn.classList.add('active');
+            document.getElementById('validatorTab')?.classList.add('active');
+          }
+        }
+
+        // 2) Toggle Light/Dark + lưu lại
+        const toggle = document.getElementById('themeToggle');
+        if (toggle) {
+          toggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+          });
+        }
+
+        // 3) Fallback hover lỗi/cảnh báo nếu trình duyệt không hỗ trợ :has
+        const supportsHas = CSS.supports && CSS.supports('selector(:has(*))');
+        if (!supportsHas) {
+          const tbody = document.getElementById('resultsTableBody');
+          if (tbody) {
+            const markRows = () => {
+              tbody.querySelectorAll('tr').forEach(tr => {
+                tr.classList.remove('row-errorish','row-warningish');
+                if (tr.querySelector('.status-badge.status-error')) tr.classList.add('row-errorish');
+                else if (tr.querySelector('.status-badge.status-warning')) tr.classList.add('row-warningish');
+              });
+            };
+            const mo = new MutationObserver(markRows);
+            mo.observe(tbody, { childList:true, subtree:true, characterData:true });
+            markRows();
+          }
+        }
+      });
+    </script>
+
+    <!-- Logic gốc của bạn -->
     <script src="script.js" defer></script>
 </body>
-</html> 
+</html>
