@@ -586,45 +586,66 @@ function performCrossRecordValidation(records) {
             });
         }
     });
- // === Step 4 (REPLACED): BS_KHAM_CHONG_LAN theo XML3, gộp ngắn gọn ===
-// Gom khoảng theo bác sĩ & hồ sơ: startYL = min(NGAY_YL), endKQ = max(NGAY_KQ), startTHYL = min(NGAY_TH_YL)
-const doctorXml3Windows = new Map(); // maBs -> Map(maLk -> { startYL, startTHYL, endKQ })
+ // === Step 4: BS_KHAM_CHONG_LAN theo XML3 — CHỈ check hồ sơ "khám-only" ===
+// Điều kiện:
+//  - Hồ sơ tham gia so chồng khi XML3 có ít nhất 1 DV "Khám"
+//  - và KHÔNG có bất kỳ DV khác "Khám" (tức không có CLS/CĐHA, v.v.)
+//  - Hồ sơ có CLS sẽ bị loại khỏi so sánh cả ở vai trò bao trùm (A) lẫn bị chồng (B)
+
+const doctorXml3Windows = new Map(); // maBs -> Map(maLk -> { startYL, startTHYL, endKQ, khamOnly: true })
 const take12 = s => (typeof s === 'string' && s.length >= 12 ? s.substring(0, 12) : null);
+
+const isKham = (svc) => (svc.ten_dich_vu || '').toLowerCase().includes('khám');
 
 records.forEach(record => {
   if (!record.services || record.services.length === 0) return;
 
+  let hasKham = false;
+  let hasNonKham = false;
+
+  // 1) xác định hồ sơ "khám-only"
   record.services.forEach(svc => {
+    if (isKham(svc)) hasKham = true; else hasNonKham = true;
+  });
+
+  if (!hasKham || hasNonKham) return; // ❗ chỉ lấy hồ sơ có KHÁM và KHÔNG có DV khác
+
+  // 2) gom khoảng thời gian theo BÁC SĨ nhưng chỉ dùng các dòng "Khám"
+  record.services.forEach(svc => {
+    if (!isKham(svc)) return;
+
     const maBs = svc.ma_bac_si;
     const yl = take12(svc.ngay_yl);
     const th = take12(svc.ngay_th_yl);
     const kq = take12(svc.ngay_kq);
 
-    // Chỉ xét khi có đủ YL & KQ
+    // cần đủ YL & KQ (theo rule cũ)
     if (!maBs || !yl || !kq) return;
 
     if (!doctorXml3Windows.has(maBs)) doctorXml3Windows.set(maBs, new Map());
     const byRecord = doctorXml3Windows.get(maBs);
+
     if (!byRecord.has(record.maLk)) {
-      byRecord.set(record.maLk, { startYL: yl, startTHYL: th, endKQ: kq });
+      byRecord.set(record.maLk, { startYL: yl, startTHYL: th, endKQ: kq, khamOnly: true });
     } else {
       const win = byRecord.get(record.maLk);
       if (yl < win.startYL) win.startYL = yl;
       if (th && (!win.startTHYL || th < win.startTHYL)) win.startTHYL = th;
       if (kq > win.endKQ) win.endKQ = kq;
+      win.khamOnly = true;
     }
   });
 });
 
-// Với mỗi bác sĩ, gộp tất cả “B nằm trong nhiều A” thành 1 lỗi duy nhất cho B
+// 3) So chồng CHỈ giữa các hồ sơ "khám-only"
 doctorXml3Windows.forEach((byRecord, maBs) => {
   const tenBacSi = staffNameMap.get(maBs) || maBs;
   const windows = Array.from(byRecord.entries())
     .map(([maLk, w]) => ({ maLk, ...w }))
-    .filter(w => w.startYL && w.endKQ);
+    .filter(w => w.khamOnly && w.startYL && w.endKQ);
 
-  // B -> set các A bao trùm
-  const containsMap = new Map(); // key: B.maLk -> {Bwin, Aset:Set(maLk)}
+  // B -> tập A bao trùm
+  const containsMap = new Map(); // bMaLk -> { Bwin, Aset: Set(maLk) }
 
   for (let i = 0; i < windows.length; i++) {
     for (let j = 0; j < windows.length; j++) {
@@ -633,15 +654,12 @@ doctorXml3Windows.forEach((byRecord, maBs) => {
       const B = windows[j];
       // B nằm TRONG A
       if (B.startYL >= A.startYL && B.endKQ <= A.endKQ) {
-        if (!containsMap.has(B.maLk)) {
-          containsMap.set(B.maLk, { Bwin: B, Aset: new Set() });
-        }
+        if (!containsMap.has(B.maLk)) containsMap.set(B.maLk, { Bwin: B, Aset: new Set() });
         containsMap.get(B.maLk).Aset.add(A.maLk);
       }
     }
   }
 
-  // Tạo 1 lỗi duy nhất cho từng B, liệt kê tất cả A bao trùm
   const ruleKey = 'BS_KHAM_CHONG_LAN';
   if (!validationSettings[ruleKey]?.enabled) return;
 
@@ -656,7 +674,6 @@ doctorXml3Windows.forEach((byRecord, maBs) => {
     const B_TH = Bwin.startTHYL ? formatDateTimeForDisplay(Bwin.startTHYL) : 'N/A';
     const B_KQ = formatDateTimeForDisplay(Bwin.endKQ);
 
-    // Danh sách A
     const AInfo = Array.from(Aset)
       .map(aLk => records.find(r => r.maLk === aLk))
       .filter(Boolean)
@@ -675,11 +692,10 @@ doctorXml3Windows.forEach((byRecord, maBs) => {
     const headerAs = AInfo.map(a => a.textShort).join(', ');
 
     const msg =
-      `BS ${tenBacSi} thực hiện khám chữa  bệnh cho: "${recordB.hoTen}" (${idB}) và nhiều bệnh nhân khác ` + 
-   
+      `BS ${tenBacSi} khám chồng: Khoảng XML3 của "${recordB.hoTen}" (${idB}) ` +
+      `[YL: ${B_YL} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
       `<br><strong>XML3 chi tiết:</strong>` +
-      `<br>• ${recordB.hoTen} (${idB}): NGAY_YL=${B_YL}, NGAY_TH_YL=${B_TH}, NGAY_KQ=${B_KQ}` +
-      `<br>${AInfo.map(a => a.detailLine).join('<br>')}`;
+      `${AInfo.map(a => a.detailLine).join('<br>')}`; // chỉ liệt kê các ca bao trùm
 
     recordB.errors.push({
       type: ruleKey,
