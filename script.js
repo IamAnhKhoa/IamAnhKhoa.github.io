@@ -646,9 +646,9 @@ function performCrossRecordValidation(records) {
 
             // Cập nhật thông báo lỗi
             const msg =
-                `BS ${tenBacSi} khám chồng lấn: Khoảng thời gian của "${recordB.hoTen}" (${idB}) ` +
+                `BS ${tenBacSi} khám chồng (XML 3 công khám): Khoảng thời gian của "${recordB.hoTen}" (${idB}) ` +
                 `[TH_YL: ${B_TH} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
-                `<br><strong>Chi tiết các ca chứa:</strong><br>` +
+                `<br><strong>Chi tiết CÔNG KHÁM (XML 3):</strong><br>` +
                 `${AInfo.map(a => a.detailLine).join('<br>')}`;
 
             recordB.errors.push({
