@@ -458,30 +458,30 @@ function processXmlFile() {
 }
 
 function performCrossRecordValidation(records) {
-    const machineTimeMap = new Map();
-    const doctorTimeMap = new Map();
+    const machineTimeMap = new Map();
+    const doctorTimeMap = new Map();
 
-    // Step 1: Populate maps
-    records.forEach(record => {
-        if (record.services) {
-            record.services.forEach(service => {
-                if (service.ma_may && service.ngay_th_yl) {
-                    const key = `${service.ma_may}_${service.ngay_th_yl}`;
-                    if (!machineTimeMap.has(key)) machineTimeMap.set(key, []);
-                    machineTimeMap.get(key).push({ maLk: record.maLk, tenDv: service.ten_dich_vu, cost: service.thanh_tien_bh });
-                }
-            });
-        }
-        if (record.drugs) {
-            record.drugs.forEach(drug => {
-                if (drug.ma_bac_si && drug.ngay_yl) {
-                    const key = `${drug.ma_bac_si}_${drug.ngay_yl}`;
-                    if (!doctorTimeMap.has(key)) doctorTimeMap.set(key, []);
-                    doctorTimeMap.get(key).push({ maLk: record.maLk, tenThuoc: drug.ten_thuoc, cost: drug.thanh_tien_bh });
-                }
-            });
-        }
-    });
+    // Step 1, 2, 3: Populate maps for other rules (giữ nguyên)
+    records.forEach(record => {
+        if (record.services) {
+            record.services.forEach(service => {
+                if (service.ma_may && service.ngay_th_yl) {
+                    const key = `${service.ma_may}_${service.ngay_th_yl}`;
+                    if (!machineTimeMap.has(key)) machineTimeMap.set(key, []);
+                    machineTimeMap.get(key).push({ maLk: record.maLk, tenDv: service.ten_dich_vu, cost: service.thanh_tien_bh });
+                }
+            });
+        }
+        if (record.drugs) {
+            record.drugs.forEach(drug => {
+                if (drug.ma_bac_si && drug.ngay_yl) {
+                    const key = `${drug.ma_bac_si}_${drug.ngay_yl}`;
+                    if (!doctorTimeMap.has(key)) doctorTimeMap.set(key, []);
+                    doctorTimeMap.get(key).push({ maLk: record.maLk, tenThuoc: drug.ten_thuoc, cost: drug.thanh_tien_bh });
+                }
+            });
+        }
+    });
 
     // Step 2: Find MA_MAY conflicts
     machineTimeMap.forEach((conflicts, key) => {
@@ -547,125 +547,119 @@ function performCrossRecordValidation(records) {
     });
     
     // Step 4: BS_KHAM_CHONG_LAN theo XML3 — CHỈ check hồ sơ "khám-only"
-    const doctorXml3Windows = new Map(); // maBs -> Map(maLk -> { startYL, startTHYL, endKQ, khamOnly: true })
-    const take12 = s => (typeof s === 'string' && s.length >= 12 ? s.substring(0, 12) : null);
-    const isKham = (svc) => (svc.ten_dich_vu || '').toLowerCase().includes('khám');
+ const doctorXml3Windows = new Map(); // maBs -> Map(maLk -> { startTHYL, endKQ, khamOnly: true })
+    const take12 = s => (typeof s === 'string' && s.length >= 12 ? s.substring(0, 12) : null);
+    const isKham = (svc) => (svc.ten_dich_vu || '').toLowerCase().includes('khám');
 
-    records.forEach(record => {
-        if (!record.services || record.services.length === 0) return;
+    records.forEach(record => {
+        if (!record.services || record.services.length === 0) return;
 
-        let hasKham = false;
-        let hasNonKham = false;
+        let hasKham = false;
+        let hasNonKham = false;
+        record.services.forEach(svc => {
+            if (isKham(svc)) hasKham = true; else hasNonKham = true;
+        });
 
-        record.services.forEach(svc => {
-            if (isKham(svc)) hasKham = true; else hasNonKham = true;
-        });
+        if (!hasKham || hasNonKham) return; // Chỉ xét hồ sơ "chỉ có công khám"
 
-        // chỉ lấy hồ sơ có "khám" và KHÔNG có DV khác
-        if (!hasKham || hasNonKham) return;
+        record.services.forEach(svc => {
+            if (!isKham(svc)) return;
 
-        // gom theo bác sĩ nhưng chỉ lấy dòng "khám"
-        record.services.forEach(svc => {
-            if (!isKham(svc)) return;
+            const maBs = svc.ma_bac_si;
+            const th = take12(svc.ngay_th_yl); // Lấy NGAY_TH_YL làm mốc bắt đầu
+            const kq = take12(svc.ngay_kq);
 
-            const maBs = svc.ma_bac_si;
-            const yl = take12(svc.ngay_yl);
-            const th = take12(svc.ngay_th_yl);
-            const kq = take12(svc.ngay_kq);
+            if (!maBs || !th || !kq) return; // Yêu cầu phải có cả NGAY_TH_YL và NGAY_KQ
 
-            if (!maBs || !yl || !kq) return;
+            if (!doctorXml3Windows.has(maBs)) doctorXml3Windows.set(maBs, new Map());
+            const byRecord = doctorXml3Windows.get(maBs);
 
-            if (!doctorXml3Windows.has(maBs)) doctorXml3Windows.set(maBs, new Map());
-            const byRecord = doctorXml3Windows.get(maBs);
+            if (!byRecord.has(record.maLk)) {
+                byRecord.set(record.maLk, { startTHYL: th, endKQ: kq, khamOnly: true });
+            } else {
+                const win = byRecord.get(record.maLk);
+                if (th < win.startTHYL) win.startTHYL = th; // Lấy thời gian bắt đầu sớm nhất
+                if (kq > win.endKQ) win.endKQ = kq;       // Lấy thời gian kết thúc muộn nhất
+            }
+        });
+    });
 
-            if (!byRecord.has(record.maLk)) {
-                byRecord.set(record.maLk, { startYL: yl, startTHYL: th, endKQ: kq, khamOnly: true });
-            } else {
-                const win = byRecord.get(record.maLk);
-                if (yl < win.startYL) win.startYL = yl;
-                if (th && (!win.startTHYL || th < win.startTHYL)) win.startTHYL = th;
-                if (kq > win.endKQ) win.endKQ = kq;
-                win.khamOnly = true;
-            }
-        });
-    });
+    // So sánh chồng lấn chỉ giữa các hồ sơ "chỉ có công khám"
+    doctorXml3Windows.forEach((byRecord, maBs) => {
+        const tenBacSi = staffNameMap.get(maBs) || maBs;
+        const windows = Array.from(byRecord.entries())
+            .map(([maLk, w]) => ({ maLk, ...w }))
+            .filter(w => w.khamOnly && w.startTHYL && w.endKQ); // Lọc theo startTHYL
 
-    // so chồng chỉ giữa các hồ sơ "khám-only"
-    doctorXml3Windows.forEach((byRecord, maBs) => {
-        const tenBacSi = staffNameMap.get(maBs) || maBs;
-        const windows = Array.from(byRecord.entries())
-            .map(([maLk, w]) => ({ maLk, ...w }))
-            .filter(w => w.khamOnly && w.startYL && w.endKQ);
+        const containsMap = new Map();
 
-        const containsMap = new Map(); // bMaLk -> { Bwin, Aset: Set(maLk) }
+        for (let i = 0; i < windows.length; i++) {
+            for (let j = 0; j < windows.length; j++) {
+                if (i === j) continue;
+                const A = windows[i]; // Ca lớn hơn (chứa)
+                const B = windows[j]; // Ca nhỏ hơn (bị chứa)
+                
+                // So sánh bằng startTHYL
+                if (B.startTHYL >= A.startTHYL && B.endKQ <= A.endKQ) {
+                    if (!containsMap.has(B.maLk)) containsMap.set(B.maLk, { Bwin: B, Aset: new Set() });
+                    containsMap.get(B.maLk).Aset.add(A.maLk);
+                }
+            }
+        }
 
-        for (let i = 0; i < windows.length; i++) {
-            for (let j = 0; j < windows.length; j++) {
-                if (i === j) continue;
-                const A = windows[i];
-                const B = windows[j];
-                if (B.startYL >= A.startYL && B.endKQ <= A.endKQ) {
-                    if (!containsMap.has(B.maLk)) containsMap.set(B.maLk, { Bwin: B, Aset: new Set() });
-                    containsMap.get(B.maLk).Aset.add(A.maLk);
-                }
-            }
-        }
+        const ruleKey = 'BS_KHAM_CHONG_LAN';
+        if (!validationSettings[ruleKey]?.enabled) return;
 
-        const ruleKey = 'BS_KHAM_CHONG_LAN';
-        if (!validationSettings[ruleKey]?.enabled) return;
+        containsMap.forEach(({ Bwin, Aset }, bMaLk) => {
+            if (Aset.size === 0) return;
 
-        containsMap.forEach(({ Bwin, Aset }, bMaLk) => {
-            if (Aset.size === 0) return;
+            const recordB = records.find(r => r.maLk === bMaLk);
+            if (!recordB) return;
 
-            const recordB = records.find(r => r.maLk === bMaLk);
-            if (!recordB) return;
+            const idB = recordB.maBn || recordB.maLk;
+            const B_TH = formatDateTimeForDisplay(Bwin.startTHYL); // Định dạng startTHYL
+            const B_KQ = formatDateTimeForDisplay(Bwin.endKQ);
 
-            const idB = recordB.maBn || recordB.maLk;
-            const B_YL = formatDateTimeForDisplay(Bwin.startYL);
-            const B_TH = Bwin.startTHYL ? formatDateTimeForDisplay(Bwin.startTHYL) : 'N/A';
-            const B_KQ = formatDateTimeForDisplay(Bwin.endKQ);
+            const AInfo = Array.from(Aset)
+                .map(aLk => records.find(r => r.maLk === aLk))
+                .filter(Boolean)
+                .map(recA => {
+                    const idA = recA.maBn || recA.maLk;
+                    const wA = byRecord.get(recA.maLk);
+                    const A_TH = formatDateTimeForDisplay(wA.startTHYL); // Định dạng startTHYL
+                    const A_KQ = formatDateTimeForDisplay(wA.endKQ);
+                    return {
+                        textShort: `"${recA.hoTen}" (${idA})`,
+                        detailLine: `• ${recA.hoTen} (${idA}): [TH_YL: ${A_TH} → KQ: ${A_KQ}]` // Cập nhật chi tiết
+                    };
+                });
 
-            const AInfo = Array.from(Aset)
-                .map(aLk => records.find(r => r.maLk === aLk))
-                .filter(Boolean)
-                .map(recA => {
-                    const idA = recA.maBn || recA.maLk;
-                    const wA = byRecord.get(recA.maLk);
-                    const A_YL = formatDateTimeForDisplay(wA.startYL);
-                    const A_TH = wA.startTHYL ? formatDateTimeForDisplay(wA.startTHYL) : 'N/A';
-                    const A_KQ = formatDateTimeForDisplay(wA.endKQ);
-                    return {
-                        textShort: `"${recA.hoTen}" (${idA})`,
-                        detailLine: `• ${recA.hoTen} (${idA}): NGAY_YL=${A_YL}, NGAY_TH_YL=${A_TH}, NGAY_KQ=${A_KQ}`
-                    };
-                });
+            const headerAs = AInfo.map(a => a.textShort).join(', ');
 
-            const headerAs = AInfo.map(a => a.textShort).join(', ');
+            const sumKhamCost = (rec) => {
+                if (!rec || !rec.services) return 0;
+                return rec.services
+                    .filter(svc => (svc.ten_dich_vu || '').toLowerCase().includes('khám'))
+                    .reduce((acc, svc) => acc + (Number(svc.thanh_tien_bh) || 0), 0);
+            };
+            const khamCost = sumKhamCost(recordB);
 
-            // tính tổng tiền "Khám" của hồ sơ B để đưa vào dự kiến xuất toán khi nâng lên Nghiêm trọng
-            const sumKhamCost = (rec) => {
-                if (!rec || !rec.services) return 0;
-                return rec.services
-                    .filter(svc => (svc.ten_dich_vu || '').toLowerCase().includes('khám'))
-                    .reduce((acc, svc) => acc + (Number(svc.thanh_tien_bh) || 0), 0);
-            };
-            const khamCost = sumKhamCost(recordB);
+            // Cập nhật thông báo lỗi
+            const msg =
+                `BS ${tenBacSi} khám chồng lấn: Khoảng thời gian của "${recordB.hoTen}" (${idB}) ` +
+                `[TH_YL: ${B_TH} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
+                `<br><strong>Chi tiết các ca chứa:</strong><br>` +
+                `${AInfo.map(a => a.detailLine).join('<br>')}`;
 
-            const msg =
-                `BS ${tenBacSi} khám chồng: Khoảng XML3 của "${recordB.hoTen}" (${idB}) ` +
-                `[YL: ${B_YL} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
-                `<br><strong>XML3 chi tiết:</strong>` +
-                `${AInfo.map(a => a.detailLine).join('<br>')}`;
-
-            recordB.errors.push({
-                type: ruleKey,
-                severity: validationSettings[ruleKey].severity,
-                message: msg,
-                cost: validationSettings[ruleKey]?.severity === 'critical' ? khamCost : 0,
-                itemName: 'Công khám'
-            });
-        });
-    });
+            recordB.errors.push({
+                type: ruleKey,
+                severity: validationSettings[ruleKey].severity,
+                message: msg,
+                cost: validationSettings[ruleKey]?.severity === 'critical' ? khamCost : 0,
+                itemName: 'Công khám'
+            });
+        });
+    });
 }
 
 // ============================= XML PARSE & VALIDATION PER RECORD =============================
@@ -699,290 +693,287 @@ function validateXmlContent(xmlString) {
 }
 
 function validateSingleHoso(hoso) {
-    const getText = (element, ...selectors) => {
-        if (!element) return '';
-        for (const selector of selectors) {
-            const node = element.querySelector(selector);
-            if (node && node.textContent) {
-                const text = node.textContent.trim();
-                if (text) return text;
-            }
-        }
-        return '';
-    };
-    
-    const findFileContent = (type) => {
-        for (const fileNode of hoso.children) {
-            if (fileNode.nodeName === 'FILEHOSO') {
-                const loaiHoso = getText(fileNode, 'LOAIHOSO');
-                if (loaiHoso === type) {
-                    return fileNode.querySelector('NOIDUNGFILE');
-                }
-            }
-        }
-        return null;
-    };
+    const getText = (element, ...selectors) => {
+        if (!element) return '';
+        for (const selector of selectors) {
+            const node = element.querySelector(selector);
+            if (node && node.textContent) {
+                const text = node.textContent.trim();
+                if (text) return text;
+            }
+        }
+        return '';
+    };
+    
+    const findFileContent = (type) => {
+        for (const fileNode of hoso.children) {
+            if (fileNode.nodeName === 'FILEHOSO') {
+                const loaiHoso = getText(fileNode, 'LOAIHOSO');
+                if (loaiHoso === type) {
+                    return fileNode.querySelector('NOIDUNGFILE');
+                }
+            }
+        }
+        return null;
+    };
 
-    const tongHopNodeContent = findFileContent('XML1');
-    if (!tongHopNodeContent) return null;
-    const tongHopNode = tongHopNodeContent.querySelector('TONG_HOP');
-    if (!tongHopNode) return null;
+    const tongHopNodeContent = findFileContent('XML1');
+    if (!tongHopNodeContent) return null;
+    const tongHopNode = tongHopNodeContent.querySelector('TONG_HOP');
+    if (!tongHopNode) return null;
 
-    const chiTietThuocNode = findFileContent('XML2');
-    const chiTietDvktNode = findFileContent('XML3');
-    const chiTietCLSNode = findFileContent('XML4');
-    const giayHenNode = findFileContent('XML14');
+    const chiTietThuocNode = findFileContent('XML2');
+    const chiTietDvktNode = findFileContent('XML3');
+    const chiTietCLSNode = findFileContent('XML4');
+    const giayHenNode = findFileContent('XML14'); 
 
-    const maLk = getText(tongHopNode, 'MA_LK');
-    
-    const record = {
-        maLk: maLk, 
-        hoTen: getText(tongHopNode,'HO_TEN'), 
-        ngayVao: getText(tongHopNode,'NGAY_VAO'),
-        ngayRa: getText(tongHopNode,'NGAY_RA'),
-        ngayTtoan: getText(tongHopNode,'NGAY_TTOAN'), 
-        maBn: getText(tongHopNode,'MA_BN'), 
-        maThe: getText(tongHopNode,'MA_THE_BHYT'),
-        t_tongchi: parseFloat(getText(tongHopNode, 'T_TONGCHI') || '0'),
-        t_bhtt: parseFloat(getText(tongHopNode, 'T_BHTT') || '0'),
-        t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'),
-        t_thuoc: parseFloat(getText(tongHopNode, 'T_THUOC') || '0'),
-        t_vtyt: parseFloat(getText(tongHopNode, 'T_VTYT') || '0'),
-        t_xn: parseFloat(getText(tongHopNode, 'T_XN') || '0'),
-        t_cdha: parseFloat(getText(tongHopNode, 'T_CDHA') || '0'),
-        t_kham: parseFloat(getText(tongHopNode, 'T_KHAM') || '0'),
-        t_giuong: parseFloat(getText(tongHopNode, 'T_GIUONG') || '0'),
-        t_mau: parseFloat(getText(tongHopNode, 'T_MAU') || '0'),
-        t_pttt: parseFloat(getText(tongHopNode, 'T_PTTT') || '0'),
-        t_vanchuyen: parseFloat(getText(tongHopNode, 'T_VANCHUYEN') || '0'),
-        gioiTinh: getText(tongHopNode,'GIOI_TINH'),
-        ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
-        chanDoan: getText(tongHopNode,'CHAN_DOAN_RV', 'MA_BENH'),
-        maKhoa: getText(tongHopNode,'MA_KHOA'),
-        isSimpleCase: false,
-        mainDoctor: null,
-        has_kham_and_dvkt: false,
-        has_xml4: !!chiTietCLSNode && !!chiTietCLSNode.querySelector('CHI_TIET_CLS'),
-        has_xml14: !!giayHenNode && !!giayHenNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI'),
-        bac_si_chi_dinh: new Set(),
-        nguoi_thuc_hien: new Set(),
-        errors: [],
-        services: [],
-        drugs: []
-    };
-    if (!record.maLk || !record.hoTen || !record.ngayVao || !record.ngayRa) return null;
+    const maLk = getText(tongHopNode, 'MA_LK');
+    
+    const record = {
+        maLk: maLk, 
+        hoTen: getText(tongHopNode,'HO_TEN'), 
+        ngayVao: getText(tongHopNode,'NGAY_VAO'),
+        ngayRa: getText(tongHopNode,'NGAY_RA'),
+        ngayTtoan: getText(tongHopNode,'NGAY_TTOAN'), 
+        maBn: getText(tongHopNode,'MA_BN'), 
+        maThe: getText(tongHopNode,'MA_THE_BHYT'),
+        t_tongchi: parseFloat(getText(tongHopNode, 'T_TONGCHI') || '0'),
+        t_bhtt: parseFloat(getText(tongHopNode, 'T_BHTT') || '0'),
+        t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'),
+        t_thuoc: parseFloat(getText(tongHopNode, 'T_THUOC') || '0'),
+        t_vtyt: parseFloat(getText(tongHopNode, 'T_VTYT') || '0'),
+        t_xn: parseFloat(getText(tongHopNode, 'T_XN') || '0'),
+        t_cdha: parseFloat(getText(tongHopNode, 'T_CDHA') || '0'),
+        t_kham: parseFloat(getText(tongHopNode, 'T_KHAM') || '0'),
+        t_giuong: parseFloat(getText(tongHopNode, 'T_GIUONG') || '0'),
+        t_mau: parseFloat(getText(tongHopNode, 'T_MAU') || '0'),
+        t_pttt: parseFloat(getText(tongHopNode, 'T_PTTT') || '0'),
+        t_vanchuyen: parseFloat(getText(tongHopNode, 'T_VANCHUYEN') || '0'),
+        gioiTinh: getText(tongHopNode,'GIOI_TINH'),
+        ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
+        chanDoan: getText(tongHopNode,'CHAN_DOAN_RV', 'MA_BENH'),
+        maKhoa: getText(tongHopNode,'MA_KHOA'),
+        isSimpleCase: false,
+        mainDoctor: null,
+        has_kham_and_dvkt: false,
+        has_xml4: !!chiTietCLSNode && !!chiTietCLSNode.querySelector('CHI_TIET_CLS'),
+        has_xml14: !!giayHenNode && !!giayHenNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI'), 
+        bac_si_chi_dinh: new Set(),
+        nguoi_thuc_hien: new Set(),
+        errors: [],
+        services: [],
+        drugs: []
+    };
+    if (!record.maLk || !record.hoTen || !record.ngayVao || !record.ngayRa) return null;
 
-    const drugsForGlobalList = [];
-    if (chiTietThuocNode) {
-        chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach(item => {
-            const tenThuoc = getText(item, 'TEN_THUOC');
-            const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
+    const drugsForGlobalList = [];
+    if (chiTietThuocNode) {
+        chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach(item => {
+            const tenThuoc = getText(item, 'TEN_THUOC');
+            const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
+            const maBacSi = getText(item, 'MA_BAC_SI');
+            const ngayYl = getText(item, 'NGAY_YL');
+            const ngayThYl = getText(item, 'NGAY_TH_YL');
+
+            drugsForGlobalList.push({
+                ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
+                so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
+                thanh_tien_bh: thanhTienBH
+            });
+            if(maBacSi && ngayYl) {
+                record.drugs.push({
+                    ma_bac_si: maBacSi,
+                    ngay_yl: ngayYl,
+                    ten_thuoc: tenThuoc,
+                    thanh_tien_bh: thanhTienBH
+                });
+                if (!record.mainDoctor) {
+                    record.mainDoctor = maBacSi;
+                }
+            }
+
+            if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
+            if (ngayThYl) {
+                if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenThuoc });
+                if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
+            }
+
+            const ruleKeyYlThuoc = 'THUOC_YL_NGOAI_GIO_HC';
+            if (validationSettings[ruleKeyYlThuoc]?.enabled && isOutsideWorkingHours(ngayYl)) {
+                 record.errors.push({ 
+                    type: ruleKeyYlThuoc, 
+                    severity: validationSettings[ruleKeyYlThuoc].severity, 
+                    message: `Thuốc "${tenThuoc}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
+                    cost: 0, 
+                    itemName: tenThuoc 
+                });
+            }
+            const ruleKeyThylThuoc = 'THUOC_THYL_NGOAI_GIO_HC';
+            if (validationSettings[ruleKeyThylThuoc]?.enabled && isOutsideWorkingHours(ngayThYl)) {
+                 record.errors.push({ 
+                    type: ruleKeyThylThuoc, 
+                    severity: validationSettings[ruleKeyThylThuoc].severity, 
+                    message: `Thuốc "${tenThuoc}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
+                    cost: 0, 
+                    itemName: tenThuoc 
+                });
+            }
+
+            if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
+        });
+    }
+
+    let hasKham = false, hasOtherDvkt = false;
+    let tongTienDVKTKhacKham = 0;
+    if (chiTietDvktNode) {
+        chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
+            const tenDV = getText(item, 'TEN_DICH_VU');
+            const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
+            const ngayYl = getText(item, 'NGAY_YL');
+            const ngayThYl = getText(item, 'NGAY_TH_YL');
             const maBacSi = getText(item, 'MA_BAC_SI');
-            const ngayYl = getText(item, 'NGAY_YL');
-            const ngayThYl = getText(item, 'NGAY_TH_YL');
 
-            drugsForGlobalList.push({
-                ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
-                so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                thanh_tien_bh: thanhTienBH
-            });
-            if(maBacSi && ngayYl) {
-                record.drugs.push({
-                    ma_bac_si: maBacSi,
-                    ngay_yl: ngayYl,
-                    ten_thuoc: tenThuoc,
-                    thanh_tien_bh: thanhTienBH
-                });
-                if (!record.mainDoctor) {
-                    record.mainDoctor = maBacSi;
-                }
-            }
-
-            if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
-            if (ngayThYl) {
-                if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenThuoc });
-                if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
-            }
-
-            const ruleKeyYlThuoc = 'THUOC_YL_NGOAI_GIO_HC';
-            if (validationSettings[ruleKeyYlThuoc]?.enabled && isOutsideWorkingHours(ngayYl)) {
-                 record.errors.push({ 
-                    type: ruleKeyYlThuoc, 
-                    severity: validationSettings[ruleKeyYlThuoc].severity, 
-                    message: `Thuốc "${tenThuoc}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
-                    cost: costIfCritical(ruleKeyYlThuoc, thanhTienBH), 
-                    itemName: tenThuoc 
-                });
-            }
-            const ruleKeyThylThuoc = 'THUOC_THYL_NGOAI_GIO_HC';
-            if (validationSettings[ruleKeyThylThuoc]?.enabled && isOutsideWorkingHours(ngayThYl)) {
-                 record.errors.push({ 
-                    type: ruleKeyThylThuoc, 
-                    severity: validationSettings[ruleKeyThylThuoc].severity, 
-                    message: `Thuốc "${tenThuoc}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
-                    cost: costIfCritical(ruleKeyThylThuoc, thanhTienBH), 
-                    itemName: tenThuoc 
-                });
-            }
-
-            if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
-        });
-    }
-
-    let hasKham = false, hasOtherDvkt = false;
-    let tongTienDVKTKhacKham = 0;
-    if (chiTietDvktNode) {
-        chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach(item => {
-            const tenDV = getText(item, 'TEN_DICH_VU');
-            const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
-            const ngayYl = getText(item, 'NGAY_YL');
-            const ngayThYl = getText(item, 'NGAY_TH_YL');
-            const ngayKq = getText(item, 'NGAY_KQ'); // NEW
-            const maBacSiDV = getText(item, 'MA_BAC_SI'); // NEW
-
-            record.services.push({
-                ma_lk: maLk,
-                ma_dich_vu: getText(item, 'MA_DICH_VU'),
-                ten_dich_vu: tenDV,
-                ma_nhom: getText(item, 'MA_NHOM'),
-                so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                thanh_tien_bh: thanhTienBH,
-                ma_may: getText(item, 'MA_MAY'),
-                ngay_th_yl: ngayThYl,
-                // added for XML3 overlap logic
+            record.services.push({
+                ma_lk: maLk,
+                ma_dich_vu: getText(item, 'MA_DICH_VU'),
+                ten_dich_vu: tenDV,
+                ma_nhom: getText(item, 'MA_NHOM'),
+                so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
+                thanh_tien_bh: thanhTienBH,
+                ma_may: getText(item, 'MA_MAY'),
+                ngay_th_yl: ngayThYl,
                 ngay_yl: ngayYl,
-                ngay_kq: ngayKq,
-                ma_bac_si: maBacSiDV
-            });
+                ma_bac_si: maBacSi,
+                ngay_kq: getText(item, 'NGAY_KQ')
+            });
 
-            if (tenDV.toLowerCase().includes('khám')) {
-                hasKham = true;
-            } else {
-                tongTienDVKTKhacKham += thanhTienBH;
-                hasOtherDvkt = true;
-            }
+            if (tenDV.toLowerCase().includes('khám')) {
+                hasKham = true;
+            } else {
+                tongTienDVKTKhacKham += thanhTienBH;
+                hasOtherDvkt = true;
+            }
 
-            if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
-            if (ngayThYl) {
-                if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenDV });
-                if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
-            }
-            
-            if (!tenDV.toLowerCase().includes('khám')) {
-                if (validationSettings['DVKT_YL_TRUNG_NGAY_VAO']?.enabled && ngayYl && ngayYl === record.ngayVao) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_VAO', severity: validationSettings['DVKT_YL_TRUNG_NGAY_VAO'].severity, message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày vào viện.`, cost: costIfCritical('DVKT_YL_TRUNG_NGAY_VAO', thanhTienBH), itemName: tenDV });
-                if (validationSettings['DVKT_YL_TRUNG_NGAY_RA']?.enabled && ngayYl && ngayYl === record.ngayRa) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_RA', severity: validationSettings['DVKT_YL_TRUNG_NGAY_RA'].severity, message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày ra viện.`, cost: costIfCritical('DVKT_YL_TRUNG_NGAY_RA', thanhTienBH), itemName: tenDV });
-                if (validationSettings['DVKT_THYL_TRUNG_NGAY_VAO']?.enabled && ngayThYl && ngayThYl === record.ngayVao) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_VAO', severity: validationSettings['DVKT_THYL_TRUNG_NGAY_VAO'].severity, message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày vào viện.`, cost: costIfCritical('DVKT_THYL_TRUNG_NGAY_VAO', thanhTienBH), itemName: tenDV });
-                if (validationSettings['DVKT_THYL_TRUNG_NGAY_RA']?.enabled && ngayThYl && ngayThYl === record.ngayRa) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_RA', severity: validationSettings['DVKT_THYL_TRUNG_NGAY_RA'].severity, message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày ra viện.`, cost: costIfCritical('DVKT_THYL_TRUNG_NGAY_RA', thanhTienBH), itemName: tenDV });
+            if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_DVKT_SAU_RA_VIEN', severity: 'critical', message: `DVKT "${tenDV}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
+            if (ngayThYl) {
+                if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenDV });
+                if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
+            }
+            
+            if (!tenDV.toLowerCase().includes('khám')) {
+                if (ngayYl && ngayYl === record.ngayVao) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_VAO', severity: 'warning', message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày vào viện.`, cost: 0, itemName: tenDV });
+                if (ngayYl && ngayYl === record.ngayRa) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_RA', severity: 'warning', message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày ra viện.`, cost: 0, itemName: tenDV });
+                if (ngayThYl && ngayThYl === record.ngayVao) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_VAO', severity: 'warning', message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày vào viện.`, cost: 0, itemName: tenDV });
+                if (ngayThYl && ngayThYl === record.ngayRa) record.errors.push({ type: 'DVKT_THYL_TRUNG_NGAY_RA', severity: 'warning', message: `DVKT "${tenDV}" có ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trùng với ngày ra viện.`, cost: 0, itemName: tenDV });
 
-                const ruleKeyYlDvkt = 'DVKT_YL_NGOAI_GIO_HC';
-                if (validationSettings[ruleKeyYlDvkt]?.enabled && isOutsideWorkingHours(ngayYl)) {
-                    record.errors.push({ 
-                        type: ruleKeyYlDvkt, 
-                        severity: validationSettings[ruleKeyYlDvkt].severity, 
-                        message: `DVKT "${tenDV}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
-                        cost: costIfCritical(ruleKeyYlDvkt, thanhTienBH), 
-                        itemName: tenDV 
-                    });
-                }
-                const ruleKeyThylDvkt = 'DVKT_THYL_NGOAI_GIO_HC';
-                if (validationSettings[ruleKeyThylDvkt]?.enabled && isOutsideWorkingHours(ngayThYl)) {
-                    record.errors.push({ 
-                        type: ruleKeyThylDvkt, 
-                        severity: validationSettings[ruleKeyThylDvkt].severity, 
-                        message: `DVKT "${tenDV}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
-                        cost: costIfCritical(ruleKeyThylDvkt, thanhTienBH), 
-                        itemName: tenDV 
-                    });
-                }
-            }
+                const ruleKeyYlDvkt = 'DVKT_YL_NGOAI_GIO_HC';
+                if (validationSettings[ruleKeyYlDvkt]?.enabled && isOutsideWorkingHours(ngayYl)) {
+                    record.errors.push({ 
+                        type: ruleKeyYlDvkt, 
+                        severity: validationSettings[ruleKeyYlDvkt].severity, 
+                        message: `DVKT "${tenDV}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
+                        cost: 0, 
+                        itemName: tenDV 
+                    });
+                }
+                const ruleKeyThylDvkt = 'DVKT_THYL_NGOAI_GIO_HC';
+                if (validationSettings[ruleKeyThylDvkt]?.enabled && isOutsideWorkingHours(ngayThYl)) {
+                    record.errors.push({ 
+                        type: ruleKeyThylDvkt, 
+                        severity: validationSettings[ruleKeyThylDvkt].severity, 
+                        message: `DVKT "${tenDV}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
+                        cost: 0, 
+                        itemName: tenDV 
+                    });
+                }
+            }
 
-            const maBacSi = getText(item, 'MA_BAC_SI');
-            if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
-            const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
-            if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
-        });
-    }
-    record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
+            if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
+            const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
+            if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
+        });
+    }
+    record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
 
-    const xml4Data = [];
-    if (record.has_xml4) {
-        chiTietCLSNode.querySelectorAll('CHI_TIET_CLS').forEach(cls => {
-            const maDichVu = getText(cls, 'MA_DICH_VU');
-            const tenChiSo = getText(cls, 'TEN_CHI_SO');
-            const maBsDocKq = getText(cls, 'MA_BS_DOC_KQ');
+    const xml4Data = [];
+    if (record.has_xml4) {
+        chiTietCLSNode.querySelectorAll('CHI_TIET_CLS').forEach(cls => {
+            const maDichVu = getText(cls, 'MA_DICH_VU');
+            const tenChiSo = getText(cls, 'TEN_CHI_SO');
+            const maBsDocKq = getText(cls, 'MA_BS_DOC_KQ');
 
-            xml4Data.push({
-                ma_dich_vu: maDichVu,
-                ten_chi_so: tenChiSo,
-                gia_tri: getText(cls, 'GIA_TRI'),
-                don_vi_do: getText(cls, 'DON_VI_DO'),
-                ngay_kq: formatDateTimeForDisplay(getText(cls, 'NGAY_KQ'))
-            });
+            xml4Data.push({
+                ma_dich_vu: maDichVu,
+                ten_chi_so: tenChiSo,
+                gia_tri: getText(cls, 'GIA_TRI'),
+                don_vi_do: getText(cls, 'DON_VI_DO'),
+                ngay_kq: formatDateTimeForDisplay(getText(cls, 'NGAY_KQ'))
+            });
 
-            const ruleKey = 'XML4_MISSING_MA_BS_DOC_KQ';
-            if (validationSettings[ruleKey]?.enabled && !maBsDocKq) {
-                const associatedService = record.services.find(s => s.ma_dich_vu === maDichVu);
-                const serviceCost = associatedService ? associatedService.thanh_tien_bh : 0;
-                const serviceName = associatedService ? associatedService.ten_dich_vu : `DV có mã ${maDichVu}`;
+            const ruleKey = 'XML4_MISSING_MA_BS_DOC_KQ';
+            if (validationSettings[ruleKey]?.enabled && !maBsDocKq) {
+                const associatedService = record.services.find(s => s.ma_dich_vu === maDichVu);
+                const serviceCost = associatedService ? associatedService.thanh_tien_bh : 0;
+                const serviceName = associatedService ? associatedService.ten_dich_vu : `DV có mã ${maDichVu}`;
 
-                record.errors.push({
-                    type: ruleKey,
-                    severity: validationSettings[ruleKey].severity,
-                    message: `CLS "${serviceName}" thiếu mã bác sĩ đọc kết quả.`,
-                    cost: serviceCost,
-                    itemName: serviceName
-                });
-            }
-        });
-    }
-    
-    if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào [${formatDateTimeForDisplay(record.ngayVao)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
-    
-    const ruleNgayTToan = 'NGAY_TTOAN_SAU_RA_VIEN';
-    if (validationSettings[ruleNgayTToan]?.enabled && record.ngayTtoan && record.ngayTtoan.substring(0, 8) > record.ngayRa.substring(0, 8)) {
-        record.errors.push({ type: ruleNgayTToan, severity: validationSettings[ruleNgayTToan].severity, message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
-    }
+                record.errors.push({
+                    type: ruleKey,
+                    severity: validationSettings[ruleKey].severity,
+                    message: `CLS "${serviceName}" thiếu mã bác sĩ đọc kết quả.`,
+                    cost: serviceCost,
+                    itemName: serviceName
+                });
+            }
+        });
+    }
+    
+    if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào [${formatDateTimeForDisplay(record.ngayVao)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+    
+    const ruleNgayTToan = 'NGAY_TTOAN_SAU_RA_VIEN';
+    if (validationSettings[ruleNgayTToan]?.enabled && record.ngayTtoan && record.ngayTtoan.substring(0, 8) > record.ngayRa.substring(0, 8)) {
+        record.errors.push({ type: ruleNgayTToan, severity: validationSettings[ruleNgayTToan].severity, message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
+    }
 
-    const ruleKhamNgan = 'KHAM_DUOI_5_PHUT';
-    if (validationSettings[ruleKhamNgan]?.enabled && record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
-        const dateVao = new Date(
-            record.ngayVao.substring(0,4), record.ngayVao.substring(4,6)-1, record.ngayVao.substring(6,8),
-            record.ngayVao.substring(8,10), record.ngayVao.substring(10,12)
-        );
-        const dateRa = new Date(
-            record.ngayRa.substring(0,4), record.ngayRa.substring(4,6)-1, record.ngayRa.substring(6,8),
-            record.ngayRa.substring(8,10), record.ngayRa.substring(10,12)
-        );
-        const diffInMinutes = (dateRa - dateVao) / 60000;
-        if(diffInMinutes >= 0 && diffInMinutes < 5) {
-            record.errors.push({ type: ruleKhamNgan, severity: validationSettings[ruleKhamNgan].severity, message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
-        }
-    }
-    
-    const ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
-    const ruleKeyTaiKham = 'NGAY_TAI_KHAM_NO_XML14';
-    if (validationSettings[ruleKeyTaiKham]?.enabled && ngayTaiKham && !record.has_xml14) {
-        record.errors.push({
-            type: ruleKeyTaiKham,
-            severity: validationSettings[ruleKeyTaiKham].severity,
-            message: `Có ngày tái khám [${formatDateTimeForDisplay(ngayTaiKham)}] nhưng không có Giấy hẹn khám lại (XML14).`,
-            cost: record.t_bhtt,
-            itemName: `Hồ sơ có hẹn tái khám`
-        });
-    }
-    
-    const isSimple = record.t_thuoc > 0 &&
-        record.t_xn === 0 &&
-        record.t_cdha === 0 &&
-        record.t_pttt === 0 &&
-        record.t_vtyt === 0 &&
-        record.t_mau === 0 &&
-        record.t_giuong === 0 &&
-        record.t_vanchuyen === 0 &&
-        tongTienDVKTKhacKham === 0;
-    record.isSimpleCase = isSimple;
-    
-    return { record, drugs: drugsForGlobalList, xml4Data };
+    const ruleKhamNgan = 'KHAM_DUOI_5_PHUT';
+    if (validationSettings[ruleKhamNgan]?.enabled && record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
+        const dateVao = new Date(
+            record.ngayVao.substring(0,4), record.ngayVao.substring(4,6)-1, record.ngayVao.substring(6,8),
+            record.ngayVao.substring(8,10), record.ngayVao.substring(10,12)
+        );
+        const dateRa = new Date(
+            record.ngayRa.substring(0,4), record.ngayRa.substring(4,6)-1, record.ngayRa.substring(6,8),
+            record.ngayRa.substring(8,10), record.ngayRa.substring(10,12)
+        );
+        const diffInMinutes = (dateRa - dateVao) / 60000;
+        if(diffInMinutes >= 0 && diffInMinutes < 5) {
+            record.errors.push({ type: ruleKhamNgan, severity: validationSettings[ruleKhamNgan].severity, message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
+        }
+    }
+    
+    const ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
+    const ruleKeyTaiKham = 'NGAY_TAI_KHAM_NO_XML14';
+    if (validationSettings[ruleKeyTaiKham]?.enabled && ngayTaiKham && !record.has_xml14) {
+        record.errors.push({
+            type: ruleKeyTaiKham,
+            severity: validationSettings[ruleKeyTaiKham].severity,
+            message: `Có ngày tái khám [${formatDateTimeForDisplay(ngayTaiKham)}] nhưng không có Giấy hẹn khám lại (XML14).`,
+            cost: record.t_bhtt,
+            itemName: `Hồ sơ có hẹn tái khám`
+        });
+    }
+    
+    const isSimple = record.t_thuoc > 0 &&
+        record.t_xn === 0 &&
+        record.t_cdha === 0 &&
+        record.t_pttt === 0 &&
+        record.t_vtyt === 0 &&
+        record.t_mau === 0 &&
+        record.t_giuong === 0 &&
+        record.t_vanchuyen === 0 &&
+        tongTienDVKTKhacKham === 0;
+    record.isSimpleCase = isSimple;
+    
+    return { record, drugs: drugsForGlobalList, xml4Data };
 }
 
 function displayValidatorResults() {
