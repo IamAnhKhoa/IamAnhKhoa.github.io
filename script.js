@@ -2059,7 +2059,7 @@ const notifications = [
         date: '2025-08-13',
         type: 'feature', // 'feature', 'fix', 'announcement'
         title: 'Thông báo cập nhật',
-        content: 'Bảng kết quả và bộ lọc đã được tinh chỉnh để hiển thị tốt hơn trên các thiết bị có màn hình nhỏ. Đã khắc phục lỗi khiến các thẻ thống kê không hiển thị đúng màu sắc và lỗi hiển thị sai số tiền "Nguồn khác". .'
+        content: 'Bổ sung tính năng lọc "Nguồn khác", lọc "CCT > 0" . Bảng kết quả và bộ lọc đã được tinh chỉnh để hiển thị tốt hơn trên các thiết bị có màn hình nhỏ. Thêm tính năng gửi tin nhắn hồ sơ lỗi qua ZALO bằng cách copy.'
     },
     {
         id: 4,
