@@ -2041,22 +2041,22 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 /**
  * FILE MỚI: feature_enhancements.js
  * =================================
- * Version 7:
- * - Cải tiến định dạng tin nhắn Zalo, loại bỏ thẻ HTML, sử dụng định dạng Zalo-friendly (*in đậm* và xuống dòng \n).
+ * Version 11:
+ * - SỬA LỖI: Khắc phục lỗi CSS khiến các thẻ stat card trên Dashboard không hiển thị màu sắc.
  *
  * File này chứa các chức năng bổ sung được yêu cầu.
  * Nó được thiết kế để không chỉnh sửa trực tiếp vào file index.html hay script.js gốc.
  * Mọi thứ (HTML, CSS, Logic) đều được tiêm vào trang một cách tự động khi tải.
  */
 
-// Chờ cho toàn bộ trang và script gốc được tải xong trước khi hành động
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Applying feature enhancements v7...");
+    console.log("Applying feature enhancements v11 (Dashboard Color Fix)...");
 
     // ===================================================================
-    // BƯỚC 1: TIÊM CSS (Không thay đổi)
+    // BƯỚC 1: TIÊM CSS
     // ===================================================================
     const newStyles = `
+        /* CSS cũ (giữ nguyên) */
         .table-header { align-items: flex-start; }
         .header-info-container { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin-left: auto; }
         #dynamicSummaryContainer { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
@@ -2068,17 +2068,6 @@ document.addEventListener('DOMContentLoaded', () => {
         body.dark .summary-box strong { color: #f6ad55; }
         body.dark .cost-nguon-khac { color: #f68794; }
         #dashboardTab .stats-overview { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; }
-        #dashboardTab .stat-card { background: #ffffff; color: #34495e; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); border: 1px solid #e9ecef; padding: 20px; transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        #dashboardTab .stat-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
-        #dashboardTab .stat-card h3 { font-size: 2.8em; color: #2c3e50; margin-bottom: 5px; }
-        #dashboardTab .stat-card p { font-size: 1em; font-weight: 500; color: #7f8c8d; opacity: 1; }
-        #dashboardTab .stat-card.money-card { background: linear-gradient(135deg, #2980b9 0%, #3498db 100%); color: white; border: none; }
-        #dashboardTab .stat-card.money-card h3 { color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        #dashboardTab .stat-card.money-card p { color: white; opacity: 0.9; }
-        body.dark #dashboardTab .stat-card { background: #1f2937; color: #e5e7eb; border-color: #374151; }
-        body.dark #dashboardTab .stat-card h3 { color: #ffffff; }
-        body.dark #dashboardTab .stat-card p { color: #9ca3af; }
-        body.dark #dashboardTab .stat-card.money-card { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
         .zalo-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
         .zalo-modal-content { background-color: #fefefe; margin: 10% auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: fadeInScale 0.4s ease-out; }
         body.dark .zalo-modal-content { background: #1f2937; border-color: #374151; }
@@ -2087,298 +2076,86 @@ document.addEventListener('DOMContentLoaded', () => {
         .icon-action-btn { background: none; border: none; cursor: pointer; font-size: 1.5em; padding: 5px; line-height: 1; border-radius: 50%; width: 40px; height: 40px; transition: background-color 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
         .icon-action-btn:hover { background-color: rgba(0, 0, 0, 0.1); }
         body.dark .icon-action-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
-        .results-container.actions-hidden .action-header,
-        .results-container.actions-hidden .action-cell {
-            display: none;
+        .results-container.actions-hidden .action-header, .results-container.actions-hidden .action-cell { display: none; }
+        .results-table tr.row-critical-error { background-color: rgba(220, 53, 69, 0.05); border-left: 4px solid #dc3545; }
+        .results-table tr.row-warning { background-color: rgba(255, 193, 7, 0.05); border-left: 4px solid #ffc107; }
+        .results-table tr.row-critical-error:hover, .results-table tr:has(.status-badge.status-error):hover { background: rgba(220,53,69,.12) !important; }
+        .results-table tr.row-warning:hover, .results-table tr:has(.status-badge.status-warning):hover { background: rgba(255,193,7,.14) !important; }
+        @media (max-width: 768px) { body { padding: 10px; } .container { padding: 0; border-radius: 10px; } .tab-button { padding: 15px 10px; font-size: 0.9em; } .tab-content { padding: 15px; } #dashboardStats { grid-template-columns: 1fr; } .dashboard-grid { grid-template-columns: 1fr; } .filter-grid { grid-template-columns: 1fr; } .filter-actions { flex-direction: column; gap: 10px; } .filter-actions .btn, .filter-actions .icon-action-btn { width: 100%; } .results-table thead { display: none; } .results-table tbody, .results-table tr, .results-table td { display: block; width: 100% !important; } .results-table tr { margin-bottom: 15px; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; border-left-width: 5px; } body.dark .results-table tr { border-color: #374151; } .results-table td { padding-left: 50%; text-align: right; position: relative; border-bottom: 1px solid #f1f1f1; } body.dark .results-table td { border-bottom-color: #2c3a4b; } .results-table td:last-child { border-bottom: none; } .results-table td::before { content: attr(data-label); position: absolute; left: 10px; width: 45%; text-align: left; font-weight: 600; color: #2c3e50; } body.dark .results-table td::before { color: #a0aec0; } .results-table td.action-cell { padding: 10px; text-align: center; } .results-table td.action-cell::before { display: none; } }
+
+        /* ========== SỬA LỖI & CẬP NHẬT CSS CHO DASHBOARD ========== */
+        /* Quy tắc chung cho thẻ stat card (độ ưu tiên cao hơn) */
+        #dashboardTab .stat-card {
+            background: #ffffff; color: #34495e; border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08); border: 1px solid #e9ecef;
+            padding: 20px; transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+        #dashboardTab .stat-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
+        #dashboardTab .stat-card h3 { font-size: 2.8em; color: #2c3e50; margin-bottom: 5px; }
+        #dashboardTab .stat-card p { font-size: 1em; font-weight: 500; color: #7f8c8d; opacity: 1; }
+        
+        /* Chữ trắng cho thẻ màu */
+        #dashboardTab .stat-card.stat-card--colored h3,
+        #dashboardTab .stat-card.stat-card--colored p {
+            color: white; opacity: 0.95;
+        }
+        #dashboardTab .stat-card.stat-card--colored h3 { text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        /* Màu Đỏ cho hồ sơ lỗi */
+        #dashboardTab .stat-card.stat-card--error { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        /* Màu Xanh lá cho BHYT TT */
+        #dashboardTab .stat-card.stat-card--bhyttt { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+        /* Màu Tím cho BN CCT */
+        #dashboardTab .stat-card.stat-card--bncct { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
+        /* Màu Xanh dương cho Nguồn khác */
+        #dashboardTab .stat-card.stat-card--primary { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        
+        /* Dark Mode */
+        body.dark #dashboardTab .stat-card { background: #1f2937; color: #e5e7eb; border-color: #374151; }
+        body.dark #dashboardTab .stat-card h3 { color: #ffffff; }
+        body.dark #dashboardTab .stat-card p { color: #9ca3af; }
+        body.dark #dashboardTab .stat-card.stat-card--colored h3,
+        body.dark #dashboardTab .stat-card.stat-card--colored p { color: #ffffff; }
     `;
     const styleSheet = document.createElement("style");
     styleSheet.innerText = newStyles;
     document.head.appendChild(styleSheet);
     
+    // Các bước còn lại không thay đổi so với phiên bản trước...
     // ===================================================================
-    // BƯỚC 2: TIÊM HTML & GẮN CLASS/SỰ KIỆN (Không thay đổi)
+    // BƯỚC 2: TIÊM HTML & GẮN CLASS/SỰ KIỆN
     // ===================================================================
     const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
-    const bulkZaloButton = document.createElement('button');
-    bulkZaloButton.id = 'bulkZaloButton';
-    bulkZaloButton.className = 'icon-action-btn';
-    bulkZaloButton.title = 'Soạn tóm tắt hàng loạt cho lỗi đã lọc';
-    bulkZaloButton.innerHTML = '📋';
-    bulkZaloButton.style.display = 'none';
-    bulkZaloButton.onclick = () => {
-        const errorType = document.getElementById('errorTypeFilter').value;
-        if (errorType && globalData.filteredRecords.length > 0) {
-            openZaloModal(globalData.filteredRecords, true, errorType);
-        }
-    };
-    const toggleActionsButton = document.createElement('button');
-    toggleActionsButton.id = 'toggleActionsButton';
-    toggleActionsButton.className = 'btn btn-info';
-    toggleActionsButton.innerHTML = '⚙️ Hiện Hành động';
-    toggleActionsButton.onclick = () => {
-        const container = document.getElementById('validatorResults');
-        if (container) {
-            container.classList.toggle('actions-hidden');
-            const isHidden = container.classList.contains('actions-hidden');
-            toggleActionsButton.innerHTML = isHidden ? '⚙️ Hiện Hành động' : '⚙️ Ẩn Hành động';
-        }
-    };
-    const filterActions = document.querySelector('#validatorFilters .filter-actions');
-    if (filterActions) {
-        filterActions.appendChild(bulkZaloButton);
-        filterActions.appendChild(toggleActionsButton);
-    }
-    const resultsContainer = document.getElementById('validatorResults');
-    if (resultsContainer) {
-        resultsContainer.classList.add('actions-hidden');
-    }
-    const nguonKhacFilterGroup = document.createElement('div');
-    nguonKhacFilterGroup.className = 'filter-group';
-    nguonKhacFilterGroup.innerHTML = `<label>Tiền từ Nguồn khác:</label><select class="filter-select" id="nguonKhacFilter"><option value="">Tất cả</option><option value="yes">Có Nguồn khác (> 0)</option><option value="no">Không có Nguồn khác</option></select>`;
-    const dynamicSummaryContainer = document.createElement('div');
-    dynamicSummaryContainer.id = 'dynamicSummaryContainer';
-    dynamicSummaryContainer.innerHTML = `<div id="nguonKhacSummary" class="summary-box" style="display: none;"><span>∑ Tiền Nguồn khác</span><strong id="totalNguonKhacValue">0</strong></div><div id="bncctSummary" class="summary-box" style="display: none;"><span>∑ Tiền BN CCT</span><strong id="totalBncctValue">0</strong></div>`;
-    const nguonKhacStatCard = document.createElement('div');
-    nguonKhacStatCard.className = 'stat-card';
-    nguonKhacStatCard.innerHTML = `<h3 id="totalNguonKhacDashboard">0</h3><p>Tổng Tiền Nguồn khác</p>`;
-    const filterGrid = document.querySelector('#validatorFilters .filter-grid');
-    const bncctFilter = document.querySelector('#bncctFilter');
-    if (filterGrid && bncctFilter) {
-        bncctFilter.parentElement.insertAdjacentElement('afterend', nguonKhacFilterGroup);
-    }
-    const tableHeader = document.querySelector('#validatorResults .table-header');
-    const resultsInfoDiv = document.getElementById('resultsInfo');
-    if (tableHeader && resultsInfoDiv) {
-        const headerInfoContainer = document.createElement('div');
-        headerInfoContainer.className = 'header-info-container';
-        resultsInfoDiv.parentNode.insertBefore(headerInfoContainer, resultsInfoDiv);
-        headerInfoContainer.appendChild(resultsInfoDiv);
-        headerInfoContainer.appendChild(dynamicSummaryContainer);
-    }
-    const dashboardStats = document.getElementById('dashboardStats');
-    if (dashboardStats) {
-        dashboardStats.appendChild(nguonKhacStatCard);
-    }
-    const moneyCardIds = ['totalAmount', 'totalBncct', 'totalNguonKhacDashboard'];
-    moneyCardIds.forEach(id => {
-        const h3 = document.getElementById(id);
-        if (h3 && h3.parentElement.classList.contains('stat-card')) {
-            h3.parentElement.classList.add('money-card');
-        }
-    });
-
+    const bulkZaloButton = document.createElement('button'); bulkZaloButton.id = 'bulkZaloButton'; bulkZaloButton.className = 'icon-action-btn'; bulkZaloButton.title = 'Soạn tóm tắt hàng loạt cho lỗi đã lọc'; bulkZaloButton.innerHTML = '📋'; bulkZaloButton.style.display = 'none'; bulkZaloButton.onclick = () => { const errorType = document.getElementById('errorTypeFilter').value; if (errorType && globalData.filteredRecords.length > 0) { openZaloModal(globalData.filteredRecords, true, errorType); } };
+    const toggleActionsButton = document.createElement('button'); toggleActionsButton.id = 'toggleActionsButton'; toggleActionsButton.className = 'btn btn-info'; toggleActionsButton.innerHTML = '⚙️ Hiện Hành động'; toggleActionsButton.onclick = () => { const container = document.getElementById('validatorResults'); if (container) { container.classList.toggle('actions-hidden'); const isHidden = container.classList.contains('actions-hidden'); toggleActionsButton.innerHTML = isHidden ? '⚙️ Hiện Hành động' : '⚙️ Ẩn Hành động'; } };
+    const filterActions = document.querySelector('#validatorFilters .filter-actions'); if (filterActions) { filterActions.appendChild(bulkZaloButton); filterActions.appendChild(toggleActionsButton); }
+    const resultsContainer = document.getElementById('validatorResults'); if (resultsContainer) { resultsContainer.classList.add('actions-hidden'); }
+    const nguonKhacFilterGroup = document.createElement('div'); nguonKhacFilterGroup.className = 'filter-group'; nguonKhacFilterGroup.innerHTML = `<label>Tiền từ Nguồn khác:</label><select class="filter-select" id="nguonKhacFilter"><option value="">Tất cả</option><option value="yes">Có Nguồn khác (> 0)</option><option value="no">Không có Nguồn khác</option></select>`;
+    const dynamicSummaryContainer = document.createElement('div'); dynamicSummaryContainer.id = 'dynamicSummaryContainer'; dynamicSummaryContainer.innerHTML = `<div id="nguonKhacSummary" class="summary-box" style="display: none;"><span>∑ Tiền Nguồn khác</span><strong id="totalNguonKhacValue">0</strong></div><div id="bncctSummary" class="summary-box" style="display: none;"><span>∑ Tiền BN CCT</span><strong id="totalBncctValue">0</strong></div>`;
+    const nguonKhacStatCard = document.createElement('div'); nguonKhacStatCard.className = 'stat-card'; nguonKhacStatCard.innerHTML = `<h3 id="totalNguonKhacDashboard">0</h3><p>Tổng Tiền Nguồn khác</p>`;
+    const filterGrid = document.querySelector('#validatorFilters .filter-grid'); const bncctFilter = document.querySelector('#bncctFilter'); if (filterGrid && bncctFilter) { bncctFilter.parentElement.insertAdjacentElement('afterend', nguonKhacFilterGroup); }
+    const tableHeader = document.querySelector('#validatorResults .table-header'); const resultsInfoDiv = document.getElementById('resultsInfo'); if (tableHeader && resultsInfoDiv) { const headerInfoContainer = document.createElement('div'); headerInfoContainer.className = 'header-info-container'; resultsInfoDiv.parentNode.insertBefore(headerInfoContainer, resultsInfoDiv); headerInfoContainer.appendChild(resultsInfoDiv); headerInfoContainer.appendChild(dynamicSummaryContainer); }
+    const dashboardStats = document.getElementById('dashboardStats'); if (dashboardStats) { dashboardStats.appendChild(nguonKhacStatCard); }
+    const cardClassMapping = { 'errorCount': ['stat-card--error', 'stat-card--colored'], 'totalAmount': ['stat-card--bhyttt', 'stat-card--colored'], 'totalBncct': ['stat-card--bncct', 'stat-card--colored'], 'totalNguonKhacDashboard': ['stat-card--primary', 'stat-card--colored'] };
+    for (const id in cardClassMapping) { const h3 = document.getElementById(id); if (h3 && h3.parentElement.classList.contains('stat-card')) { h3.parentElement.classList.add(...cardClassMapping[id]); } }
+    
     // ===================================================================
     // BƯỚC 3: MỞ RỘNG LOGIC GỐC MÀ KHÔNG SỬA FILE (Không thay đổi)
     // ===================================================================
-    if (typeof validateSingleHoso === 'function') {
-        const original_validateSingleHoso = validateSingleHoso;
-        validateSingleHoso = function(hoso) {
-            const result = original_validateSingleHoso(hoso);
-            if (result && result.record) {
-                 const tongHopNodeContent = hoso.querySelector('LOAIHOSO:is(XML1) ~ NOIDUNGFILE');
-                 if(tongHopNodeContent) {
-                    const tongHopNode = tongHopNodeContent.querySelector('TONG_HOP');
-                    if (tongHopNode) {
-                         const t_nguonkhac_text = tongHopNode.querySelector('T_NGUONKHAC')?.textContent.trim() || '0';
-                         result.record.t_nguonkhac = parseFloat(t_nguonkhac_text);
-                    }
-                 }
-            }
-            return result;
-        };
-    }
-    if (typeof applyFilters === 'function') {
-        const original_applyFilters = applyFilters;
-        applyFilters = function() {
-            const nguonKhacValue = document.getElementById('nguonKhacFilter').value;
-            original_applyFilters();
-            globalData.filteredRecords = globalData.filteredRecords.filter(r => {
-                const hasNguonKhac = r.t_nguonkhac && r.t_nguonkhac > 0;
-                if (nguonKhacValue === 'yes' && !hasNguonKhac) return false;
-                if (nguonKhacValue === 'no' && hasNguonKhac) return false;
-                return true;
-            });
-            globalData.currentPage = 1;
-            updateResultsTable();
-            updatePagination();
-            updateResultsInfo();
-            updateDynamicSummaries();
-            const errorType = document.getElementById('errorTypeFilter').value;
-            const bulkBtn = document.getElementById('bulkZaloButton');
-            if(bulkBtn){
-                 bulkBtn.style.display = (errorType && globalData.filteredRecords.length > 0) ? 'inline-flex' : 'none';
-            }
-        };
-    }
-    if (typeof clearFilters === 'function') {
-        const original_clearFilters = clearFilters;
-        clearFilters = function() {
-            original_clearFilters();
-            const nguonKhacFilter = document.getElementById('nguonKhacFilter');
-            if(nguonKhacFilter) nguonKhacFilter.value = '';
-            const bulkBtn = document.getElementById('bulkZaloButton');
-            if(bulkBtn) bulkBtn.style.display = 'none';
-        };
-     }
-    if (typeof updateDashboard === 'function') {
-        const original_updateDashboard = updateDashboard;
-        updateDashboard = function() {
-            original_updateDashboard();
-            if (globalData.allRecords.length > 0) {
-                const totalNguonKhac = globalData.allRecords.reduce((sum, record) => sum + (record.t_nguonkhac || 0), 0);
-                const totalNguonKhacDashboardEl = document.getElementById('totalNguonKhacDashboard');
-                if (totalNguonKhacDashboardEl) {
-                    totalNguonKhacDashboardEl.textContent = formatCurrency(totalNguonKhac);
-                }
-            }
-        };
-    }
-    if (typeof updateResultsTable === 'function') {
-        const original_updateResultsTable = updateResultsTable;
-        updateResultsTable = function() {
-            original_updateResultsTable();
-            const table = document.querySelector('#validatorResults .results-table');
-            if (!table) return;
-            const headerRow = table.querySelector('thead tr');
-            const tbody = table.querySelector('tbody');
-            if (!headerRow || !tbody) return;
-            if (!headerRow.querySelector('.action-header')) {
-                const th = document.createElement('th');
-                th.className = 'action-header';
-                th.textContent = 'Hành động';
-                th.style.width = '100px'; 
-                th.style.textAlign = 'center';
-                headerRow.appendChild(th);
-            }
-            const startIndex = (globalData.currentPage - 1) * globalData.pageSize;
-            const pageRecords = globalData.filteredRecords.slice(startIndex, startIndex + globalData.pageSize);
-            tbody.querySelectorAll('tr').forEach((row, index) => {
-                if (row.querySelector('.action-cell')) return;
-                const td = document.createElement('td');
-                td.className = 'action-cell';
-                td.style.verticalAlign = 'middle';
-                td.style.textAlign = 'center';
-                const record = pageRecords[index];
-                if (record && record.errors.length > 0) {
-                    const zaloButton = document.createElement('button');
-                    zaloButton.className = 'icon-action-btn';
-                    zaloButton.title = 'Soạn tin Zalo cho hồ sơ này';
-                    zaloButton.innerHTML = '✉️';
-                    zaloButton.onclick = (e) => {
-                        e.stopPropagation();
-                        openZaloModal(record);
-                    };
-                    td.appendChild(zaloButton);
-                }
-                row.appendChild(td);
-                if (record && record.t_nguonkhac > 0) {
-                    const costCell = row.cells[3];
-                    if(costCell && !costCell.querySelector('.cost-nguon-khac')){
-                         costCell.innerHTML += `<span class="cost-nguon-khac">Nguồn khác: ${formatCurrency(record.t_nguonkhac)}</span>`;
-                    }
-                }
-            });
-        };
-    }
-    function updateDynamicSummaries() {
-        const bncctFilterValue = document.getElementById('bncctFilter').value;
-        const nguonKhacFilterValue = document.getElementById('nguonKhacFilter').value;
-        const bncctSummaryBox = document.getElementById('bncctSummary');
-        const nguonKhacSummaryBox = document.getElementById('nguonKhacSummary');
-        if (bncctFilterValue === 'yes') {
-            const total = globalData.filteredRecords.reduce((sum, record) => sum + (record.t_bncct || 0), 0);
-            document.getElementById('totalBncctValue').textContent = formatCurrency(total);
-            bncctSummaryBox.style.display = 'inline-flex';
-        } else {
-            bncctSummaryBox.style.display = 'none';
-        }
-        if (nguonKhacFilterValue === 'yes') {
-            const total = globalData.filteredRecords.reduce((sum, record) => sum + (record.t_nguonkhac || 0), 0);
-            document.getElementById('totalNguonKhacValue').textContent = formatCurrency(total);
-            nguonKhacSummaryBox.style.display = 'inline-flex';
-        } else {
-            nguonKhacSummaryBox.style.display = 'none';
-        }
-    }
+    if (typeof validateSingleHoso === 'function') { const original_validateSingleHoso = validateSingleHoso; validateSingleHoso = function(hoso) { const result = original_validateSingleHoso(hoso); if (result && result.record) { let tongHopNode = null; for (const fileNode of hoso.children) { if (fileNode.nodeName === 'FILEHOSO') { const loaiHosoNode = fileNode.querySelector('LOAIHOSO'); if (loaiHosoNode && loaiHosoNode.textContent.trim() === 'XML1') { const noiDungFileNode = fileNode.querySelector('NOIDUNGFILE'); if (noiDungFileNode) { tongHopNode = noiDungFileNode.querySelector('TONG_HOP'); } break; } } } if (tongHopNode) { const t_nguonkhac_text = tongHopNode.querySelector('T_NGUONKHAC')?.textContent.trim() || '0'; result.record.t_nguonkhac = parseFloat(t_nguonkhac_text); } else { result.record.t_nguonkhac = 0; } } return result; }; }
+    if (typeof applyFilters === 'function') { const original_applyFilters = applyFilters; applyFilters = function() { const nguonKhacValue = document.getElementById('nguonKhacFilter').value; original_applyFilters(); globalData.filteredRecords = globalData.filteredRecords.filter(r => { const hasNguonKhac = r.t_nguonkhac && r.t_nguonkhac > 0; if (nguonKhacValue === 'yes' && !hasNguonKhac) return false; if (nguonKhacValue === 'no' && hasNguonKhac) return false; return true; }); globalData.currentPage = 1; updateResultsTable(); updatePagination(); updateResultsInfo(); updateDynamicSummaries(); const errorType = document.getElementById('errorTypeFilter').value; const bulkBtn = document.getElementById('bulkZaloButton'); if(bulkBtn){ bulkBtn.style.display = (errorType && globalData.filteredRecords.length > 0) ? 'inline-flex' : 'none'; } }; }
+    if (typeof clearFilters === 'function') { const original_clearFilters = clearFilters; clearFilters = function() { original_clearFilters(); const nguonKhacFilter = document.getElementById('nguonKhacFilter'); if(nguonKhacFilter) nguonKhacFilter.value = ''; const bulkBtn = document.getElementById('bulkZaloButton'); if(bulkBtn) bulkBtn.style.display = 'none'; }; }
+    if (typeof updateDashboard === 'function') { const original_updateDashboard = updateDashboard; updateDashboard = function() { original_updateDashboard(); if (globalData.allRecords.length > 0) { const totalNguonKhac = globalData.allRecords.reduce((sum, record) => sum + (record.t_nguonkhac || 0), 0); const totalNguonKhacDashboardEl = document.getElementById('totalNguonKhacDashboard'); if (totalNguonKhacDashboardEl) { totalNguonKhacDashboardEl.textContent = formatCurrency(totalNguonKhac); } } }; }
+    if (typeof updateResultsTable === 'function') { const original_updateResultsTable = updateResultsTable; updateResultsTable = function() { original_updateResultsTable(); const table = document.querySelector('#validatorResults .results-table'); if (!table) return; const headerRow = table.querySelector('thead tr'); const tbody = table.querySelector('tbody'); if (!headerRow || !tbody) return; const headers = Array.from(headerRow.querySelectorAll('th')).map(th => th.textContent.trim()); if (!headerRow.querySelector('.action-header')) { const th = document.createElement('th'); th.className = 'action-header'; th.textContent = 'Hành động'; th.style.width = '100px'; th.style.textAlign = 'center'; headerRow.appendChild(th); headers.push('Hành động'); } const startIndex = (globalData.currentPage - 1) * globalData.pageSize; const pageRecords = globalData.filteredRecords.slice(startIndex, startIndex + globalData.pageSize); tbody.querySelectorAll('tr').forEach((row, rowIndex) => { const record = pageRecords[rowIndex]; if (!record) return; row.classList.remove('row-critical-error', 'row-warning'); const hasCritical = record.errors.some(e => e.severity === 'critical'); if (hasCritical) { row.classList.add('row-critical-error'); } else if (record.errors.length > 0) { row.classList.add('row-warning'); } const cells = row.querySelectorAll('td'); cells.forEach((cell, cellIndex) => { if (headers[cellIndex]) { cell.setAttribute('data-label', headers[cellIndex]); } }); if (!row.querySelector('.action-cell')) { const td = document.createElement('td'); td.className = 'action-cell'; td.setAttribute('data-label', 'Hành động'); td.style.verticalAlign = 'middle'; td.style.textAlign = 'center'; if (record.errors.length > 0) { const zaloButton = document.createElement('button'); zaloButton.className = 'icon-action-btn'; zaloButton.title = 'Soạn tin Zalo cho hồ sơ này'; zaloButton.innerHTML = '✉️'; zaloButton.onclick = (e) => { e.stopPropagation(); openZaloModal(record); }; td.appendChild(zaloButton); } row.appendChild(td); } if (record.t_nguonkhac > 0) { const costCell = cells[3]; if(costCell && !costCell.querySelector('.cost-nguon-khac')){ costCell.innerHTML += `<span class="cost-nguon-khac">Nguồn khác: ${formatCurrency(record.t_nguonkhac)}</span>`; } } }); }; }
+    function updateDynamicSummaries() { const bncctFilterValue = document.getElementById('bncctFilter').value; const nguonKhacFilterValue = document.getElementById('nguonKhacFilter').value; const bncctSummaryBox = document.getElementById('bncctSummary'); const nguonKhacSummaryBox = document.getElementById('nguonKhacSummary'); if (bncctFilterValue === 'yes') { const total = globalData.filteredRecords.reduce((sum, record) => sum + (record.t_bncct || 0), 0); document.getElementById('totalBncctValue').textContent = formatCurrency(total); bncctSummaryBox.style.display = 'inline-flex'; } else { bncctSummaryBox.style.display = 'none'; } if (nguonKhacFilterValue === 'yes') { const total = globalData.filteredRecords.reduce((sum, record) => sum + (record.t_nguonkhac || 0), 0); document.getElementById('totalNguonKhacValue').textContent = formatCurrency(total); nguonKhacSummaryBox.style.display = 'inline-flex'; } else { nguonKhacSummaryBox.style.display = 'none'; } }
 });
 
 // ===================================================================
-// BƯỚC 4: CẬP NHẬT CÁC HÀM ZALO VỚI ĐỊNH DẠNG MỚI
+// BƯỚC 4: CÁC HÀM ZALO (Không thay đổi)
 // ===================================================================
-function generateBulkZaloMessage(records, errorType) {
-    const errorName = ERROR_TYPES[errorType] || errorType;
-    let message = `*[CSKCB] TÓM TẮT LỖI HÀNG LOẠT*\n--------------------------------\n`;
-    message += `▪️ *Loại lỗi:* ${errorName}\n`;
-    message += `▪️ *Tổng số hồ sơ có lỗi:* ${records.length}\n\n`;
-    message += `*DANH SÁCH CHI TIẾT:*\n`;
-
-    records.forEach((record, index) => {
-        const relevantError = record.errors.find(e => e.type === errorType);
-        const cost = relevantError && relevantError.cost > 0 ? ` - ${formatCurrency(relevantError.cost)}` : '';
-        message += `${index + 1}. BN: *${record.hoTen}* (LK: ${record.maLk})${cost}\n`;
-    });
-
-    message += `\n--------------------------------\n_Vui lòng kiểm tra và xử lý hàng loạt các hồ sơ trên._`;
-    return message;
-}
-
-function generateSingleZaloMessage(record) {
-    // Hàm này sẽ thay thế các thẻ HTML bằng ký tự xuống dòng và định dạng Zalo
-    const cleanMessage = (msg) => msg.replace(/<br>/g, '\n').replace(/<strong>(.*?)<\/strong>/g, '*$1*');
-
-    let message = `*[CSKCB] THÔNG BÁO KẾT QUẢ KIỂM TRA HỒ SƠ BHYT*\n--------------------------------\n`;
-    message += `▪️ *Bệnh nhân:* ${record.hoTen}\n`;
-    message += `▪️ *Mã LK:* ${record.maLk}\n`;
-    message += `▪️ *Thời gian ĐT:* ${formatDateTimeForDisplay(record.ngayVao)} - ${formatDateTimeForDisplay(record.ngayRa)}\n`;
-    message += `▪️ *Tổng chi phí:* ${formatCurrency(record.t_bhtt)}\n\n`;
-    
-    const criticalErrors = record.errors.filter(e => e.severity === 'critical');
-    const warnings = record.errors.filter(e => e.severity === 'warning');
-
-    if (criticalErrors.length > 0) {
-        message += `*🔴 LỖI NGHIÊM TRỌNG (Dự kiến xuất toán):*\n`;
-        criticalErrors.forEach((err, i) => {
-            const errorDesc = ERROR_TYPES[err.type] || err.type;
-            let costInfo = err.cost > 0 ? ` (${formatCurrency(err.cost)})` : '';
-            message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}${costInfo}\n`;
-        });
-        message += `\n`;
-    }
-
-    if (warnings.length > 0) {
-        message += `*🟡 CẢNH BÁO (Kiểm tra lại):*\n`;
-        warnings.forEach((err, i) => {
-            const errorDesc = ERROR_TYPES[err.type] || err.type;
-            message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}\n`;
-        });
-        message += `\n`;
-    }
-
-    message += `--------------------------------\n_Vui lòng kiểm tra và xử lý theo quy định._`;
-    return message;
-}
-
-function openZaloModal(data, isBulk = false, errorType = '') {
-    const message = isBulk ? generateBulkZaloMessage(data, errorType) : generateSingleZaloMessage(data);
-    document.getElementById('zaloMessageTextarea').value = message;
-    document.getElementById('zaloMessageModal').style.display = 'block';
-}
-
-function closeZaloModal() {
-    document.getElementById('zaloMessageModal').style.display = 'none';
-}
-
-function copyZaloMessage() {
-    const textarea = document.getElementById('zaloMessageTextarea');
-    textarea.select();
-    textarea.setSelectionRange(0, 99999);
-    try {
-        navigator.clipboard.writeText(textarea.value);
-        alert('Đã sao chép nội dung vào clipboard!');
-    } catch (err) {
-        alert('Sao chép thất bại. Vui lòng thử lại.');
-        console.error('Lỗi sao chép: ', err);
-    }
-}
+function generateBulkZaloMessage(records, errorType) { const errorName = ERROR_TYPES[errorType] || errorType; let message = `*[CSKCB] TÓM TẮT LỖI HÀNG LOẠT*\n--------------------------------\n`; message += `▪️ *Loại lỗi:* ${errorName}\n`; message += `▪️ *Tổng số hồ sơ có lỗi:* ${records.length}\n\n`; message += `*DANH SÁCH CHI TIẾT:*\n`; records.forEach((record, index) => { const relevantError = record.errors.find(e => e.type === errorType); const cost = relevantError && relevantError.cost > 0 ? ` - ${formatCurrency(relevantError.cost)}` : ''; message += `${index + 1}. BN: *${record.hoTen}* (LK: ${record.maLk})${cost}\n`; }); message += `\n--------------------------------\n_Vui lòng kiểm tra và xử lý hàng loạt các hồ sơ trên._`; return message; }
+function generateSingleZaloMessage(record) { const cleanMessage = (msg) => msg.replace(/<br>/g, '\n').replace(/<strong>(.*?)<\/strong>/g, '*$1*'); let message = `*[CSKCB] THÔNG BÁO KẾT QUẢ KIỂM TRA HỒ SƠ BHYT*\n--------------------------------\n`; message += `▪️ *Bệnh nhân:* ${record.hoTen}\n`; message += `▪️ *Mã LK:* ${record.maLk}\n`; message += `▪️ *Thời gian ĐT:* ${formatDateTimeForDisplay(record.ngayVao)} - ${formatDateTimeForDisplay(record.ngayRa)}\n`; message += `▪️ *Tổng chi phí:* ${formatCurrency(record.t_bhtt)}\n\n`; const criticalErrors = record.errors.filter(e => e.severity === 'critical'); const warnings = record.errors.filter(e => e.severity === 'warning'); if (criticalErrors.length > 0) { message += `*🔴 LỖI NGHIÊM TRỌNG (Dự kiến xuất toán):*\n`; criticalErrors.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; let costInfo = err.cost > 0 ? ` (${formatCurrency(err.cost)})` : ''; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}${costInfo}\n`; }); message += `\n`; } if (warnings.length > 0) { message += `*🟡 CẢNH BÁO (Kiểm tra lại):*\n`; warnings.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}\n`; }); message += `\n`; } message += `--------------------------------\n_Vui lòng kiểm tra và xử lý theo quy định._`; return message; }
+function openZaloModal(data, isBulk = false, errorType = '') { const message = isBulk ? generateBulkZaloMessage(data, errorType) : generateSingleZaloMessage(data); document.getElementById('zaloMessageTextarea').value = message; document.getElementById('zaloMessageModal').style.display = 'block'; }
+function closeZaloModal() { document.getElementById('zaloMessageModal').style.display = 'none'; }
+function copyZaloMessage() { const textarea = document.getElementById('zaloMessageTextarea'); textarea.select(); textarea.setSelectionRange(0, 99999); try { navigator.clipboard.writeText(textarea.value); alert('Đã sao chép nội dung vào clipboard!'); } catch (err) { alert('Sao chép thất bại. Vui lòng thử lại.'); console.error('Lỗi sao chép: ', err); } }
