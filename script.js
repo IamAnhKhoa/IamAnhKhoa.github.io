@@ -2041,92 +2041,102 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 /**
  * FILE MỚI: feature_enhancements.js
  * =================================
- * Version 11:
- * - SỬA LỖI: Khắc phục lỗi CSS khiến các thẻ stat card trên Dashboard không hiển thị màu sắc.
+ * Version 15 (Đầy đủ):
+ * - Khôi phục lại tính năng "Buộc xem thông báo cập nhật" đã bị mất.
+ * - Bao gồm tất cả các tính năng đã thêm trước đó.
  *
  * File này chứa các chức năng bổ sung được yêu cầu.
  * Nó được thiết kế để không chỉnh sửa trực tiếp vào file index.html hay script.js gốc.
  * Mọi thứ (HTML, CSS, Logic) đều được tiêm vào trang một cách tự động khi tải.
  */
 
+// ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
+// Để kích hoạt thông báo tự động cho người dùng, hãy thêm một mục mới vào ĐẦU danh sách này.
+// ID phải là duy nhất và lớn hơn ID trước đó.
+const notifications = [
+    {
+        id: 5,
+        date: '2025-08-13',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Thông báo cập nhật',
+        content: 'Bảng kết quả và bộ lọc đã được tinh chỉnh để hiển thị tốt hơn trên các thiết bị có màn hình nhỏ. Đã khắc phục lỗi khiến các thẻ thống kê không hiển thị đúng màu sắc và lỗi hiển thị sai số tiền "Nguồn khác". .'
+    },
+    {
+        id: 4,
+        date: '2025-08-12',
+        type: 'feature',
+        title: 'Hệ thống Thông báo & Cập nhật ra mắt!',
+        content: 'Giờ đây, mọi cập nhật và tính năng mới sẽ được thông báo trực tiếp tại đây để bạn tiện theo dõi.'
+    },
+    {
+        id: 3,
+        date: '2025-08-11',
+        type: 'fix',
+        title: 'Sửa lỗi màu sắc và hiển thị trên Dashboard',
+        content: 'Đã khắc phục lỗi khiến các thẻ thống kê không hiển thị đúng màu sắc và lỗi hiển thị sai số tiền "Nguồn khác".'
+    },
+    {
+        id: 2,
+        date: '2025-08-10',
+        type: 'feature',
+        title: 'Tối ưu giao diện cho di động',
+        content: 'Bảng kết quả và bộ lọc đã được tinh chỉnh để hiển thị tốt hơn trên các thiết bị có màn hình nhỏ.'
+    },
+    {
+        id: 1,
+        date: '2025-08-09',
+        type: 'announcement',
+        title: 'Chào mừng đến với phiên bản mới',
+        content: 'Chào mừng bạn đến với hệ thống Giám sát BHYT Toàn diện phiên bản nâng cấp.'
+    }
+];
+
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Applying feature enhancements v11 (Dashboard Color Fix)...");
+    console.log("Applying feature enhancements v15 (Restoring Forced Update Modal)...");
 
     // ===================================================================
     // BƯỚC 1: TIÊM CSS
     // ===================================================================
     const newStyles = `
-        /* CSS cũ (giữ nguyên) */
-        .table-header { align-items: flex-start; }
-        .header-info-container { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin-left: auto; }
-        #dynamicSummaryContainer { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-        .summary-box { display: inline-flex; align-items: center; gap: 15px; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.1); backdrop-filter: blur(4px); transition: opacity 0.3s ease, transform 0.3s ease; }
-        .summary-box span { font-size: 0.9em; font-weight: 600; color: white; }
-        .summary-box strong { font-size: 1.1em; font-weight: 700; color: #ffc107; }
-        .cost-nguon-khac { display: block; color: #c82333; font-weight: bold; font-size: 0.9em; margin-top: 4px; }
-        body.dark .summary-box { border-color: rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); }
-        body.dark .summary-box strong { color: #f6ad55; }
-        body.dark .cost-nguon-khac { color: #f68794; }
-        #dashboardTab .stats-overview { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; }
-        .zalo-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
-        .zalo-modal-content { background-color: #fefefe; margin: 10% auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: fadeInScale 0.4s ease-out; }
-        body.dark .zalo-modal-content { background: #1f2937; border-color: #374151; }
-        .zalo-modal-textarea { width: 100%; height: 300px; margin-top: 15px; margin-bottom: 15px; padding: 10px; font-family: monospace; font-size: 1em; border: 1px solid #ccc; border-radius: 8px; resize: vertical; white-space: pre-wrap; }
-        body.dark .zalo-modal-textarea { background-color: #0f172a; color: #e5e7eb; border-color: #374151; }
-        .icon-action-btn { background: none; border: none; cursor: pointer; font-size: 1.5em; padding: 5px; line-height: 1; border-radius: 50%; width: 40px; height: 40px; transition: background-color 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
-        .icon-action-btn:hover { background-color: rgba(0, 0, 0, 0.1); }
-        body.dark .icon-action-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
-        .results-container.actions-hidden .action-header, .results-container.actions-hidden .action-cell { display: none; }
-        .results-table tr.row-critical-error { background-color: rgba(220, 53, 69, 0.05); border-left: 4px solid #dc3545; }
-        .results-table tr.row-warning { background-color: rgba(255, 193, 7, 0.05); border-left: 4px solid #ffc107; }
-        .results-table tr.row-critical-error:hover, .results-table tr:has(.status-badge.status-error):hover { background: rgba(220,53,69,.12) !important; }
-        .results-table tr.row-warning:hover, .results-table tr:has(.status-badge.status-warning):hover { background: rgba(255,193,7,.14) !important; }
-        @media (max-width: 768px) { body { padding: 10px; } .container { padding: 0; border-radius: 10px; } .tab-button { padding: 15px 10px; font-size: 0.9em; } .tab-content { padding: 15px; } #dashboardStats { grid-template-columns: 1fr; } .dashboard-grid { grid-template-columns: 1fr; } .filter-grid { grid-template-columns: 1fr; } .filter-actions { flex-direction: column; gap: 10px; } .filter-actions .btn, .filter-actions .icon-action-btn { width: 100%; } .results-table thead { display: none; } .results-table tbody, .results-table tr, .results-table td { display: block; width: 100% !important; } .results-table tr { margin-bottom: 15px; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; border-left-width: 5px; } body.dark .results-table tr { border-color: #374151; } .results-table td { padding-left: 50%; text-align: right; position: relative; border-bottom: 1px solid #f1f1f1; } body.dark .results-table td { border-bottom-color: #2c3a4b; } .results-table td:last-child { border-bottom: none; } .results-table td::before { content: attr(data-label); position: absolute; left: 10px; width: 45%; text-align: left; font-weight: 600; color: #2c3e50; } body.dark .results-table td::before { color: #a0aec0; } .results-table td.action-cell { padding: 10px; text-align: center; } .results-table td.action-cell::before { display: none; } }
-
-        /* ========== SỬA LỖI & CẬP NHẬT CSS CHO DASHBOARD ========== */
-        /* Quy tắc chung cho thẻ stat card (độ ưu tiên cao hơn) */
-        #dashboardTab .stat-card {
-            background: #ffffff; color: #34495e; border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08); border: 1px solid #e9ecef;
-            padding: 20px; transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        #dashboardTab .stat-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
-        #dashboardTab .stat-card h3 { font-size: 2.8em; color: #2c3e50; margin-bottom: 5px; }
-        #dashboardTab .stat-card p { font-size: 1em; font-weight: 500; color: #7f8c8d; opacity: 1; }
-        
-        /* Chữ trắng cho thẻ màu */
-        #dashboardTab .stat-card.stat-card--colored h3,
-        #dashboardTab .stat-card.stat-card--colored p {
-            color: white; opacity: 0.95;
-        }
-        #dashboardTab .stat-card.stat-card--colored h3 { text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
-        /* Màu Đỏ cho hồ sơ lỗi */
-        #dashboardTab .stat-card.stat-card--error { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
-        /* Màu Xanh lá cho BHYT TT */
-        #dashboardTab .stat-card.stat-card--bhyttt { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
-        /* Màu Tím cho BN CCT */
-        #dashboardTab .stat-card.stat-card--bncct { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
-        /* Màu Xanh dương cho Nguồn khác */
-        #dashboardTab .stat-card.stat-card--primary { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
-        
-        /* Dark Mode */
-        body.dark #dashboardTab .stat-card { background: #1f2937; color: #e5e7eb; border-color: #374151; }
-        body.dark #dashboardTab .stat-card h3 { color: #ffffff; }
-        body.dark #dashboardTab .stat-card p { color: #9ca3af; }
-        body.dark #dashboardTab .stat-card.stat-card--colored h3,
-        body.dark #dashboardTab .stat-card.stat-card--colored p { color: #ffffff; }
+        .table-header { align-items: flex-start; } .header-info-container { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin-left: auto; } #dynamicSummaryContainer { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; } .summary-box { display: inline-flex; align-items: center; gap: 15px; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.1); backdrop-filter: blur(4px); transition: opacity 0.3s ease, transform 0.3s ease; } .summary-box span { font-size: 0.9em; font-weight: 600; color: white; } .summary-box strong { font-size: 1.1em; font-weight: 700; color: #ffc107; } .cost-nguon-khac { display: block; color: #c82333; font-weight: bold; font-size: 0.9em; margin-top: 4px; } body.dark .summary-box { border-color: rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); } body.dark .summary-box strong { color: #f6ad55; } body.dark .cost-nguon-khac { color: #f68794; } #dashboardTab .stats-overview { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; } .zalo-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); } .zalo-modal-content { background-color: #fefefe; margin: 10% auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: fadeInScale 0.4s ease-out; } body.dark .zalo-modal-content { background: #1f2937; border-color: #374151; } .zalo-modal-textarea { width: 100%; height: 300px; margin-top: 15px; margin-bottom: 15px; padding: 10px; font-family: monospace; font-size: 1em; border: 1px solid #ccc; border-radius: 8px; resize: vertical; white-space: pre-wrap; } body.dark .zalo-modal-textarea { background-color: #0f172a; color: #e5e7eb; border-color: #374151; } .icon-action-btn { background: none; border: none; cursor: pointer; font-size: 1.5em; padding: 5px; line-height: 1; border-radius: 50%; width: 40px; height: 40px; transition: background-color 0.2s ease; display: inline-flex; align-items: center; justify-content: center; } .icon-action-btn:hover { background-color: rgba(0, 0, 0, 0.1); } body.dark .icon-action-btn:hover { background-color: rgba(255, 255, 255, 0.1); } .results-container.actions-hidden .action-header, .results-container.actions-hidden .action-cell { display: none; } .results-table tr.row-critical-error { background-color: rgba(220, 53, 69, 0.05); border-left: 4px solid #dc3545; } .results-table tr.row-warning { background-color: rgba(255, 193, 7, 0.05); border-left: 4px solid #ffc107; } .results-table tr.row-critical-error:hover, .results-table tr:has(.status-badge.status-error):hover { background: rgba(220,53,69,.12) !important; } .results-table tr.row-warning:hover, .results-table tr:has(.status-badge.status-warning):hover { background: rgba(255,193,7,.14) !important; } #dashboardTab .stat-card { background: #ffffff; color: #34495e; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); border: 1px solid #e9ecef; padding: 20px; transition: transform 0.3s ease, box-shadow 0.3s ease; } #dashboardTab .stat-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); } #dashboardTab .stat-card h3 { font-size: 2.8em; color: #2c3e50; margin-bottom: 5px; } #dashboardTab .stat-card p { font-size: 1em; font-weight: 500; color: #7f8c8d; opacity: 1; } #dashboardTab .stat-card.stat-card--colored h3, #dashboardTab .stat-card.stat-card--colored p { color: white; opacity: 0.95; } #dashboardTab .stat-card.stat-card--colored h3 { text-shadow: 0 2px 4px rgba(0,0,0,0.2); } #dashboardTab .stat-card.stat-card--error { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); } #dashboardTab .stat-card.stat-card--bhyttt { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); } #dashboardTab .stat-card.stat-card--bncct { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); } #dashboardTab .stat-card.stat-card--primary { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); } body.dark #dashboardTab .stat-card { background: #1f2937; color: #e5e7eb; border-color: #374151; } body.dark #dashboardTab .stat-card h3 { color: #ffffff; } body.dark #dashboardTab .stat-card p { color: #9ca3af; } body.dark #dashboardTab .stat-card.stat-card--colored h3, body.dark #dashboardTab .stat-card.stat-card--colored p { color: #ffffff; } @media (max-width: 768px) { body { padding: 10px; } .container { padding: 0; border-radius: 10px; } .header { padding: 20px; } .header h1 { font-size: 1.8em; } .tab-button { padding: 15px 10px; font-size: 0.9em; } .tab-content { padding: 15px; } #dashboardStats { grid-template-columns: 1fr; } .dashboard-grid { grid-template-columns: 1fr; } .filter-grid { grid-template-columns: 1fr; } .filter-actions { flex-direction: column; gap: 10px; } .filter-actions .btn, .filter-actions .icon-action-btn { width: 100%; } .results-table thead { display: none; } .results-table tbody, .results-table tr, .results-table td { display: block; width: 100% !important; } .results-table tr { margin-bottom: 15px; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; border-left-width: 5px; } body.dark .results-table tr { border-color: #374151; } .results-table td { padding-left: 50%; text-align: right; position: relative; border-bottom: 1px solid #f1f1f1; } body.dark .results-table td { border-bottom-color: #2c3a4b; } .results-table td:last-child { border-bottom: none; } .results-table td::before { content: attr(data-label); position: absolute; left: 10px; width: 45%; text-align: left; font-weight: 600; color: #2c3e50; } body.dark .results-table td::before { color: #a0aec0; } .results-table td.action-cell { padding: 10px; text-align: center; } .results-table td.action-cell::before { display: none; } }
+        .header-actions { position: absolute; top: 18px; right: 18px; display: flex; gap: 10px; align-items: center; } #notificationBell { position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; box-shadow: 0 8px 20px rgba(0,0,0,0.3); font-size: 1.8rem; display: grid; place-items: center; cursor: pointer; z-index: 1050; transition: transform 0.2s ease-out; } #notificationBell:hover { transform: scale(1.1); } .unread-indicator { position: absolute; top: 8px; right: 8px; width: 12px; height: 12px; background-color: #e74c3c; border-radius: 50%; border: 2px solid white; } #notificationPanel { position: fixed; display: none; bottom: 95px; right: 25px; width: 380px; max-width: calc(100vw - 40px); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 1100; overflow: hidden; animation: fadeInUp 0.3s ease-out; } @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .notification-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; } .notification-header h3 { font-size: 1.1em; margin: 0; color: #2c3e50; } .notification-list { max-height: 400px; overflow-y: auto; padding: 5px; } .notification-item { display: flex; padding: 15px; border-bottom: 1px solid #e9ecef; gap: 15px; } .notification-item:last-child { border-bottom: none; } .notification-icon { font-size: 1.5rem; } .notification-content h4 { font-size: 1em; margin: 0 0 5px 0; color: #2c3e50; } .notification-content p { font-size: 0.9em; margin: 0; color: #6c757d; line-height: 1.5; } .notification-content .date { font-size: 0.8em; color: #adb5bd; margin-top: 5px; } body.dark #notificationPanel { background: #1f2937; } body.dark .notification-header { background: #111827; border-bottom-color: #374151; } body.dark .notification-header h3 { color: #e5e7eb; } body.dark .notification-item { border-bottom-color: #374151; } body.dark .notification-content h4 { color: #f9fafb; } body.dark .notification-content p { color: #d1d5db; } body.dark .notification-content .date { color: #6b7280; }
+        .update-modal-content { max-width: 600px; margin: 15% auto; } .update-modal-body { padding: 10px 0 20px 0; } .update-modal-body .notification-item { border-bottom: none; padding: 0; } .update-modal-body h4 { font-size: 1.2em; } .update-modal-body p { font-size: 1em; }
     `;
     const styleSheet = document.createElement("style");
     styleSheet.innerText = newStyles;
     document.head.appendChild(styleSheet);
     
-    // Các bước còn lại không thay đổi so với phiên bản trước...
     // ===================================================================
     // BƯỚC 2: TIÊM HTML & GẮN CLASS/SỰ KIỆN
     // ===================================================================
+    const oldThemeToggle = document.getElementById('themeToggle');
+    const header = document.querySelector('.header');
+    if (oldThemeToggle && header) {
+        oldThemeToggle.remove();
+        const headerActions = document.createElement('div');
+        headerActions.className = 'header-actions';
+        headerActions.innerHTML = `<button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark"><span class="icon icon-sun">☀️</span><span class="icon icon-moon">🌙</span></button>`;
+        header.appendChild(headerActions);
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+    }
+
+    const bellButtonHTML = `<button id="notificationBell" title="Thông báo & Cập nhật">🔔</button>`;
+    document.body.insertAdjacentHTML('beforeend', bellButtonHTML);
+    const notificationPanelHTML = `<div id="notificationPanel"><div class="notification-header"><h3>Thông báo & Cập nhật</h3></div><div class="notification-list"></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', notificationPanelHTML);
     const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
+    const updateModalHTML = `<div id="updateNoticeModal" class="modal"><div class="modal-content update-modal-content"><div class="modal-header"><h2 id="updateModalTitle">🔔 Có gì mới trong phiên bản này?</h2><span class="close-button" onclick="closeUpdateModal()">&times;</span></div><div id="updateModalBody" class="update-modal-body"></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeUpdateModal()">Đã hiểu</button></div></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', updateModalHTML);
+
+    initializeNotifications();
+    checkForcedUpdateNotice();
+
+    // Các đoạn mã tiêm HTML cũ khác
     const bulkZaloButton = document.createElement('button'); bulkZaloButton.id = 'bulkZaloButton'; bulkZaloButton.className = 'icon-action-btn'; bulkZaloButton.title = 'Soạn tóm tắt hàng loạt cho lỗi đã lọc'; bulkZaloButton.innerHTML = '📋'; bulkZaloButton.style.display = 'none'; bulkZaloButton.onclick = () => { const errorType = document.getElementById('errorTypeFilter').value; if (errorType && globalData.filteredRecords.length > 0) { openZaloModal(globalData.filteredRecords, true, errorType); } };
     const toggleActionsButton = document.createElement('button'); toggleActionsButton.id = 'toggleActionsButton'; toggleActionsButton.className = 'btn btn-info'; toggleActionsButton.innerHTML = '⚙️ Hiện Hành động'; toggleActionsButton.onclick = () => { const container = document.getElementById('validatorResults'); if (container) { container.classList.toggle('actions-hidden'); const isHidden = container.classList.contains('actions-hidden'); toggleActionsButton.innerHTML = isHidden ? '⚙️ Hiện Hành động' : '⚙️ Ẩn Hành động'; } };
     const filterActions = document.querySelector('#validatorFilters .filter-actions'); if (filterActions) { filterActions.appendChild(bulkZaloButton); filterActions.appendChild(toggleActionsButton); }
@@ -2140,9 +2150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cardClassMapping = { 'errorCount': ['stat-card--error', 'stat-card--colored'], 'totalAmount': ['stat-card--bhyttt', 'stat-card--colored'], 'totalBncct': ['stat-card--bncct', 'stat-card--colored'], 'totalNguonKhacDashboard': ['stat-card--primary', 'stat-card--colored'] };
     for (const id in cardClassMapping) { const h3 = document.getElementById(id); if (h3 && h3.parentElement.classList.contains('stat-card')) { h3.parentElement.classList.add(...cardClassMapping[id]); } }
     
-    // ===================================================================
-    // BƯỚC 3: MỞ RỘNG LOGIC GỐC MÀ KHÔNG SỬA FILE (Không thay đổi)
-    // ===================================================================
+    // Các hàm bọc logic không thay đổi
     if (typeof validateSingleHoso === 'function') { const original_validateSingleHoso = validateSingleHoso; validateSingleHoso = function(hoso) { const result = original_validateSingleHoso(hoso); if (result && result.record) { let tongHopNode = null; for (const fileNode of hoso.children) { if (fileNode.nodeName === 'FILEHOSO') { const loaiHosoNode = fileNode.querySelector('LOAIHOSO'); if (loaiHosoNode && loaiHosoNode.textContent.trim() === 'XML1') { const noiDungFileNode = fileNode.querySelector('NOIDUNGFILE'); if (noiDungFileNode) { tongHopNode = noiDungFileNode.querySelector('TONG_HOP'); } break; } } } if (tongHopNode) { const t_nguonkhac_text = tongHopNode.querySelector('T_NGUONKHAC')?.textContent.trim() || '0'; result.record.t_nguonkhac = parseFloat(t_nguonkhac_text); } else { result.record.t_nguonkhac = 0; } } return result; }; }
     if (typeof applyFilters === 'function') { const original_applyFilters = applyFilters; applyFilters = function() { const nguonKhacValue = document.getElementById('nguonKhacFilter').value; original_applyFilters(); globalData.filteredRecords = globalData.filteredRecords.filter(r => { const hasNguonKhac = r.t_nguonkhac && r.t_nguonkhac > 0; if (nguonKhacValue === 'yes' && !hasNguonKhac) return false; if (nguonKhacValue === 'no' && hasNguonKhac) return false; return true; }); globalData.currentPage = 1; updateResultsTable(); updatePagination(); updateResultsInfo(); updateDynamicSummaries(); const errorType = document.getElementById('errorTypeFilter').value; const bulkBtn = document.getElementById('bulkZaloButton'); if(bulkBtn){ bulkBtn.style.display = (errorType && globalData.filteredRecords.length > 0) ? 'inline-flex' : 'none'; } }; }
     if (typeof clearFilters === 'function') { const original_clearFilters = clearFilters; clearFilters = function() { original_clearFilters(); const nguonKhacFilter = document.getElementById('nguonKhacFilter'); if(nguonKhacFilter) nguonKhacFilter.value = ''; const bulkBtn = document.getElementById('bulkZaloButton'); if(bulkBtn) bulkBtn.style.display = 'none'; }; }
@@ -2152,8 +2160,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===================================================================
-// BƯỚC 4: CÁC HÀM ZALO (Không thay đổi)
+// BƯỚC 4: CÁC HÀM CHO TÍNH NĂNG THÔNG BÁO & CẬP NHẬT
 // ===================================================================
+function initializeNotifications() { const bell = document.getElementById('notificationBell'); const panel = document.getElementById('notificationPanel'); if (!bell || !panel) return; const checkUnread = () => { const lastSeenId = parseInt(localStorage.getItem('lastSeenNotificationId') || '0'); const latestId = notifications.length > 0 ? notifications[0].id : 0; if (latestId > lastSeenId) { const indicator = document.createElement('div'); indicator.className = 'unread-indicator'; bell.appendChild(indicator); } }; const renderNotifications = () => { const list = panel.querySelector('.notification-list'); if (!list) return; const iconMap = { feature: '✨', fix: '🔧', announcement: '📢' }; list.innerHTML = notifications.map(n => `<div class="notification-item"><div class="notification-icon">${iconMap[n.type] || '🔔'}</div><div class="notification-content"><h4>${n.title}</h4><p>${n.content}</p><div class="date">${n.date}</div></div></div>`).join(''); }; bell.addEventListener('click', (e) => { e.stopPropagation(); const isVisible = panel.style.display === 'block'; if (!isVisible) { renderNotifications(); panel.style.display = 'block'; const latestId = notifications.length > 0 ? notifications[0].id : 0; localStorage.setItem('lastSeenNotificationId', latestId); const indicator = bell.querySelector('.unread-indicator'); if (indicator) indicator.remove(); } else { panel.style.display = 'none'; } }); document.addEventListener('click', (e) => { if (!panel.contains(e.target) && !bell.contains(e.target)) { panel.style.display = 'none'; } }); checkUnread(); }
+function checkForcedUpdateNotice() { if (notifications.length === 0) return; const latestUpdate = notifications[0]; const lastAcknowledgedId = parseInt(localStorage.getItem('acknowledgedUpdateId') || '0'); if (latestUpdate.id > lastAcknowledgedId) { const modal = document.getElementById('updateNoticeModal'); const modalBody = document.getElementById('updateModalBody'); const iconMap = { feature: '✨', fix: '🔧', announcement: '📢' }; modalBody.innerHTML = `<div class="notification-item"><div class="notification-icon">${iconMap[latestUpdate.type] || '🔔'}</div><div class="notification-content"><h4>${latestUpdate.title}</h4><p>${latestUpdate.content}</p><div class="date">${latestUpdate.date}</div></div></div>`; modal.style.display = 'block'; } }
+function closeUpdateModal() { const latestUpdateId = notifications.length > 0 ? notifications[0].id : 0; localStorage.setItem('acknowledgedUpdateId', latestUpdateId); document.getElementById('updateNoticeModal').style.display = 'none'; }
 function generateBulkZaloMessage(records, errorType) { const errorName = ERROR_TYPES[errorType] || errorType; let message = `*[CSKCB] TÓM TẮT LỖI HÀNG LOẠT*\n--------------------------------\n`; message += `▪️ *Loại lỗi:* ${errorName}\n`; message += `▪️ *Tổng số hồ sơ có lỗi:* ${records.length}\n\n`; message += `*DANH SÁCH CHI TIẾT:*\n`; records.forEach((record, index) => { const relevantError = record.errors.find(e => e.type === errorType); const cost = relevantError && relevantError.cost > 0 ? ` - ${formatCurrency(relevantError.cost)}` : ''; message += `${index + 1}. BN: *${record.hoTen}* (LK: ${record.maLk})${cost}\n`; }); message += `\n--------------------------------\n_Vui lòng kiểm tra và xử lý hàng loạt các hồ sơ trên._`; return message; }
 function generateSingleZaloMessage(record) { const cleanMessage = (msg) => msg.replace(/<br>/g, '\n').replace(/<strong>(.*?)<\/strong>/g, '*$1*'); let message = `*[CSKCB] THÔNG BÁO KẾT QUẢ KIỂM TRA HỒ SƠ BHYT*\n--------------------------------\n`; message += `▪️ *Bệnh nhân:* ${record.hoTen}\n`; message += `▪️ *Mã LK:* ${record.maLk}\n`; message += `▪️ *Thời gian ĐT:* ${formatDateTimeForDisplay(record.ngayVao)} - ${formatDateTimeForDisplay(record.ngayRa)}\n`; message += `▪️ *Tổng chi phí:* ${formatCurrency(record.t_bhtt)}\n\n`; const criticalErrors = record.errors.filter(e => e.severity === 'critical'); const warnings = record.errors.filter(e => e.severity === 'warning'); if (criticalErrors.length > 0) { message += `*🔴 LỖI NGHIÊM TRỌNG (Dự kiến xuất toán):*\n`; criticalErrors.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; let costInfo = err.cost > 0 ? ` (${formatCurrency(err.cost)})` : ''; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}${costInfo}\n`; }); message += `\n`; } if (warnings.length > 0) { message += `*🟡 CẢNH BÁO (Kiểm tra lại):*\n`; warnings.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}\n`; }); message += `\n`; } message += `--------------------------------\n_Vui lòng kiểm tra và xử lý theo quy định._`; return message; }
 function openZaloModal(data, isBulk = false, errorType = '') { const message = isBulk ? generateBulkZaloMessage(data, errorType) : generateSingleZaloMessage(data); document.getElementById('zaloMessageTextarea').value = message; document.getElementById('zaloMessageModal').style.display = 'block'; }
