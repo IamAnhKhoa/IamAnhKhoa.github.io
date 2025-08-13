@@ -2190,3 +2190,84 @@ function generateSingleZaloMessage(record) { const cleanMessage = (msg) => msg.r
 function openZaloModal(data, isBulk = false, errorType = '') { const message = isBulk ? generateBulkZaloMessage(data, errorType) : generateSingleZaloMessage(data); document.getElementById('zaloMessageTextarea').value = message; document.getElementById('zaloMessageModal').style.display = 'block'; }
 function closeZaloModal() { document.getElementById('zaloMessageModal').style.display = 'none'; }
 function copyZaloMessage() { const textarea = document.getElementById('zaloMessageTextarea'); textarea.select(); textarea.setSelectionRange(0, 99999); try { navigator.clipboard.writeText(textarea.value); alert('Đã sao chép nội dung vào clipboard!'); } catch (err) { alert('Sao chép thất bại. Vui lòng thử lại.'); console.error('Lỗi sao chép: ', err); } }
+function exportDashboardToExcel() {
+    if (!globalData || globalData.allRecords.length === 0) {
+        alert('Chưa có dữ liệu để xuất. Vui lòng xử lý một file XML trước.');
+        return;
+    }
+
+    try {
+        const wb = XLSX.utils.book_new();
+        const stats = calculateGlobalStats(globalData.allRecords);
+
+        // --- Sheet 1: Tổng quan ---
+        const overviewData = [
+            ["BÁO CÁO TỔNG QUAN DASHBOARD"],
+            [],
+            ["Chỉ số", "Giá trị"],
+            ["Tổng hồ sơ", stats.totalRecords],
+            ["Số hồ sơ lỗi", stats.errorRecordsCount],
+            ["Tổng chi phí BHYT TT", stats.totalAmount],
+            ["Tổng chi phí BN CCT", stats.totalBncct],
+            ["Tổng tiền Nguồn khác", globalData.allRecords.reduce((sum, r) => sum + (r.t_nguonkhac || 0), 0)]
+        ];
+        const wsOverview = XLSX.utils.aoa_to_sheet(overviewData);
+        XLSX.utils.book_append_sheet(wb, wsOverview, "TongQuan");
+
+        // --- Sheet 2: Phân bố lỗi ---
+        const errorData = Object.entries(stats.errorTypes).map(([key, value]) => ({
+            "Loại lỗi": ERROR_TYPES[key] || key,
+            "Số lượng": value
+        }));
+        const wsErrors = XLSX.utils.json_to_sheet(errorData);
+        XLSX.utils.book_append_sheet(wb, wsErrors, "PhanBoLoi");
+
+        // --- Sheet 3: Dòng thời gian ---
+        const timelineData = Object.entries(stats.timeline)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([day, count]) => ({
+                "Ngày": formatDateTimeForDisplay(day),
+                "Số hồ sơ": count
+            }));
+        const wsTimeline = XLSX.utils.json_to_sheet(timelineData);
+        XLSX.utils.book_append_sheet(wb, wsTimeline, "DongThoiGian");
+
+        // --- Sheet 4: Thống kê Khoa ---
+        const departmentData = Object.entries(stats.departments)
+            .sort(([, a], [, b]) => b - a)
+            .map(([name, count]) => ({
+                "Tên Khoa": name || "Không xác định",
+                "Số hồ sơ": count
+            }));
+        const wsDepartments = XLSX.utils.json_to_sheet(departmentData);
+        XLSX.utils.book_append_sheet(wb, wsDepartments, "ThongKeKhoa");
+
+        // --- Sheet 5 & 6: Top Thuốc và DVKT ---
+        const drugCosts = {};
+        globalData.allDrugs.forEach(drug => {
+            const key = `${drug.ten_thuoc} (${drug.ma_thuoc})`;
+            drugCosts[key] = (drugCosts[key] || 0) + drug.thanh_tien_bh;
+        });
+        const topDrugs = Object.entries(drugCosts).sort(([, a], [, b]) => b - a).slice(0, 10)
+            .map(([name, cost]) => ({ "Tên thuốc": name, "Tổng chi phí BHYT": cost }));
+        const wsDrugs = XLSX.utils.json_to_sheet(topDrugs);
+        XLSX.utils.book_append_sheet(wb, wsDrugs, "Top10Thuoc");
+
+        const serviceCosts = {};
+        globalData.allServices.forEach(service => {
+            const key = `${service.ten_dich_vu} (${service.ma_dich_vu})`;
+            serviceCosts[key] = (serviceCosts[key] || 0) + service.thanh_tien_bh;
+        });
+        const topServices = Object.entries(serviceCosts).sort(([, a], [, b]) => b - a).slice(0, 10)
+            .map(([name, cost]) => ({ "Tên DVKT": name, "Tổng chi phí BHYT": cost }));
+        const wsServices = XLSX.utils.json_to_sheet(topServices);
+        XLSX.utils.book_append_sheet(wb, wsServices, "Top10DVKT");
+
+        // --- Xuất file ---
+        XLSX.writeFile(wb, "BaoCao_Dashboard.xlsx");
+
+    } catch (error) {
+        console.error("Lỗi khi xuất file Excel Dashboard:", error);
+        alert("Đã có lỗi xảy ra khi tạo file Excel. Vui lòng thử lại.");
+    }
+}
