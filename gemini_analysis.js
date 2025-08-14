@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         validatorTabButton.innerHTML = `
             <span>📋 Kiểm tra XML</span>
             <div class="ai-dropdown-content">
-                <a href="#" id="openAiAnalysisModal">🤖 Phân tích bằng AI</a>
+                <a href="#" id="openAiAnalysisModal"> Xem chi tiết hồ sơ và 🤖</a>
             </div>
         `;
     }
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="aiAnalysisModal" class="ai-modal">
             <div class="ai-modal-content">
                 <div class="ai-modal-header">
-                    <h2>Phân tích Hồ sơ Bằng AI Gemini</h2>
+                    <h2>Xem chi tiết hồ sơ và 🤖 Phân tích AI</h2>
                 </div>
                 <div class="ai-modal-body">
                     <div class="filter-group">
