@@ -2075,6 +2075,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+    {
+        id: 8,
+        date: '15-08-2025',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Xem chi tiết hồ sơ và 🤖 Phân tích AI',
+        content: 'Bổ sung xem chi tiết hồ sơ và phân tích AI hồ sơ đó'
+    },
      {
         id: 7,
         date: '14-08-2025',
@@ -2082,6 +2089,7 @@ const notifications = [
         title: 'Sửa lỗi XML 3 nếu có 2 người TH',
         content: 'Giờ đây xem chi tiết XML 4 sẽ hiện ra người thực hiện và đọc kết quả chỉ số'
     },
+    
     {
         id: 6,
         date: '13-08-2025',
