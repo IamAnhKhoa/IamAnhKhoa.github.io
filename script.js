@@ -17,8 +17,8 @@ let globalData = {
 };
 
 const ERROR_TYPES = {
-    'NGAY_YL_THUOC_SAU_RA_VIEN': 'Thuốc - YL sau ra viện',
-    'NGAY_YL_DVKT_SAU_RA_VIEN': 'DVKT - YL sau ra viện',
+    'NGAY_YL_THUOC_SAU_RA_VIEN': 'YL Thuốc - sau ra viện',
+    'NGAY_YL_DVKT_SAU_RA_VIEN': 'YL DVKT - sau ra viện',
     'NGAY_TTOAN_SAU_RA_VIEN': 'Ngày TT sau ngày ra viện',
     'NGAY_VAO_SAU_NGAY_RA': 'Ngày vào sau ngày ra',
     'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
@@ -771,7 +771,7 @@ function validateSingleHoso(hoso) {
         chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach(item => {
             const tenThuoc = getText(item, 'TEN_THUOC');
             const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
-            const maBacSi = getText(item, 'MA_BAC_SI');
+            const maBacSiStr = getText(item, 'MA_BAC_SI');
             const ngayYl = getText(item, 'NGAY_YL');
             const ngayThYl = getText(item, 'NGAY_TH_YL');
 
@@ -780,15 +780,15 @@ function validateSingleHoso(hoso) {
                 so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                 thanh_tien_bh: thanhTienBH
             });
-            if(maBacSi && ngayYl) {
+            if(maBacSiStr && ngayYl) {
                 record.drugs.push({
-                    ma_bac_si: maBacSi,
+                    ma_bac_si: maBacSiStr,
                     ngay_yl: ngayYl,
                     ten_thuoc: tenThuoc,
                     thanh_tien_bh: thanhTienBH
                 });
                 if (!record.mainDoctor) {
-                    record.mainDoctor = maBacSi;
+                    record.mainDoctor = maBacSiStr.split(/[,;]/)[0].trim();
                 }
             }
 
@@ -819,7 +819,9 @@ function validateSingleHoso(hoso) {
                 });
             }
 
-            if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
+            if(maBacSiStr) {
+                maBacSiStr.split(/[,;]/).map(c => c.trim()).filter(Boolean).forEach(code => record.bac_si_chi_dinh.add(code));
+            }
         });
     }
 
@@ -831,7 +833,8 @@ function validateSingleHoso(hoso) {
             const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
             const ngayYl = getText(item, 'NGAY_YL');
             const ngayThYl = getText(item, 'NGAY_TH_YL');
-            const maBacSi = getText(item, 'MA_BAC_SI');
+            const maBacSiStr = getText(item, 'MA_BAC_SI');
+            const nguoiThucHienStr = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
 
             record.services.push({
                 ma_lk: maLk,
@@ -843,7 +846,8 @@ function validateSingleHoso(hoso) {
                 ma_may: getText(item, 'MA_MAY'),
                 ngay_th_yl: ngayThYl,
                 ngay_yl: ngayYl,
-                ma_bac_si: maBacSi,
+                ma_bac_si: maBacSiStr,
+                nguoi_thuc_hien: nguoiThucHienStr, // MỚI: Lưu người thực hiện vào đây
                 ngay_kq: getText(item, 'NGAY_KQ')
             });
 
@@ -888,9 +892,12 @@ function validateSingleHoso(hoso) {
                 }
             }
 
-            if(maBacSi) record.bac_si_chi_dinh.add(maBacSi);
-            const nguoiThucHien = getText(item, 'NGUOI_THUC_HIEN', 'MA_NGUOI_THIEN');
-            if(nguoiThucHien) record.nguoi_thuc_hien.add(nguoiThucHien);
+            if(maBacSiStr) {
+                 maBacSiStr.split(/[,;]/).map(c => c.trim()).filter(Boolean).forEach(code => record.bac_si_chi_dinh.add(code));
+            }
+            if(nguoiThucHienStr) {
+                nguoiThucHienStr.split(/[,;]/).map(c => c.trim()).filter(Boolean).forEach(code => record.nguoi_thuc_hien.add(code));
+            }
         });
     }
     record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
@@ -902,12 +909,18 @@ function validateSingleHoso(hoso) {
             const tenChiSo = getText(cls, 'TEN_CHI_SO');
             const maBsDocKq = getText(cls, 'MA_BS_DOC_KQ');
 
+            // MỚI: Tìm dịch vụ tương ứng trong XML3 để lấy người thực hiện
+            const correspondingService = record.services.find(s => s.ma_dich_vu === maDichVu);
+            const nguoiThucHien = correspondingService ? correspondingService.nguoi_thuc_hien : '';
+
             xml4Data.push({
                 ma_dich_vu: maDichVu,
                 ten_chi_so: tenChiSo,
                 gia_tri: getText(cls, 'GIA_TRI'),
                 don_vi_do: getText(cls, 'DON_VI_DO'),
-                ngay_kq: formatDateTimeForDisplay(getText(cls, 'NGAY_KQ'))
+                ngay_kq: formatDateTimeForDisplay(getText(cls, 'NGAY_KQ')),
+                ma_bs_doc_kq: maBsDocKq,
+                nguoi_thuc_hien: nguoiThucHien
             });
 
             const ruleKey = 'XML4_MISSING_MA_BS_DOC_KQ';
@@ -975,6 +988,7 @@ function validateSingleHoso(hoso) {
     
     return { record, drugs: drugsForGlobalList, xml4Data };
 }
+
 
 function displayValidatorResults() {
     updateErrorTypeFilter();
@@ -1226,6 +1240,7 @@ function displayXml4Details(maLk) {
     const record = globalData.allRecords.find(r => r.maLk === maLk);
     title.textContent = `Chi tiết CLS - BN: ${record.hoTen} (${record.maLk})`;
 
+    // MỚI: Thêm 2 cột mới vào header của bảng
     let tableHTML = `<table class="results-table"><thead><tr>
         <th>STT</th>
         <th>Mã Dịch Vụ</th>
@@ -1233,9 +1248,15 @@ function displayXml4Details(maLk) {
         <th>Giá Trị</th>
         <th>Đơn Vị</th>
         <th>Ngày Kết Quả</th>
+        <th>Người Thực Hiện</th>
+        <th>BS Đọc KQ</th>
     </tr></thead><tbody>`;
 
     details.forEach((item, index) => {
+        // Map mã sang tên cho Người thực hiện và BS đọc KQ
+        const performerName = staffNameMap.get(item.nguoi_thuc_hien) || item.nguoi_thuc_hien || 'N/A';
+        const doctorName = staffNameMap.get(item.ma_bs_doc_kq) || item.ma_bs_doc_kq || 'N/A';
+
         tableHTML += `<tr>
             <td>${index + 1}</td>
             <td>${item.ma_dich_vu}</td>
@@ -1243,6 +1264,8 @@ function displayXml4Details(maLk) {
             <td>${item.gia_tri}</td>
             <td>${item.don_vi_do}</td>
             <td>${item.ngay_kq}</td>
+            <td>${performerName}</td>
+            <td>${doctorName}</td>
         </tr>`;
     });
 
