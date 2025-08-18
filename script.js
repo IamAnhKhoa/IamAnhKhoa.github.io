@@ -2075,6 +2075,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+     {
+        id: 9,
+        date: '18-08-2025',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Cải tiến xem chi tiết',
+        content: 'Xem chi tiết bây giờ hiện rõ hơn, lọc ngày chính xác hơn'
+    },
     {
         id: 8,
         date: '15-08-2025',
