@@ -327,15 +327,13 @@ function extractDataForAI(maLk) {
     const getText = (element, ...selectors) => { if (!element) return ''; for (const selector of selectors) { const node = element.querySelector(selector); if (node && node.textContent) { const text = node.textContent.trim(); if (text) return text; } } return ''; };
     const getFileContent = (type) => { for (const fileNode of targetHosoNode.children) { if (fileNode.nodeName === 'FILEHOSO' && getText(fileNode, 'LOAIHOSO') === type) { return fileNode.querySelector('NOIDUNGFILE'); } } return null; };
     
+    // SỬA LỖI: Lấy lại thông tin từ XML1 node thay vì record object
     const tongHopNode = getFileContent('XML1').querySelector('TONG_HOP');
     const updatedPatientInfo = { ...record };
     if(tongHopNode) {
         updatedPatientInfo.chanDoanVao = getText(tongHopNode, 'CHAN_DOAN_VAO');
         updatedPatientInfo.maBenh = getText(tongHopNode, 'MA_BENH_CHINH');
         updatedPatientInfo.diaChi = getText(tongHopNode, 'DIA_CHI');
-        updatedPatientInfo.lyDoVaoVien = getText(tongHopNode, 'LY_DO_VV');
-        updatedPatientInfo.maHSBA = getText(tongHopNode, 'MA_HSBA');
-        updatedPatientInfo.ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
     }
 
     const chiTietThuocNode = getFileContent('XML2');
@@ -350,9 +348,8 @@ function extractDataForAI(maLk) {
                 soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                 donGia: parseFloat(getText(item, 'DON_GIA_BH') || '0'),
                 thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
-                ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
-                maBacSi: getText(item, 'MA_BAC_SI'),
-                tyleTT: getText(item, 'TYLE_TT_BH')
+                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')),
+                mucHuong: getText(item, 'MUC_HUONG')
             });
         });
     }
@@ -363,54 +360,23 @@ function extractDataForAI(maLk) {
         chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach((item, index) => {
              serviceList.push({
                 sttDvkt: index + 1,
-                maDvkt: getText(item, 'MA_DICH_VU'),
                 tenDvkt: getText(item, 'TEN_DICH_VU'),
                 soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                 donGiaBH: parseFloat(getText(item, 'DON_GIA_BH') || '0'),
                 thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
-                ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
-                maBacSi: getText(item, 'MA_BAC_SI'),
-                nguoiThucHien: getText(item, 'NGUOI_THUC_HIEN'),
-                tyleTT: getText(item, 'TYLE_TT_BH')
+                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')),
+                mucHuong: getText(item, 'MUC_HUONG')
             });
         });
     }
 
     const xml4ContentNode = getFileContent('XML4');
-    const xml4Details = [];
-    if (xml4ContentNode) {
-        xml4ContentNode.querySelectorAll('CHI_TIET_CLS').forEach((item, index) => {
-            const maDichVu = getText(item, 'MA_DICH_VU');
-            const correspondingService = serviceList.find(s => s.maDvkt === maDichVu);
-
-            xml4Details.push({
-                stt: index + 1,
-                tenChiSo: getText(item, 'TEN_CHI_SO'),
-                giaTri: getText(item, 'GIA_TRI'),
-                donVi: getText(item, 'DON_VI_DO'),
-                nguoiThucHien: correspondingService ? correspondingService.nguoiThucHien : '',
-                maBsDocKq: getText(item, 'MA_BS_DOC_KQ'),
-                ngayKQ: formatDateTimeForDisplay(getText(item, 'NGAY_KQ'))
-            });
-        });
-    }
-
     const xml14ContentNode = getFileContent('XML14');
-    let appointmentInfo = null;
-    if (xml14ContentNode && xml14ContentNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI')) {
-        const henKhamNode = xml14ContentNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI');
-        appointmentInfo = {
-            soGiayHen: getText(henKhamNode, 'SO_GIAYHEN_KL'),
-            ngayHenKL: formatDateTimeForDisplay(getText(henKhamNode, 'NGAY_HEN_KL'))
-        };
-    }
 
     const originalHoSoData = {
         patientInfo: updatedPatientInfo,
         drugList: drugList,
         serviceList: serviceList,
-        xml4Details: xml4Details,
-        appointmentInfo: appointmentInfo,
         xml4RawContentForPrompt: xml4ContentNode ? xml4ContentNode.innerHTML.trim() : null,
         xml14RawContentForPrompt: xml14ContentNode ? xml14ContentNode.innerHTML.trim() : null,
     };
