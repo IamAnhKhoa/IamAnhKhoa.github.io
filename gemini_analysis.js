@@ -427,6 +427,143 @@ function extractDataForAI(maLk) {
     function anonymizePatientData(patientInfo, index) { const dob = patientInfo.ngaySinh; let age = 'N/A'; if (dob && dob.length >= 4) { const birthYear = parseInt(dob.substring(0, 4)); const currentYear = new Date().getFullYear(); age = currentYear - birthYear; } return { stt: index, maLK: patientInfo.maLk, hoTen: `BN_${String(index).padStart(3, '0')}`, tuoi: age, gioiTinh: patientInfo.gioiTinh === '1' ? 'Nam' : 'Nữ', canNang: patientInfo.canNang || 'N/A', chanDoanVao: patientInfo.chanDoanVao || 'N/A', chanDoanRaVien: patientInfo.chanDoan, maBenh: patientInfo.maBenh, maTheBHYT: "[ĐÃ ẨN]", gtTheTu: "[ĐÃ ẨN]", gtTheDen: "[ĐÃ ẨN]", ngayVao: formatDateTimeForDisplay(patientInfo.ngayVao), ngayRa: formatDateTimeForDisplay(patientInfo.ngayRa), }; }
     function createAnonymizedRawDataString(originalHoSoData, generalFileInfo, anonymizedPatientInfoForPrompt) { let text = `Mã CSKCB (File): ${generalFileInfo.maCSKCB || 'N/A'}\n`; text += `Ngày lập File XML: ${generalFileInfo.ngayLapFile || 'N/A'}\n`; text += `\n--- Bệnh nhân (STT: ${anonymizedPatientInfoForPrompt.stt || 'N/A'}, Mã LK tham chiếu: ${originalHoSoData.patientInfo.maLk || 'N/A'}) --- \n`; text += `Họ tên: ${anonymizedPatientInfoForPrompt.hoTen}\n`; text += `Tuổi: ${anonymizedPatientInfoForPrompt.tuoi || 'N/A'}, Giới tính: ${anonymizedPatientInfoForPrompt.gioiTinh || 'N/A'}, Cân nặng: ${anonymizedPatientInfoForPrompt.canNang || 'N/A'} kg\n`; text += `Chẩn đoán vào viện: ${originalHoSoData.patientInfo.chanDoanVao || 'N/A'}\n`; text += `Chẩn đoán RV: ${anonymizedPatientInfoForPrompt.chanDoanRaVien || 'N/A'} (Mã: ${anonymizedPatientInfoForPrompt.maBenh || 'N/A'})\n`; text += `Thẻ BHYT: ${anonymizedPatientInfoForPrompt.maTheBHYT} (Từ ${anonymizedPatientInfoForPrompt.gtTheTu} đến ${anonymizedPatientInfoForPrompt.gtTheDen})\n`; text += `Ngày Vào: ${anonymizedPatientInfoForPrompt.ngayVao || 'N/A'} - Ngày Ra: ${anonymizedPatientInfoForPrompt.ngayRa || 'N/A'}\n`; if (originalHoSoData.drugList && originalHoSoData.drugList.length > 0) { text += "\n--- Thuốc ---\n"; originalHoSoData.drugList.forEach((drug) => { text += `- STT ${drug.sttThuoc}: ${drug.tenThuoc}, Liều: ${drug.lieuDung}, Cách dùng: ${drug.cachDung}, SL: ${drug.soLuong}, Ngày YL: ${drug.ngayYLenh}, Mức hưởng: ${drug.mucHuong || 'N/A'}%\n`; }); } if (originalHoSoData.serviceList && originalHoSoData.serviceList.length > 0) { text += "\n--- DVKT ---\n"; originalHoSoData.serviceList.forEach((service) => { text += `- STT ${service.sttDvkt}: ${service.tenDvkt}, SL: ${service.soLuong}, Ngày YL: ${service.ngayYLenh}, Mức hưởng: ${service.mucHuong || 'N/A'}%\n`; }); } if (originalHoSoData.xml4RawContentForPrompt) { text += "\n--- Dữ liệu XML4 (Kết quả CLS) ---\n"; text += originalHoSoData.xml4RawContentForPrompt + "\n"; } if (originalHoSoData.xml14RawContentForPrompt) { text += "\n--- Dữ liệu XML14 (Giấy hẹn) ---\n"; text += originalHoSoData.xml14RawContentForPrompt + "\n"; } return text; }
     function createPdfHtmlContent(analysisTextFromGemini, originalPatientInfo) { return `<html><head><meta charset="UTF-8"><title>Chi tiết HS và Phân tích AI - ${escapeBasicHtml(originalPatientInfo.maLk) || 'HoSo'}</title><style>body { font-family: 'DejaVu Sans', Arial, sans-serif; line-height: 1.5; margin: 20px; font-size: 11px; } h1 { color: #2c3e50; text-align: center; border-bottom: 1px solid #3498db; padding-bottom: 8px; font-size: 1.5em; margin-bottom: 15px;} h2 { color: #3498db; margin-top: 20px; border-bottom: 1px solid #bdc3c7; padding-bottom: 4px; font-size: 1.2em;} p { margin-bottom: 8px; text-align: justify;} hr { border: 0; height: 1px; background: #ccc; margin: 20px 0; } ul { margin-left: 20px; padding-left: 0;} li { margin-bottom: 5px; } pre { background-color: #f0f0f0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-size: 0.85em; } table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95em; } th, td { border: 1px solid #ccc; padding: 6px; text-align: left; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body>${analysisTextFromGemini}</body></html>`; }
-    async function getGeminiAnalysis(promptData, patientInfoForPrompt, generalInfo, originalHoSoData, apiKey) { const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`; const fullPrompt = `Bạn là một bác sĩ đa khoa danh tiếng, dược sĩ nhiều năm kinh nghiệm, và chuyên gia giám định BHYT Việt Nam. Dựa trên dữ liệu XML tóm tắt được cung cấp, hãy tạo một báo cáo HTML chi tiết theo mẫu sau.\n\n**QUY TẮC PHÂN TÍCH:**\n1. **THỜI GIAN:** Ngày y lệnh ('NGAY_YL') không được sau ngày ra viện ('NGAY_RA'). Thời gian điều trị quá ngắn (dưới 5 phút) là một cảnh báo.\n2. **THUỐC (XML2):** Kiểm tra liều dùng ('LIEU_DUNG'), cách dùng ('CACH_DUNG'), thuốc trùng lặp, thuốc không phù hợp chẩn đoán.\n3. **DVKT & CLS (XML3, XML4):** Đánh giá tần suất, sự cần thiết của dịch vụ so với chẩn đoán. Phân tích kết quả CLS trong XML4.\n4. **GIẤY HẸN (XML14):** Phân tích tính hợp lệ của ngày hẹn.\n5. **TỔNG HỢP:** Liệt kê các điểm bất thường, đánh dấu <b><font color='red'>[LỖI]</font></b> cho các vi phạm rõ ràng và <b><font color='orange'>[CẢNH BÁO]</font></b> cho các điểm cần xem xét thêm.\n\n**YÊU CẦU ĐỊNH DẠNG HTML (TUÂN THỦ NGHIÊM NGẶT):**\n- Chỉ trả lời bằng nội dung HTML bên trong thẻ <body>. Không bao gồm thẻ <html>, <head>, hoặc <style>.\n- Bắt đầu bằng <h1>PHÂN TÍCH DỮ LIỆU KHÁM CHỮA BỆNH DO AI CUNG CẤP</h1>.\n- Điền đầy đủ thông tin tóm tắt bệnh nhân.\n- Tạo các mục <h2> cho từng phần phân tích.\n- Dùng bảng (<table>) với các cột đã chỉ định để trình bày chi tiết thuốc và DVKT.\n- Điền thông tin vào các mục "Tổng hợp lỗi" và "Khuyến nghị".\n- Kết thúc bằng phần "Từ chối trách nhiệm".\n\n--- START TEMPLATE ---\n<h1>PHÂN TÍCH DỮ LIỆU KHÁM CHỮA BỆNH DO AI CUNG CẤP</h1>\n<p><b>Mã CSKCB:</b> ${escapeBasicHtml(generalInfo.maCSKCB) || 'N/A'}</p>\n<p><b>Ngày lập hồ sơ:</b> ${escapeBasicHtml(generalInfo.ngayLapFile) || 'N/A'}</p>\n<p><b>Bệnh nhân (STT: ${escapeBasicHtml(patientInfoForPrompt.stt)}):</b> ${escapeBasicHtml(patientInfoForPrompt.hoTen)} - ${escapeBasicHtml(patientInfoForPrompt.tuoi?.toString()) || 'N/A'} tuổi - Giới tính: ${escapeBasicHtml(patientInfoForPrompt.gioiTinh) || 'N/A'} - Cân nặng: ${escapeBasicHtml(patientInfoForPrompt.canNang) || 'N/A'} kg</p>\n<p><b>Thông tin thẻ BHYT:</b> ${escapeBasicHtml(patientInfoForPrompt.maTheBHYT)} (Từ: ${escapeBasicHtml(patientInfoForPrompt.gtTheTu)} đến: ${escapeBasicHtml(patientInfoForPrompt.gtTheDen)})</p>\n<p><b>Mã LK (tham chiếu nội bộ):</b> ${escapeBasicHtml(patientInfoForPrompt.maLK) || 'N/A'}</p>\n<p><b>Chẩn đoán vào viện:</b> ${escapeBasicHtml(patientInfoForPrompt.chanDoanVao) || 'N/A'}</p>\n<p><b>Chẩn đoán ra viện:</b> ${escapeBasicHtml(patientInfoForPrompt.chanDoanRaVien) || 'N/A'}</p>\n<p><b>Mã ICD CHÍNH:</b> ${escapeBasicHtml(patientInfoForPrompt.maBenh) || 'N/A'}</p>\n<p><b>Thời gian điều trị:</b> Từ ${escapeBasicHtml(patientInfoForPrompt.ngayVao)} đến ${escapeBasicHtml(patientInfoForPrompt.ngayRa) || 'N/A'}</p>\n<hr>\n\n<h2>1. Thông tin hành chính và quyền lợi BHYT:</h2>\n<p><i>Đánh giá quyền lợi BHYT:</i> [Phân tích MUC_HUONG, TYLE_TT. Lưu ý: Thông tin chi tiết thẻ BHYT đã được ẩn danh.]</p>\n\n<h2>2. Kiểm tra mã ICD và chẩn đoán:</h2>\n<p><i>Đánh giá mã ICD:</i> [Phân tích mã ICD có phù hợp với chẩn đoán ra viện không]</p>\n<p><i>Tính nhất quán:</i> [So sánh chẩn đoán các giai đoạn của quá trình điều trị]</p>\n\n<h2>3. Kiểm tra thời gian điều trị:</h2>\n<p><i>Tổng thời gian điều trị:</i> [Tính toán số ngày/phút điều trị, đánh giá tính hợp lý]</p>\n<p><i>Kiểm tra mốc thời gian:</i> [Phân tích có mâu thuẫn về thời gian không, ví dụ NGAY_YL so với NGAY_VAO, NGAY_RA]</p>\n<p style="color: red;"><i>Các y lệnh sau ngày ra viện:</i> [Liệt kê chi tiết các trường hợp y lệnh sau ngày ra viện]</p>\n\n<h2>4. Phân tích thuốc điều trị (XML2):</h2>\n<table border="1" style="width:100%; border-collapse: collapse;">\n    <tr style="background-color: #f2f2f2;">\n        <th>Tên thuốc</th><th>Liều dùng</th><th>Cách dùng</th><th>Số lượng</th><th>Mức hưởng</th><th>Ngày y lệnh</th><th>Ghi chú phân tích</th>\n    </tr>\n    <!-- AI sẽ điền các dòng <tr> vào đây -->\n</table>\n\n<h2>5. Phân tích dịch vụ kỹ thuật (XML3):</h2>\n<table border="1" style="width:100%; border-collapse: collapse;">\n    <tr style="background-color: #f2f2f2;">\n        <th>Tên dịch vụ</th><th>Số lượng</th><th>Ngày y lệnh</th><th>Mức hưởng</th><th>Ghi chú phân tích</th>\n    </tr>\n    <!-- AI sẽ điền các dòng <tr> vào đây -->\n</table>\n\n<h2>6. Phân tích kết quả cận lâm sàng (XML4):</h2>\n<p><i>Đánh giá chung:</i> [Phân tích các chỉ số trong XML4, sự phù hợp với chẩn đoán và thuốc điều trị]</p>\n<pre>${originalHoSoData.xml4RawContentForPrompt ? escapeBasicHtml(originalHoSoData.xml4RawContentForPrompt) : "Không có dữ liệu XML4."}</pre>\n\n<h2>7. Kiểm tra giấy hẹn khám lại (XML14):</h2>\n<p><i>Thông tin hẹn khám:</i> [Phân tích thông tin hẹn khám và tính hợp lý nếu có trong XML14]</p>\n<pre>${originalHoSoData.xml14RawContentForPrompt ? escapeBasicHtml(originalHoSoData.xml14RawContentForPrompt) : "Không có dữ liệu XML14."}</pre>\n\n<h2>8. Tổng hợp lỗi phát hiện:</h2>\n<div style="background-color: #ffebee; padding: 15px; border-radius: 5px;">\n    <h3 style="color: #c62828;">Các lỗi nghiêm trọng (cần xem xét từ chối thanh toán):</h3>\n    <ul><!-- AI điền <li> vào đây --></ul>\n    <h3 style="color: #ff8f00;">Các cảnh báo cần lưu ý (có thể cần giải trình):</h3>\n    <ul><!-- AI điền <li> vào đây --></ul>\n</div>\n\n<h2>9. Khuyến nghị:</h2>\n<div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px;">\n    <ul><!-- AI điền <li> vào đây --></ul>\n</div>\n\n<h2>10. Từ chối trách nhiệm:</h2>\n<div style="background-color: #fff3cd; padding: 15px; border: 2px solid #ffeeba; border-radius: 5px; margin: 15px 0;">\n  <p style="font-weight: bold; color: #856404; font-size: 16px; text-align: center; text-transform: uppercase; margin-bottom: 10px;">⚠️ LƯU Ý QUAN TRỌNG ⚠️</p>\n  <p style="text-align: center; font-weight: bold;">Báo cáo này được tạo bởi AI theo yêu cầu của Anh Khoa - IT Trung tâm Y tế Huyện Củ Chi.</p>\n  <p style="text-align: center; font-weight: bold;">Đây CHỈ LÀ CÔNG CỤ HỖ TRỢ, mọi quyết định cuối cùng PHẢI do chuyên gia y tế và y bác sĩ đưa ra.</p>\n</div>\n--- END TEMPLATE ---`; try { const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }) }); if (!response.ok) { const errorData = await response.json(); throw new Error(`Lỗi API: ${errorData.error?.message || response.statusText}`); } const data = await response.json(); let analysisHtmlContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "<p>Không có phản hồi từ AI.</p>"; if (analysisHtmlContent.startsWith("```html")) { analysisHtmlContent = analysisHtmlContent.substring(7).trim(); } if (analysisHtmlContent.endsWith("```")) { analysisHtmlContent = analysisHtmlContent.substring(0, analysisHtmlContent.length - 3).trim(); } return { success: true, content: analysisHtmlContent }; } catch (error) { console.error("Lỗi gọi Gemini API:", error); return { success: false, content: error.message }; }
+   async function getGeminiAnalysis(promptData, patientInfoForPrompt, generalInfo, originalHoSoData, apiKey) {
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+        const fullPrompt = `Bạn là một bác sĩ đa khoa danh tiếng, dược sĩ nhiều năm kinh nghiệm, bạn sẽ không để sai xót trong điều trị và chỉ định thuốc sai và bạn cũng là chuyên gia về giám định bảo hiểm y tế (dựa vào công văn 4750/qđ-byt, 130/QĐ-BYT, Thông tư 27/2023/TT-BYT và các quy định mới nhất về BHYT).
+Dựa trên thông tin hồ sơ bệnh án XML được cung cấp (bao gồm tất cả dữ liệu XML tóm tắt và thông tin tham khảo từ tìm kiếm web dưới đây), hãy tạo nội dung HTML cho một báo cáo tóm tắt "PHÂN TÍCH DỮ LIỆU KHÁM CHỮA BỆNH".
+
+**KIỂM TRA CHI TIẾT:** Vui lòng phân tích kỹ và nhấn mạnh các điểm bất thường hoặc lỗi tiềm ẩn (dùng <b><font color='red'>[LỖI]</font></b> hoặc <b><font color='orange'>[CẢNH BÁO]</font></b>) dựa trên các quy tắc BHYT sau:
+
+1. **THỜI GIAN ĐIỀU TRỊ:** - **Ngày Y Lệnh vs Ngày Ra Viện:** Ngày y lệnh ('NGAY_YL' trong XML2/XML3) của thuốc/dịch vụ KHÔNG được sau ngày ra viện ('NGAY_RA' trong XML1). Đánh dấu rõ các trường hợp sai có thể dẫn đến từ chối thanh toán BHYT.
+   - **Thứ tự Thời gian hợp lý:** Kiểm tra thời gian nhập viện ('NGAY_VAO') đến ra viện ('NGAY_RA'), so với các ngày y lệnh thuốc/dịch vụ. Nhận diện các mốc thời gian mâu thuẫn.
+
+2. **THUỐC & LIỀU DÙNG (XML2):** - **Mức hưởng: ('MUC_HUONG').
+   - **Quy tắc liều dùng:** Kiểm tra chỉ định ('LIEU_DUNG') có tuân thủ theo tuổi/cân nặng và phác đồ chuẩn không? Tính toán cụ thể nếu có thể.
+   - **Trùng lặp Thuốc:** Phát hiện thuốc kê trùng lặp cùng công dụng, cùng thời kỳ điều trị.
+   - **Ngày Y lệnh:** Có nằm trong khoảng Ngày vào - Ngày ra?
+
+3. **DỊCH VỤ KỸ THUẬT & CẬN LÂM SÀNG (XML3, XML4):**
+   - **Tần suất hợp lý:** Kiểm tra các xét nghiệm/dịch vụ ('MA_DICH_VU' trong XML3) có tần suất bất thường không, đặc biệt các dịch vụ lặp lại nhiều lần trong thời gian ngắn.
+   - **Mức hưởng: ('MUC_HUONG').
+   - **Chỉ định theo định mức:** Đối chiếu dịch vụ kỹ thuật với chẩn đoán để đánh giá sự cần thiết y tế theo quy định BHYT.
+   - **Kết quả CLS (XML4):** Phân tích kết quả cận lâm sàng có phù hợp với chẩn đoán và thuốc điều trị không. Sử dụng dữ liệu từ thẻ <CHITIEU_CHITIET_DICHVUCANLAMSANG> và <DSACH_CHI_TIET_CLS> nếu có trong phần tóm tắt XML4.
+   - **Ngày Y lệnh/KQ:** Có nằm trong khoảng Ngày vào - Ngày ra? NGAY_KQ >= NGAY_YL?
+
+4. **MÃ ICD & CHẨN ĐOÁN:**
+   - **Tính chính xác của Mã ICD:** Kiểm tra mã ICD ('MA_BENH_CHINH' trong XML1) có chính xác và phù hợp với chẩn đoán ra viện không.
+   - **Nhất quán trong chẩn đoán:** So sánh chẩn đoán ban đầu, chẩn đoán trong quá trình điều trị và chẩn đoán ra viện để phát hiện mâu thuẫn.
+
+5. **THÔNG TIN HÀNH CHÍNH:**
+   - **Thông tin Thẻ BHYT:** Dữ liệu thẻ BHYT ('MA_THE_BHYT', 'GT_THE_TU', 'GT_THE_DEN') đã được ẩn danh. Chỉ nhận xét về MUC_HUONG nếu có.
+   - **Tỷ lệ thanh toán BHYT:** Kiểm tra tỷ lệ được hưởng BHYT ('MUC_HUONG' trong XML2 và XML3, hoặc TYLE_TT trong XML1) có phù hợp không.
+
+**Nội dung báo cáo HTML cần tạo:**
+Bắt đầu với các thông tin tóm tắt sau (LƯU Ý: Thông tin bệnh nhân như Họ tên, Mã thẻ BHYT đã được ẩn danh cho mục đích bảo mật khi gửi lên AI. Hãy giữ nguyên dạng ẩn danh đó trong báo cáo của bạn):
+  <h1>PHÂN TÍCH DỮ LIỆU KHÁM CHỮA BỆNH DO AI CUNG CẤP</h1>
+  <p><b>Mã CSKCB:</b> ${escapeBasicHtml(generalInfo.maCSKCB) || 'N/A'}</p>
+  <p><b>Ngày lập hồ sơ:</b> ${escapeBasicHtml(generalInfo.ngayLapFile) || 'N/A'}</p>
+  <p><b>Bệnh nhân (STT: ${escapeBasicHtml(patientInfoForPrompt.stt)}):</b> ${escapeBasicHtml(patientInfoForPrompt.hoTen)} - ${escapeBasicHtml(patientInfoForPrompt.tuoi?.toString()) || 'N/A'} tuổi - Giới tính: ${escapeBasicHtml(patientInfoForPrompt.gioiTinh) || 'N/A'} - Cân nặng: ${escapeBasicHtml(patientInfoForPrompt.canNang) || 'N/A'} kg</p>
+  <p>
+  <b>Thông tin thẻ BHYT:</b> ${escapeBasicHtml(patientInfoForPrompt.maTheBHYT)} 
+  (Từ: ${escapeBasicHtml(patientInfoForPrompt.gtTheTu)} đến: ${escapeBasicHtml(patientInfoForPrompt.gtTheDen)})
+</p>
+  <p><b>Mã LK (tham chiếu nội bộ):</b> ${escapeBasicHtml(patientInfoForPrompt.maLK) || 'N/A'}</p>
+  <p><b>Chẩn đoán vào viện:</b> ${escapeBasicHtml(patientInfoForPrompt.chanDoanVao) || 'N/A'}</p>
+  <p><b>Chẩn đoán ra viện:</b> ${escapeBasicHtml(patientInfoForPrompt.chanDoanRaVien) || 'N/A'}</p>
+  <p><b>Mã ICD CHÍNH:</b> ${escapeBasicHtml(patientInfoForPrompt.maBenh) || 'N/A'}</p>
+  <p><b>Thời gian điều trị:</b> Từ ${escapeBasicHtml(patientInfoForPrompt.ngayVao)} đến ${escapeBasicHtml(patientInfoForPrompt.ngayRa) || 'N/A'}</p>
+  <hr>
+
+Tiếp theo, phân tích chi tiết theo các mục:
+  <h2>1. Thông tin hành chính và quyền lợi BHYT:</h2>
+       <p><i>Đánh giá quyền lợi BHYT:</i> (Phân tích MUC_HUONG, TYLE_TT. Lưu ý: Thông tin chi tiết thẻ BHYT đã được ẩn danh.)</p>
+ 
+  <h2>2. Kiểm tra mã ICD và chẩn đoán:</h2>
+       <p><i>Đánh giá mã ICD:</i> (Phân tích mã ICD có phù hợp với chẩn đoán ra viện không)</p>
+       <p><i>Tính nhất quán:</i> (So sánh chẩn đoán các giai đoạn của quá trình điều trị)</p>
+ 
+  <h2>3. Kiểm tra thời gian điều trị:</h2>
+       <p><i>Tổng thời gian điều trị:</i> (Tính toán số ngày điều trị, đánh giá tính hợp lý, nếu thời gian trên 30 phút là hợp lí, không báo lỗi)</p>
+       <p><i>Kiểm tra mốc thời gian:</i> (Phân tích có mâu thuẫn về thời gian không, ví dụ NGAY_YL so với NGAY_VAO, NGAY_RA)</p>
+       <p style="color: red;"><i>Các y lệnh sau ngày ra viện:</i> (Liệt kê chi tiết các trường hợp y lệnh sau ngày ra viện)</p>
+ 
+  <h2>4. Phân tích thuốc điều trị (XML2):</h2>
+       <table border="1" style="width:100%; border-collapse: collapse;">
+          <tr style="background-color: #f2f2f2;">
+              <th>Tên thuốc</th><th>Liều dùng</th><th>Cách dùng</th><th>Số lượng</th><th>Mức hưởng</th><th>Ngày y lệnh</th><th>Phù hợp chẩn đoán & Chống chỉ định?</th><th>Liều dùng hợp lý?</th><th>Lỗi/Cảnh báo</th>
+          </tr>
+          </table>
+       <p><i>Liều dùng bất thường:</i> (Chi tiết các trường hợp liều dùng quá cao/thấp theo tuổi, cân nặng)</p>
+       <p><i>Thuốc trùng lặp:</i> (Liệt kê các thuốc trùng lặp cùng công dụng)</p>
+       <p><i>Thuốc không phù hợp/chống chỉ định:</i> (Chi tiết các thuốc không phù hợp hoặc có chống chỉ định với chẩn đoán, tuổi, giới tính)</p>
+ 
+  <h2>5. Phân tích dịch vụ kỹ thuật (XML3):</h2>
+       <table border="1" style="width:100%; border-collapse: collapse;">
+          <tr style="background-color: #f2f2f2;">
+              <th>Tên dịch vụ</th><th>Số lượng</th><th>Ngày y lệnh</th><th>Mức hưởng</th><th>Phù hợp chẩn đoán?</th><th>Tần suất hợp lý?</th><th>Lỗi/Cảnh báo</th>
+          </tr>
+          </table>
+       <p><i>Dịch vụ tần suất bất thường:</i> (Liệt kê dịch vụ lặp lại nhiều lần trong thời gian ngắn)</p>
+       <p><i>Dịch vụ không phù hợp chẩn đoán:</i> (Liệt kê các dịch vụ không phù hợp với chẩn đoán)</p>
+ 
+  <h2>6. Phân tích kết quả cận lâm sàng (XML4):</h2>
+   <p>Dưới đây là nội dung XML4 nếu có, hãy phân tích các chỉ số trong đó:</p>
+   <pre>${originalHoSoData.xml4RawContentForPrompt ? escapeBasicHtml(originalHoSoData.xml4RawContentForPrompt) : "Không có dữ liệu XML4."}</pre>
+   <table border="1" style="width:100%; border-collapse: collapse;">
+       <tr style="background-color: #f2f2f2;">
+           <th>STT CLS</th><th>Tên Chỉ Số/Dịch Vụ</th><th>Giá trị</th><th>Đơn vị</th><th>Mô tả/Kết luận</th><th>Ngày KQ</th><th>Bất thường/Phù hợp?</th>
+       </tr>
+       </table>
+       <p><i>Các chỉ số bất thường:</i> (Liệt kê các kết quả CLS bất thường, ví dụ TEN_CHI_SO, GIA_TRI, MO_TA, KET_LUAN từ XML4)</p>
+       <p><i>Tương quan với thuốc điều trị:</i> (Phân tích sự phù hợp giữa kết quả CLS và thuốc điều trị)</p>
+ 
+  <h2>7. Kiểm tra giấy hẹn khám lại (XML14):</h2>
+    <p>Dưới đây là nội dung XML14 nếu có:</p>
+    <pre>${originalHoSoData.xml14RawContentForPrompt ? escapeBasicHtml(originalHoSoData.xml14RawContentForPrompt) : "Không có dữ liệu XML14."}</pre>
+       <p><i>Thông tin hẹn khám:</i> (Phân tích thông tin hẹn khám NGAY_HEN_KL, SO_GIAYHEN_KL và tính hợp lý nếu có trong XML14)</p>
+ 
+  <h2>8. Tổng hợp lỗi phát hiện:</h2>
+       <div style="background-color: #ffebee; padding: 15px; border-radius: 5px;">
+           <h3 style="color: #c62828;">Các lỗi nghiêm trọng (cần xem xét từ chối thanh toán):</h3>
+           <ul></ul>
+           <h3 style="color: #ff8f00;">Các cảnh báo cần lưu ý (có thể cần giải trình):</h3>
+           <ul></ul>
+       </div>
+ 
+  <h2>9. Khuyến nghị:</h2>
+       <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px;">
+           <ul></ul>
+       </div>
+       
+  <h2>10. Từ chối trách nhiệm:</h1>
+ <div style="background-color: #fff3cd; padding: 15px; border: 2px solid #ffeeba; border-radius: 5px; margin: 15px 0;">
+   <p style="font-weight: bold; color: #856404; font-size: 16px; text-align: center; text-transform: uppercase; margin-bottom: 10px;">⚠️ LƯU Ý QUAN TRỌNG ⚠️</p>
+   <p style="font-weight: bold; text-align: center;">Báo cáo này được tạo bởi AI theo yêu cầu của Anh Khoa - IT Trung tâm Y tế Huyện Củ Chi.</p>
+   <p style="text-align: center; font-weight: bold;">Đây CHỈ LÀ CÔNG CỤ HỖ TRỢ, mọi quyết định cuối cùng PHẢI do chuyên gia y tế và y bác sĩ đưa ra.</p>
+</div>
+
+<h3>Dữ liệu XML tóm tắt (đã ẩn danh một phần):</h3>
+<pre>${escapeBasicHtml(promptData)}</pre>
+
+Hãy đảm bảo toàn bộ phản hồi là HTML hoàn chỉnh, ngắn gọn, tuân thủ cấu trúc yêu cầu và nêu bật được các lỗi/bất thường theo quy tắc. Chỉ trả lời bằng nội dung HTML cho báo cáo.`;
+        try {
+            const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }) });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Lỗi API: ${errorData.error?.message || response.statusText}`);
+            }
+            const data = await response.json();
+            let analysisHtmlContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "<p>Không có phản hồi từ AI.</p>";
+            if (analysisHtmlContent.startsWith("```html")) {
+                analysisHtmlContent = analysisHtmlContent.substring(7).trim();
+            }
+            if (analysisHtmlContent.endsWith("```")) {
+                analysisHtmlContent = analysisHtmlContent.substring(0, analysisHtmlContent.length - 3).trim();
+            }
+            return { success: true, content: analysisHtmlContent };
+        } catch (error) {
+            console.error("Lỗi gọi Gemini API:", error);
+            return { success: false, content: error.message };
+        }
     }
 });
