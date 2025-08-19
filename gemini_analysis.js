@@ -444,7 +444,7 @@ function renderPreview(maLk) {
     function createAnonymizedRawDataString(originalHoSoData, generalFileInfo, anonymizedPatientInfoForPrompt) { let text = `Mã CSKCB (File): ${generalFileInfo.maCSKCB || 'N/A'}\n`; text += `Ngày lập File XML: ${generalFileInfo.ngayLapFile || 'N/A'}\n`; text += `\n--- Bệnh nhân (STT: ${anonymizedPatientInfoForPrompt.stt || 'N/A'}, Mã LK tham chiếu: ${originalHoSoData.patientInfo.maLk || 'N/A'}) --- \n`; text += `Họ tên: ${anonymizedPatientInfoForPrompt.hoTen}\n`; text += `Tuổi: ${anonymizedPatientInfoForPrompt.tuoi || 'N/A'}, Giới tính: ${anonymizedPatientInfoForPrompt.gioiTinh || 'N/A'}, Cân nặng: ${anonymizedPatientInfoForPrompt.canNang || 'N/A'} kg\n`; text += `Chẩn đoán vào viện: ${originalHoSoData.patientInfo.chanDoanVao || 'N/A'}\n`; text += `Chẩn đoán RV: ${anonymizedPatientInfoForPrompt.chanDoanRaVien || 'N/A'} (Mã: ${anonymizedPatientInfoForPrompt.maBenh || 'N/A'})\n`; text += `Thẻ BHYT: ${anonymizedPatientInfoForPrompt.maTheBHYT} (Từ ${anonymizedPatientInfoForPrompt.gtTheTu} đến ${anonymizedPatientInfoForPrompt.gtTheDen})\n`; text += `Ngày Vào: ${anonymizedPatientInfoForPrompt.ngayVao || 'N/A'} - Ngày Ra: ${anonymizedPatientInfoForPrompt.ngayRa || 'N/A'}\n`; if (originalHoSoData.drugList && originalHoSoData.drugList.length > 0) { text += "\n--- Thuốc ---\n"; originalHoSoData.drugList.forEach((drug) => { text += `- STT ${drug.sttThuoc}: ${drug.tenThuoc}, Liều: ${drug.lieuDung}, Cách dùng: ${drug.cachDung}, SL: ${drug.soLuong}, Ngày YL: ${drug.ngayYLenh}, Mức hưởng: ${drug.mucHuong || 'N/A'}%\n`; }); } if (originalHoSoData.serviceList && originalHoSoData.serviceList.length > 0) { text += "\n--- DVKT ---\n"; originalHoSoData.serviceList.forEach((service) => { text += `- STT ${service.sttDvkt}: ${service.tenDvkt}, SL: ${service.soLuong}, Ngày YL: ${service.ngayYLenh}, Mức hưởng: ${service.mucHuong || 'N/A'}%\n`; }); } if (originalHoSoData.xml4RawContentForPrompt) { text += "\n--- Dữ liệu XML4 (Kết quả CLS) ---\n"; text += originalHoSoData.xml4RawContentForPrompt + "\n"; } if (originalHoSoData.xml14RawContentForPrompt) { text += "\n--- Dữ liệu XML14 (Giấy hẹn) ---\n"; text += originalHoSoData.xml14RawContentForPrompt + "\n"; } return text; }
     function createPdfHtmlContent(analysisTextFromGemini, originalPatientInfo) { return `<html><head><meta charset="UTF-8"><title>Chi tiết HS và Phân tích AI - ${escapeBasicHtml(originalPatientInfo.maLk) || 'HoSo'}</title><style>body { font-family: 'DejaVu Sans', Arial, sans-serif; line-height: 1.5; margin: 20px; font-size: 11px; } h1 { color: #2c3e50; text-align: center; border-bottom: 1px solid #3498db; padding-bottom: 8px; font-size: 1.5em; margin-bottom: 15px;} h2 { color: #3498db; margin-top: 20px; border-bottom: 1px solid #bdc3c7; padding-bottom: 4px; font-size: 1.2em;} p { margin-bottom: 8px; text-align: justify;} hr { border: 0; height: 1px; background: #ccc; margin: 20px 0; } ul { margin-left: 20px; padding-left: 0;} li { margin-bottom: 5px; } pre { background-color: #f0f0f0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-size: 0.85em; } table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95em; } th, td { border: 1px solid #ccc; padding: 6px; text-align: left; } th { background-color: #f2f2f2; font-weight: bold; }</style></head><body>${analysisTextFromGemini}</body></html>`; }
    async function getGeminiAnalysis(promptData, patientInfoForPrompt, generalInfo, originalHoSoData, apiKey) {
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         const fullPrompt = `Bạn là một bác sĩ đa khoa danh tiếng, dược sĩ nhiều năm kinh nghiệm, bạn sẽ không để sai xót trong điều trị và chỉ định thuốc sai và bạn cũng là chuyên gia về giám định bảo hiểm y tế (dựa vào công văn 4750/qđ-byt, 130/QĐ-BYT, Thông tư 27/2023/TT-BYT và các quy định mới nhất về BHYT).
 Dựa trên thông tin hồ sơ bệnh án XML được cung cấp (bao gồm tất cả dữ liệu XML tóm tắt và thông tin tham khảo từ tìm kiếm web dưới đây), hãy tạo nội dung HTML cho một báo cáo tóm tắt "PHÂN TÍCH DỮ LIỆU KHÁM CHỮA BỆNH".
 
@@ -499,14 +499,14 @@ Tiếp theo, phân tích chi tiết theo các mục:
        <p><i>Tính nhất quán:</i> (So sánh chẩn đoán các giai đoạn của quá trình điều trị)</p>
  
   <h2>3. Kiểm tra thời gian điều trị:</h2>
-       <p><i>Tổng thời gian điều trị:</i> (Tính toán số ngày điều trị, đánh giá tính hợp lý, nếu thời gian trên 30 phút là hợp lí, không báo lỗi)</p>
+       <p><i>Tổng thời gian điều trị:</i> (Tính toán số ngày điều trị, đánh giá tính hợp lý, nếu thời gian trên 5 phút là hợp lí, không báo lỗi)</p>
        <p><i>Kiểm tra mốc thời gian:</i> (Phân tích có mâu thuẫn về thời gian không, ví dụ NGAY_YL so với NGAY_VAO, NGAY_RA)</p>
        <p style="color: red;"><i>Các y lệnh sau ngày ra viện:</i> (Liệt kê chi tiết các trường hợp y lệnh sau ngày ra viện)</p>
  
   <h2>4. Phân tích thuốc điều trị (XML2):</h2>
        <table border="1" style="width:100%; border-collapse: collapse;">
           <tr style="background-color: #f2f2f2;">
-              <th>Tên thuốc</th><th>Liều dùng</th><th>Cách dùng</th><th>Số lượng</th><th>Mức hưởng</th><th>Ngày y lệnh</th><th>Phù hợp chẩn đoán & Chống chỉ định?</th><th>Liều dùng hợp lý?</th><th>Lỗi/Cảnh báo</th>
+              <th>Tên thuốc</th><th>Liều dùng</th><th>Cách dùng</th><th>Số lượng</th><th>Mức hưởng</th><th>Ngày y lệnh (NGAY_YL)</th><th>Phù hợp chẩn đoán & Chống chỉ định?</th><th>Liều dùng hợp lý?</th><th>Lỗi/Cảnh báo</th>
           </tr>
           </table>
        <p><i>Liều dùng bất thường:</i> (Chi tiết các trường hợp liều dùng quá cao/thấp theo tuổi, cân nặng)</p>
@@ -516,7 +516,7 @@ Tiếp theo, phân tích chi tiết theo các mục:
   <h2>5. Phân tích dịch vụ kỹ thuật (XML3):</h2>
        <table border="1" style="width:100%; border-collapse: collapse;">
           <tr style="background-color: #f2f2f2;">
-              <th>Tên dịch vụ</th><th>Số lượng</th><th>Ngày y lệnh</th><th>Mức hưởng</th><th>Phù hợp chẩn đoán?</th><th>Tần suất hợp lý?</th><th>Lỗi/Cảnh báo</th>
+              <th>Tên dịch vụ</th><th>Số lượng</th><th>Ngày y lệnh </th><th>Mức hưởng</th><th>Phù hợp chẩn đoán?</th><th>Tần suất hợp lý?</th><th>Lỗi/Cảnh báo</th>
           </tr>
           </table>
        <p><i>Dịch vụ tần suất bất thường:</i> (Liệt kê dịch vụ lặp lại nhiều lần trong thời gian ngắn)</p>
