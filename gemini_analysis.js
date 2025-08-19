@@ -571,12 +571,10 @@ Tiếp theo, phân tích chi tiết theo các mục:
    <p style="text-align: center; font-weight: bold;">Đây CHỈ LÀ CÔNG CỤ HỖ TRỢ, mọi quyết định cuối cùng PHẢI do chuyên gia y tế và y bác sĩ đưa ra.</p>
 </div>
 
-<h3>Dữ liệu XML tóm tắt (đã ẩn danh một phần):</h3>
-<pre>${escapeBasicHtml(promptData)}</pre>
 
 Hãy đảm bảo toàn bộ phản hồi là HTML hoàn chỉnh, ngắn gọn, tuân thủ cấu trúc yêu cầu và nêu bật được các lỗi/bất thường theo quy tắc. Chỉ trả lời bằng nội dung HTML cho báo cáo.`;
         try {
-            const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 } }) });
+            const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }], generationConfig: { temperature: 0.5, maxOutputTokens: 10240 } }) });
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(`Lỗi API: ${errorData.error?.message || response.statusText}`);
