@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             analyzeButton.disabled = false;
         }
     }
-   function extractDataForAI(maLk) {
+  function extractDataForAI(maLk) {
     const record = globalData.allRecords.find(r => r.maLk === maLk);
     if (!record) throw new Error("Không tìm thấy hồ sơ.");
     const parser = new DOMParser();
@@ -178,6 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updatedPatientInfo.lyDoVaoVien = getText(tongHopNode, 'LY_DO_VV');
         updatedPatientInfo.maHSBA = getText(tongHopNode, 'MA_HSBA');
         updatedPatientInfo.ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
+        // === START CHANGE 1: Lấy Cân Nặng ===
+        updatedPatientInfo.canNang = getText(tongHopNode, 'CAN_NANG'); // <--- THÊM DÒNG NÀY
+        // === END CHANGE 1 ===
     }
 
     const chiTietThuocNode = getFileContent('XML2');
@@ -193,12 +196,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                 donGia: parseFloat(getText(item, 'DON_GIA_BH') || '0'),
                 thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
-                // === START CHANGE ===
-                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')), // <--- THÊM DÒNG NÀY
-                // === END CHANGE ===
+                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')),
                 ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
                 maBacSi: getText(item, 'MA_BAC_SI'),
-                tyleTT: getText(item, 'TYLE_TT_BH')
+                tyleTT: getText(item, 'TYLE_TT_BH'),
+                // === START CHANGE 2: Lấy Mức Hưởng Thuốc ===
+                mucHuong: getText(item, 'MUC_HUONG') // <--- THÊM DÒNG NÀY
+                // === END CHANGE 2 ===
             });
         });
     }
@@ -214,13 +218,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                 donGiaBH: parseFloat(getText(item, 'DON_GIA_BH') || '0'),
                 thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
-                // === START CHANGE ===
-                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')), // <--- THÊM DÒNG NÀY
-                // === END CHANGE ===
+                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')),
                 ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
                 maBacSi: getText(item, 'MA_BAC_SI'),
                 nguoiThucHien: getText(item, 'NGUOI_THUC_HIEN'),
-                tyleTT: getText(item, 'TYLE_TT_BH')
+                tyleTT: getText(item, 'TYLE_TT_BH'),
+                // === START CHANGE 3: Lấy Mức Hưởng DVKT ===
+                mucHuong: getText(item, 'MUC_HUONG') // <--- THÊM DÒNG NÀY
+                // === END CHANGE 3 ===
             });
         });
     }
