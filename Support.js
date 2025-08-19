@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const supportDropdown = document.createElement('div');
     supportDropdown.className = 'tab-button support-dropdown';
     supportDropdown.innerHTML = `
-        <span>📞 Hỗ trợ & Liên hệ</span>
+        <span>📞 Hỗ trợ</span>
         <div class="dropdown-content">
             <a href="#" data-target="contactPage">Thông tin liên hệ</a>
             <a href="#" data-target="donatePage">Ủng hộ dự án</a>
