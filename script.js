@@ -37,6 +37,7 @@ const ERROR_TYPES = {
     'DVKT_YL_NGOAI_GIO_HC': 'DVKT - Y lệnh ngoài giờ HC',
     'DVKT_THYL_NGOAI_GIO_HC': 'DVKT - Thực hiện YL ngoài giờ HC',
     'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
+  'KQ_DVKT_SAU_YL_THUOC': 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)'
 };
 
@@ -847,7 +848,7 @@ function validateSingleHoso(hoso) {
                 ngay_th_yl: ngayThYl,
                 ngay_yl: ngayYl,
                 ma_bac_si: maBacSiStr,
-                nguoi_thuc_hien: nguoiThucHienStr, // MỚI: Lưu người thực hiện vào đây
+                nguoi_thuc_hien: nguoiThucHienStr,
                 ngay_kq: getText(item, 'NGAY_KQ')
             });
 
@@ -908,8 +909,6 @@ function validateSingleHoso(hoso) {
             const maDichVu = getText(cls, 'MA_DICH_VU');
             const tenChiSo = getText(cls, 'TEN_CHI_SO');
             const maBsDocKq = getText(cls, 'MA_BS_DOC_KQ');
-
-            // MỚI: Tìm dịch vụ tương ứng trong XML3 để lấy người thực hiện
             const correspondingService = record.services.find(s => s.ma_dich_vu === maDichVu);
             const nguoiThucHien = correspondingService ? correspondingService.nguoi_thuc_hien : '';
 
@@ -974,6 +973,55 @@ function validateSingleHoso(hoso) {
             itemName: `Hồ sơ có hẹn tái khám`
         });
     }
+
+    // =================================================================
+    // BẮT ĐẦU: KHỐI LOGIC GỠ LỖI
+    // =================================================================
+    const ruleKeyKqDvktSauThuoc = 'KQ_DVKT_SAU_YL_THUOC';
+    console.log(`--- DEBUG CHO HỒ SƠ ${record.maLk} ---`);
+    if (validationSettings[ruleKeyKqDvktSauThuoc]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
+        console.log('Rule is ENABLED and data is present. Starting check.');
+        
+        const earliestDrugYl = record.drugs.reduce((earliest, drug) => {
+            if (drug.ngay_yl && (earliest === null || drug.ngay_yl < earliest)) {
+                return drug.ngay_yl;
+            }
+            return earliest;
+        }, null);
+
+        console.log('Thời gian YL thuốc sớm nhất tìm thấy:', earliestDrugYl);
+
+        if (earliestDrugYl) {
+            record.services.forEach(service => {
+                if (service.ten_dich_vu.toLowerCase().includes('khám')) {
+                    return;
+                }
+                
+                const comparison = service.ngay_kq > earliestDrugYl;
+                console.log(`So sánh DV "${service.ten_dich_vu}": NGAY_KQ (${service.ngay_kq}) > YL_THUOC (${earliestDrugYl}) -> Kết quả: ${comparison}`);
+
+                if (service.ngay_kq && comparison) {
+                    console.error('LỖI ĐƯỢC PHÁT HIỆN! Đang thêm lỗi vào hồ sơ.');
+                    record.errors.push({
+                        type: ruleKeyKqDvktSauThuoc,
+                        severity: validationSettings[ruleKeyKqDvktSauThuoc].severity,
+                        message: `DVKT "${service.ten_dich_vu}" có Ngày KQ [${formatDateTimeForDisplay(service.ngay_kq)}] sau YL thuốc [${formatDateTimeForDisplay(earliestDrugYl)}].`,
+                        cost: 0,
+                        itemName: service.ten_dich_vu
+                    });
+                }
+            });
+        }
+    } else {
+        console.warn('Rule is DISABLED or no drugs/services to compare.');
+        console.log('Rule enabled?', validationSettings[ruleKeyKqDvktSauThuoc]?.enabled);
+        console.log('Số lượng thuốc:', record.drugs.length);
+        console.log('Số lượng DVKT:', record.services.length);
+    }
+    console.log('--- KẾT THÚC DEBUG ---');
+    // =================================================================
+    // KẾT THÚC: KHỐI LOGIC GỠ LỖI
+    // =================================================================
     
     const isSimple = record.t_thuoc > 0 &&
         record.t_xn === 0 &&
@@ -1987,7 +2035,8 @@ function initializeValidationSettings() {
         'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA', 
         'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
         'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC',
-        'NGAY_TAI_KHAM_NO_XML14'
+        'NGAY_TAI_KHAM_NO_XML14',
+        'KQ_DVKT_SAU_YL_THUOC' // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
@@ -2027,7 +2076,6 @@ function initializeValidationSettings() {
         };
     });
 }
-
 document.addEventListener('DOMContentLoaded', () => {
     initializeValidationSettings();
     initializeValidator();
@@ -2075,6 +2123,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+     {
+        id: 10,
+        date: '19-08-2025',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Bổ sung cảnh báo',
+        content: 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC'
+    },
      {
         id: 9,
         date: '18-08-2025',
