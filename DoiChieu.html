@@ -1,11 +1,16 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Giám sát BHYT Toàn diện</title>
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  
+  
+
 
     <!-- ========== CSS GỐC CỦA BẠN (GIỮ NGUYÊN) ========== -->
     <style>
@@ -672,6 +677,43 @@
         #settingsTable input:checked + .slider:before {
             transform: translateX(26px);
         }
+      /* ======================================================= */
+        /* CSS ĐỂ DANH SÁCH NGÀY NGHỈ CÓ THỂ CUỘN VÀ ĐẸP HƠN */
+        /* ======================================================= */
+        #vacationList ul {
+            max-height: 400px; /* Chiều cao tối đa trước khi thanh cuộn xuất hiện */
+            overflow-y: auto;  /* Tự động thêm thanh cuộn dọc khi cần */
+            padding: 10px;     /* Thêm đệm bên trong cho đẹp */
+            border: 1px solid #e1e8ed; /* Thêm viền nhẹ */
+            border-radius: 8px; /* Bo góc */
+        }
+
+        #vacationList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #f1f3f5; /* Phân cách các mục */
+        }
+        
+        #vacationList li:last-child {
+            border-bottom: none; /* Bỏ đường viền cho mục cuối cùng */
+        }
+
+        #vacationList li button {
+            padding: 4px 10px;
+            border: 1px solid #dc3545;
+            background-color: #f8d7da;
+            color: #721c24;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #vacationList li button:hover {
+            background-color: #dc3545;
+            color: white;
+        }
     </style>
 
     <!-- ========== CSS BỔ SUNG (ADD-ON) – không phá CSS cũ ========== -->
@@ -762,14 +804,15 @@
             </button>
         </header>
 
-        <nav class="tab-nav">
-            <!-- Đổi tab mặc định: để validatorTab active khi tải trang -->
-            <button class="tab-button" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
-            <button class="tab-button active" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
-            <button class="tab-button" onclick="openTab(event, 'comparatorTab')">🔄 Đối chiếu</button>
-            <button class="tab-button" onclick="openTab(event, 'denialTab')">💸 Dự kiến Xuất toán</button>
-            <button class="tab-button" onclick="openTab(event, 'reportsTab')">📈 Báo cáo</button>
-        </nav>
+      <nav class="tab-nav">
+    <button class="tab-button" onclick="openTab(event, 'dashboardTab')">📊 Dashboard</button>
+    <button class="tab-button active" onclick="openTab(event, 'validatorTab')">📋 Kiểm tra XML</button>
+    <button class="tab-button" onclick="openTab(event, 'comparatorTab')">🔄 Đối chiếu</button>
+    <button class="tab-button" onclick="openTab(event, 'denialTab')">💸 Dự kiến Xuất toán</button>
+    <button class="tab-button" onclick="openTab(event, 'reportsTab')">📈 Báo cáo</button>
+    
+    <button class="tab-button" onclick="openTab(event, 'scheduleTab')">🗓️ Lịch nghỉ</button>
+    </nav>
 
         <!-- Dashboard: KHÔNG active mặc định -->
         <div id="dashboardTab" class="tab-content">
@@ -1081,7 +1124,58 @@
             <div id="xml4DetailsTableContainer"></div>
         </div>
     </div>
+<div id="scheduleTab" class="tab-content">
+    <div class="advanced-filters">
+      <div class="advanced-filters" style="margin-top: 30px;">
+    <div class="filter-header">
+        <h3>📅 Xem lịch nghỉ theo ngày</h3>
+    </div>
+    <div class="filter-grid" style="grid-template-columns: 2fr 1fr; align-items: end;">
+        <div class="filter-group">
+            <label for="viewVacationByDateInput">Chọn một ngày để xem:</label>
+            <input type="date" id="viewVacationByDateInput" class="filter-input">
+        </div>
+        <div class="filter-group">
+            <button id="viewVacationByDateButton" class="btn btn-primary" style="width: 100%;">🔍 Xem ai nghỉ</button>
+        </div>
+    </div>
+    <div id="vacationsByDateResult" style="margin-top: 20px;">
+        </div>
+</div>
+<div class="results-container">
+    </div>
+        <div class="filter-header">
+            <h3>🗓️ Thiết lập lịch nghỉ của Bác sĩ</h3>
+        </div>
+        <div class="filter-grid" style="grid-template-columns: 2fr 1fr; align-items: end;">
+            <div class="filter-group">
+                <label for="doctorScheduleSelect">Chọn Bác sĩ:</label>
+                <select id="doctorScheduleSelect" class="filter-select"></select>
+            </div>
+            <div class="filter-group">
+                <label for="vacationDate">Chọn ngày nghỉ:</label>
+                <input type="date" id="vacationDate" class="filter-input">
+            </div>
+            <div class="filter-actions" style="grid-column: 1 / -1;">
+                 <button id="addVacationDayButton" class="btn btn-primary">➕ Thêm ngày nghỉ</button>
+                 <button id="saveScheduleButton" class="btn btn-success">💾 Lưu Lịch nghỉ vào trình duyệt</button>
+              
+            </div>
+          
+        </div>
+    </div>
 
+    <div class="results-container">
+        <div class="table-header">
+            <h3>Danh sách ngày nghỉ đã thiết lập</h3>
+        </div>
+        <div id="vacationList" style="padding: 20px;">
+            <p>Vui lòng chọn một bác sĩ để xem và quản lý lịch nghỉ.</p>
+        </div>
+    </div>
+</div>
+<div id="xml4Modal" class="modal">
+    </div>
     <div id="summaryModal" class="modal">
         <div class="modal-content summary-modal-content">
             <div class="modal-header">
@@ -1207,7 +1301,7 @@
       });
     </script>
 
-    <!-- Logic gốc của bạn -->
+    <!-- Logic gốc của bạn -->  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="script.js" defer></script>
     <script src="Support.js" defer></script>
      <script src="gemini_analysis.js" defer></script>
