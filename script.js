@@ -974,14 +974,11 @@ function validateSingleHoso(hoso) {
         });
     }
 
-    // =================================================================
-    // BẮT ĐẦU: KHỐI LOGIC GỠ LỖI
+ // =================================================================
+    // BẮT ĐẦU: LOGIC MỚI - KIỂM TRA NGÀY KẾT QUẢ DVKT SAU Y LỆNH THUỐC
     // =================================================================
     const ruleKeyKqDvktSauThuoc = 'KQ_DVKT_SAU_YL_THUOC';
-    console.log(`--- DEBUG CHO HỒ SƠ ${record.maLk} ---`);
     if (validationSettings[ruleKeyKqDvktSauThuoc]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
-        console.log('Rule is ENABLED and data is present. Starting check.');
-        
         const earliestDrugYl = record.drugs.reduce((earliest, drug) => {
             if (drug.ngay_yl && (earliest === null || drug.ngay_yl < earliest)) {
                 return drug.ngay_yl;
@@ -989,38 +986,34 @@ function validateSingleHoso(hoso) {
             return earliest;
         }, null);
 
-        console.log('Thời gian YL thuốc sớm nhất tìm thấy:', earliestDrugYl);
-
         if (earliestDrugYl) {
             record.services.forEach(service => {
-                if (service.ten_dich_vu.toLowerCase().includes('khám')) {
-                    return;
-                }
-                
-                const comparison = service.ngay_kq > earliestDrugYl;
-                console.log(`So sánh DV "${service.ten_dich_vu}": NGAY_KQ (${service.ngay_kq}) > YL_THUOC (${earliestDrugYl}) -> Kết quả: ${comparison}`);
+                const serviceNameLower = service.ten_dich_vu.toLowerCase();
 
-                if (service.ngay_kq && comparison) {
-                    console.error('LỖI ĐƯỢC PHÁT HIỆN! Đang thêm lỗi vào hồ sơ.');
+                // Kiểm tra xem dịch vụ có thuộc danh sách loại trừ hay không
+                const isExcludedService = serviceNameLower.includes('khám') ||
+                                          serviceNameLower.includes('cd4') ||      // Loại trừ xét nghiệm đếm CD4
+                                          serviceNameLower.includes('tải lượng'); // Loại trừ xét nghiệm đo tải lượng HIV
+
+                if (isExcludedService) {
+                    return; // Bỏ qua, không kiểm tra lỗi cho dịch vụ này
+                }
+
+                // Nếu không bị loại trừ, tiếp tục kiểm tra lỗi như bình thường
+                if (service.ngay_kq && service.ngay_kq > earliestDrugYl) {
                     record.errors.push({
                         type: ruleKeyKqDvktSauThuoc,
                         severity: validationSettings[ruleKeyKqDvktSauThuoc].severity,
-                        message: `DVKT "${service.ten_dich_vu}" có Ngày KQ [${formatDateTimeForDisplay(service.ngay_kq)}] sau YL thuốc [${formatDateTimeForDisplay(earliestDrugYl)}].`,
+                        message: `DVKT "${service.ten_dich_vu}" có Ngày KQ [${formatDateTimeForDisplay(service.ngay_kq)}] sau YL thuốc đầu tiên [${formatDateTimeForDisplay(earliestDrugYl)}].`,
                         cost: 0,
                         itemName: service.ten_dich_vu
                     });
                 }
             });
         }
-    } else {
-        console.warn('Rule is DISABLED or no drugs/services to compare.');
-        console.log('Rule enabled?', validationSettings[ruleKeyKqDvktSauThuoc]?.enabled);
-        console.log('Số lượng thuốc:', record.drugs.length);
-        console.log('Số lượng DVKT:', record.services.length);
     }
-    console.log('--- KẾT THÚC DEBUG ---');
     // =================================================================
-    // KẾT THÚC: KHỐI LOGIC GỠ LỖI
+    // KẾT THÚC: LOGIC MỚI
     // =================================================================
     
     const isSimple = record.t_thuoc > 0 &&
@@ -2128,7 +2121,7 @@ const notifications = [
         date: '19-08-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
         title: 'Bổ sung cảnh báo',
-        content: 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC'
+        content: 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC. Trừ dịch vụ kỹ thuật gửi mẫu'
     },
      {
         id: 9,
