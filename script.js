@@ -17,6 +17,7 @@ let globalData = {
 };
 
 const ERROR_TYPES = {
+  
     'NGAY_YL_THUOC_SAU_RA_VIEN': 'YL Thuốc - sau ra viện',
     'NGAY_YL_DVKT_SAU_RA_VIEN': 'YL DVKT - sau ra viện',
     'NGAY_TTOAN_SAU_RA_VIEN': 'Ngày TT sau ngày ra viện',
@@ -1015,7 +1016,32 @@ function validateSingleHoso(hoso) {
     // =================================================================
     // KẾT THÚC: LOGIC MỚI
     // =================================================================
-    
+     // BẮT ĐẦU: KIỂM TRA BÁC SĨ KHÁM TRONG NGÀY NGHỈ
+    // =================================================================
+    const ruleKeyBsNghi = 'BS_KHAM_TRONG_NGAY_NGHI';
+    const hasSchedules = typeof doctorSchedules !== 'undefined' && Object.keys(doctorSchedules).length > 0;
+
+    if (validationSettings[ruleKeyBsNghi]?.enabled && hasSchedules && record.bac_si_chi_dinh.size > 0) {
+        const ngayKhamStr = record.ngayVao.substring(0, 8);
+        const ngayKhamFormatted = `${ngayKhamStr.substring(0,4)}-${ngayKhamStr.substring(4,6)}-${ngayKhamStr.substring(6,8)}`;
+
+        record.bac_si_chi_dinh.forEach(maBS => {
+            const doctorSchedule = doctorSchedules[maBS];
+            if (doctorSchedule && doctorSchedule.includes(ngayKhamFormatted)) {
+                const tenBS = staffNameMap.get(maBS) || maBS;
+                record.errors.push({
+                    type: ruleKeyBsNghi,
+                    severity: validationSettings[ruleKeyBsNghi].severity,
+                    message: `BS CĐ ${tenBS} có lịch nghỉ vào ngày khám [${formatDateTimeForDisplay(record.ngayVao)}].`,
+                    cost: record.t_bhtt,
+                    itemName: `Toàn bộ hồ sơ do BS ${tenBS} chỉ định`
+                });
+            }
+        });
+    }
+    // =================================================================
+    // KẾT THÚC: KIỂM TRA BÁC SĨ KHÁM TRONG NGÀY NGHỈ
+    // =================================================================
     const isSimple = record.t_thuoc > 0 &&
         record.t_xn === 0 &&
         record.t_cdha === 0 &&
@@ -2040,6 +2066,7 @@ function initializeValidationSettings() {
 
     // Rules that are always treated as 'critical' errors and are NOT configurable
     const criticalErrors = [
+        'BS_KHAM_TRONG_NGAY_NGHI',
         'NGAY_YL_THUOC_SAU_RA_VIEN', 'NGAY_YL_DVKT_SAU_RA_VIEN', 'NGAY_VAO_SAU_NGAY_RA',
         'THE_BHYT_HET_HAN', 'NGAY_THYL_TRUOC_VAOVIEN', 'NGAY_THYL_SAU_RAVIEN',
         'MA_MAY_TRUNG_THOI_GIAN', 'XML4_MISSING_MA_BS_DOC_KQ'
@@ -2116,6 +2143,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+    {
+        id: 11,
+        date: '19-08-2025',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Bổ sung ngày NV nghỉ',
+        content: 'Bác sỹ khi nghỉ phát sinh khám sẽ báo lỗi nghiêm trọng'
+    },
      {
         id: 10,
         date: '19-08-2025',
@@ -2378,3 +2412,171 @@ function exportDashboardToExcel() {
         alert("Đã có lỗi xảy ra khi tạo file Excel. Vui lòng thử lại.");
     }
 }
+// File: schedule-manager.js
+
+// Biến toàn cục để lưu trữ lịch nghỉ và đối tượng dropdown tìm kiếm
+let doctorSchedules = {};
+let scheduleChoices = null;
+
+/**
+ * Tải lịch nghỉ đã lưu từ localStorage của trình duyệt vào biến doctorSchedules.
+ */
+function loadSchedules() {
+    const savedSchedules = localStorage.getItem('doctorSchedules');
+    if (savedSchedules) {
+        doctorSchedules = JSON.parse(savedSchedules);
+    }
+}
+
+/**
+ * Lưu đối tượng doctorSchedules hiện tại vào localStorage.
+ */
+function saveSchedules() {
+    localStorage.setItem('doctorSchedules', JSON.stringify(doctorSchedules));
+    alert('Đã lưu lịch nghỉ thành công!');
+}
+
+/**
+ * Hiển thị danh sách các ngày nghỉ của một bác sĩ được chọn lên giao diện.
+ * @param {string} maBS - Mã của bác sĩ.
+ */
+function renderVacationList(maBS) {
+    const vacationListDiv = document.getElementById('vacationList');
+    if (!vacationListDiv) return;
+    
+    const schedule = doctorSchedules[maBS] || [];
+    vacationListDiv.innerHTML = `<h4>Lịch nghỉ của ${staffNameMap.get(maBS) || maBS}:</h4>`;
+
+    if (schedule.length === 0) {
+        vacationListDiv.innerHTML += '<p>Chưa có ngày nghỉ nào được thêm.</p>';
+        return;
+    }
+
+    const list = document.createElement('ul');
+    schedule.sort().forEach(date => {
+        const listItem = document.createElement('li');
+        listItem.textContent = new Date(date + 'T00:00:00').toLocaleDateString('vi-VN');
+        const removeButton = document.createElement('button');
+        removeButton.textContent = 'Xóa';
+        removeButton.onclick = () => {
+            doctorSchedules[maBS] = doctorSchedules[maBS].filter(d => d !== date);
+            renderVacationList(maBS);
+        };
+        listItem.appendChild(removeButton);
+        list.appendChild(listItem);
+    });
+    vacationListDiv.appendChild(list);
+}
+
+/**
+ * Xem danh sách các bác sĩ nghỉ trong một ngày được chọn.
+ */
+function viewVacationsByDate() {
+    const dateInput = document.getElementById('viewVacationByDateInput');
+    const resultsDiv = document.getElementById('vacationsByDateResult');
+    const selectedDate = dateInput.value; // Format: YYYY-MM-DD
+
+    if (!selectedDate) {
+        resultsDiv.innerHTML = '<p>Vui lòng chọn một ngày.</p>';
+        return;
+    }
+
+    const doctorsOnLeave = [];
+    for (const maBS in doctorSchedules) {
+        if (doctorSchedules[maBS].includes(selectedDate)) {
+            const tenBS = staffNameMap.get(maBS) || maBS;
+            doctorsOnLeave.push(tenBS);
+        }
+    }
+
+    const displayDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('vi-VN');
+    if (doctorsOnLeave.length > 0) {
+        let html = `<h4>Danh sách bác sĩ nghỉ ngày ${displayDate}:</h4><ul>`;
+        doctorsOnLeave.forEach(name => {
+            html += `<li>${name}</li>`;
+        });
+        html += '</ul>';
+        resultsDiv.innerHTML = html;
+    } else {
+        resultsDiv.innerHTML = `<p>✅ Không có bác sĩ nào nghỉ vào ngày ${displayDate}.</p>`;
+    }
+}
+
+/**
+ * Khởi tạo toàn bộ giao diện và sự kiện cho tab "Quản lý lịch nghỉ".
+ */
+function initializeScheduler() {
+    const doctorSelect = document.getElementById('doctorScheduleSelect');
+    if (!doctorSelect) return;
+
+    // 1. Chuẩn bị dữ liệu cho dropdown tìm kiếm
+    const doctorChoicesData = Array.from(staffNameMap.entries()).map(([code, name]) => ({
+        value: code,
+        label: `${name} (${code})`
+    }));
+
+    // 2. Hủy và khởi tạo lại Choices.js với cấu hình nâng cao
+    if (scheduleChoices) {
+        scheduleChoices.destroy();
+    }
+    doctorSelect.innerHTML = '';
+    scheduleChoices = new Choices(doctorSelect, {
+        choices: doctorChoicesData,
+        searchPlaceholderValue: "Nhập tên hoặc mã để tìm...",
+        itemSelectText: 'Nhấn để chọn',
+        noResultsText: 'Không tìm thấy kết quả',
+        noChoicesText: 'Không có lựa chọn nào',
+        shouldSort: false,
+        fuseOptions: {
+            keys: ['label'],
+            threshold: 0.3
+        }
+    });
+
+    // 3. Gán các sự kiện cho các nút bấm
+    const vacationDateInput = document.getElementById('vacationDate');
+    const addButton = document.getElementById('addVacationDayButton');
+    const saveButton = document.getElementById('saveScheduleButton');
+    const viewByDateButton = document.getElementById('viewVacationByDateButton');
+
+    doctorSelect.addEventListener('change', () => {
+        const selectedBS = scheduleChoices.getValue(true);
+        if (selectedBS) {
+            renderVacationList(selectedBS);
+        } else {
+            document.getElementById('vacationList').innerHTML = '<p>Vui lòng chọn một bác sĩ...</p>';
+        }
+    });
+
+    addButton.addEventListener('click', () => {
+        const selectedBS = scheduleChoices.getValue(true);
+        const vacationDate = vacationDateInput.value;
+        if (!selectedBS || !vacationDate) {
+            alert('Vui lòng chọn bác sĩ và ngày nghỉ!');
+            return;
+        }
+
+        if (!doctorSchedules[selectedBS]) {
+            doctorSchedules[selectedBS] = [];
+        }
+        
+        if (!doctorSchedules[selectedBS].includes(vacationDate)) {
+            doctorSchedules[selectedBS].push(vacationDate);
+            renderVacationList(selectedBS);
+        } else {
+            alert('Ngày nghỉ này đã được thêm từ trước.');
+        }
+    });
+    
+    saveButton.addEventListener('click', saveSchedules);
+    
+    if (viewByDateButton) {
+        viewByDateButton.addEventListener('click', viewVacationsByDate);
+    }
+}
+
+// Chạy các hàm cần thiết khi trang được tải xong
+document.addEventListener('DOMContentLoaded', () => {
+    loadSchedules();
+    initializeScheduler();
+});
