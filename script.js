@@ -39,7 +39,9 @@ const ERROR_TYPES = {
     'DVKT_THYL_NGOAI_GIO_HC': 'DVKT - Thực hiện YL ngoài giờ HC',
     'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
   'KQ_DVKT_SAU_YL_THUOC': 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
+    'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT', 
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)'
+    
 };
 
 let validationSettings = {};
