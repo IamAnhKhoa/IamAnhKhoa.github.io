@@ -151,117 +151,125 @@ document.addEventListener('DOMContentLoaded', () => {
             analyzeButton.disabled = false;
         }
     }
-    function extractDataForAI(maLk) {
-    const record = globalData.allRecords.find(r => r.maLk === maLk);
-    if (!record) throw new Error("Không tìm thấy hồ sơ.");
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(globalData.xmlDataContent, 'text/xml');
-    let targetHosoNode = null;
-    const hosoNodes = xmlDoc.getElementsByTagName('HOSO');
-    for (const hosoNode of hosoNodes) {
-        const maLkNode = hosoNode.querySelector('MA_LK');
-        if (maLkNode && maLkNode.textContent.trim() === maLk) {
-            targetHosoNode = hosoNode;
-            break;
-        }
-    }
-    if (!targetHosoNode) throw new Error("Không tìm thấy HOSO trong XML gốc.");
-    const getText = (element, ...selectors) => { if (!element) return ''; for (const selector of selectors) { const node = element.querySelector(selector); if (node && node.textContent) { const text = node.textContent.trim(); if (text) return text; } } return ''; };
-    const getFileContent = (type) => { for (const fileNode of targetHosoNode.children) { if (fileNode.nodeName === 'FILEHOSO' && getText(fileNode, 'LOAIHOSO') === type) { return fileNode.querySelector('NOIDUNGFILE'); } } return null; };
-    
-    const tongHopNode = getFileContent('XML1').querySelector('TONG_HOP');
-    const updatedPatientInfo = { ...record };
-    if(tongHopNode) {
-        updatedPatientInfo.chanDoanVao = getText(tongHopNode, 'CHAN_DOAN_VAO');
-        updatedPatientInfo.maBenh = getText(tongHopNode, 'MA_BENH_CHINH');
-        updatedPatientInfo.diaChi = getText(tongHopNode, 'DIA_CHI');
-        updatedPatientInfo.lyDoVaoVien = getText(tongHopNode, 'LY_DO_VV');
-        updatedPatientInfo.maHSBA = getText(tongHopNode, 'MA_HSBA');
-        updatedPatientInfo.ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
-    }
+   function extractDataForAI(maLk) {
+    const record = globalData.allRecords.find(r => r.maLk === maLk);
+    if (!record) throw new Error("Không tìm thấy hồ sơ.");
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(globalData.xmlDataContent, 'text/xml');
+    let targetHosoNode = null;
+    const hosoNodes = xmlDoc.getElementsByTagName('HOSO');
+    for (const hosoNode of hosoNodes) {
+        const maLkNode = hosoNode.querySelector('MA_LK');
+        if (maLkNode && maLkNode.textContent.trim() === maLk) {
+            targetHosoNode = hosoNode;
+            break;
+        }
+    }
+    if (!targetHosoNode) throw new Error("Không tìm thấy HOSO trong XML gốc.");
+    const getText = (element, ...selectors) => { if (!element) return ''; for (const selector of selectors) { const node = element.querySelector(selector); if (node && node.textContent) { const text = node.textContent.trim(); if (text) return text; } } return ''; };
+    const getFileContent = (type) => { for (const fileNode of targetHosoNode.children) { if (fileNode.nodeName === 'FILEHOSO' && getText(fileNode, 'LOAIHOSO') === type) { return fileNode.querySelector('NOIDUNGFILE'); } } return null; };
+    
+    const tongHopNode = getFileContent('XML1').querySelector('TONG_HOP');
+    const updatedPatientInfo = { ...record };
+    if(tongHopNode) {
+        updatedPatientInfo.chanDoanVao = getText(tongHopNode, 'CHAN_DOAN_VAO');
+        updatedPatientInfo.maBenh = getText(tongHopNode, 'MA_BENH_CHINH');
+        updatedPatientInfo.diaChi = getText(tongHopNode, 'DIA_CHI');
+        updatedPatientInfo.lyDoVaoVien = getText(tongHopNode, 'LY_DO_VV');
+        updatedPatientInfo.maHSBA = getText(tongHopNode, 'MA_HSBA');
+        updatedPatientInfo.ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
+    }
 
-    const chiTietThuocNode = getFileContent('XML2');
-    const drugList = [];
-    if(chiTietThuocNode) {
-        chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach((item, index) => {
-            drugList.push({
-                sttThuoc: index + 1,
-                tenThuoc: getText(item, 'TEN_THUOC'),
-                hamLuong: getText(item, 'HAM_LUONG'), // Lấy thêm hàm lượng
-                lieuDung: getText(item, 'LIEU_DUNG'),
-                cachDung: getText(item, 'CACH_DUNG'),
-                soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
-                ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
-                maBacSi: getText(item, 'MA_BAC_SI'),
-                tyleTT: getText(item, 'TYLE_TT_BH')
-            });
-        });
-    }
+    const chiTietThuocNode = getFileContent('XML2');
+    const drugList = [];
+    if(chiTietThuocNode) {
+        chiTietThuocNode.querySelectorAll('CHI_TIET_THUOC').forEach((item, index) => {
+            drugList.push({
+                sttThuoc: index + 1,
+                tenThuoc: getText(item, 'TEN_THUOC'),
+                hamLuong: getText(item, 'HAM_LUONG'),
+                lieuDung: getText(item, 'LIEU_DUNG'),
+                cachDung: getText(item, 'CACH_DUNG'),
+                soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
+                donGia: parseFloat(getText(item, 'DON_GIA_BH') || '0'),
+                thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
+                // === START CHANGE ===
+                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')), // <--- THÊM DÒNG NÀY
+                // === END CHANGE ===
+                ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
+                maBacSi: getText(item, 'MA_BAC_SI'),
+                tyleTT: getText(item, 'TYLE_TT_BH')
+            });
+        });
+    }
 
-    const chiTietDvktNode = getFileContent('XML3');
-    const serviceList = [];
-    if(chiTietDvktNode){
-        chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach((item, index) => {
-             serviceList.push({
-                sttDvkt: index + 1,
-                maDvkt: getText(item, 'MA_DICH_VU'),
-                tenDvkt: getText(item, 'TEN_DICH_VU'),
-                soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
-                thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
-                ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
-                maBacSi: getText(item, 'MA_BAC_SI'),
-                nguoiThucHien: getText(item, 'NGUOI_THUC_HIEN'),
-                tyleTT: getText(item, 'TYLE_TT_BH')
-            });
-        });
-    }
+    const chiTietDvktNode = getFileContent('XML3');
+    const serviceList = [];
+    if(chiTietDvktNode){
+        chiTietDvktNode.querySelectorAll('CHI_TIET_DVKT').forEach((item, index) => {
+             serviceList.push({
+                sttDvkt: index + 1,
+                maDvkt: getText(item, 'MA_DICH_VU'),
+                tenDvkt: getText(item, 'TEN_DICH_VU'),
+                soLuong: parseFloat(getText(item, 'SO_LUONG') || '0'),
+                donGiaBH: parseFloat(getText(item, 'DON_GIA_BH') || '0'),
+                thanhTienBH: parseFloat(getText(item, 'THANH_TIEN_BH') || '0'),
+                // === START CHANGE ===
+                ngayYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_YL')), // <--- THÊM DÒNG NÀY
+                // === END CHANGE ===
+                ngayThYLenh: formatDateTimeForDisplay(getText(item, 'NGAY_TH_YL')),
+                maBacSi: getText(item, 'MA_BAC_SI'),
+                nguoiThucHien: getText(item, 'NGUOI_THUC_HIEN'),
+                tyleTT: getText(item, 'TYLE_TT_BH')
+            });
+        });
+    }
 
-    const xml4ContentNode = getFileContent('XML4');
-    const xml4Details = [];
-    if (xml4ContentNode) {
-        xml4ContentNode.querySelectorAll('CHI_TIET_CLS').forEach((item, index) => {
-            const maDichVu = getText(item, 'MA_DICH_VU');
-            const correspondingService = serviceList.find(s => s.maDvkt === maDichVu);
+    const xml4ContentNode = getFileContent('XML4');
+    const xml4Details = [];
+    if (xml4ContentNode) {
+        xml4ContentNode.querySelectorAll('CHI_TIET_CLS').forEach((item, index) => {
+            const maDichVu = getText(item, 'MA_DICH_VU');
+            const correspondingService = serviceList.find(s => s.maDvkt === maDichVu);
 
-            xml4Details.push({
-                stt: index + 1,
-                tenChiSo: getText(item, 'TEN_CHI_SO'),
-                giaTri: getText(item, 'GIA_TRI'),
-                donVi: getText(item, 'DON_VI_DO'),
-                nguoiThucHien: correspondingService ? correspondingService.nguoiThucHien : '',
-                maBsDocKq: getText(item, 'MA_BS_DOC_KQ'),
-                ngayKQ: formatDateTimeForDisplay(getText(item, 'NGAY_KQ'))
-            });
-        });
-    }
+            xml4Details.push({
+                stt: index + 1,
+                tenChiSo: getText(item, 'TEN_CHI_SO'),
+                giaTri: getText(item, 'GIA_TRI'),
+                donVi: getText(item, 'DON_VI_DO'),
+                nguoiThucHien: correspondingService ? correspondingService.nguoiThucHien : '',
+                maBsDocKq: getText(item, 'MA_BS_DOC_KQ'),
+                ngayKQ: formatDateTimeForDisplay(getText(item, 'NGAY_KQ'))
+            });
+        });
+    }
 
-    const xml14ContentNode = getFileContent('XML14');
-    let appointmentInfo = null;
-    if (xml14ContentNode && xml14ContentNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI')) {
-        const henKhamNode = xml14ContentNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI');
-        appointmentInfo = {
-            soGiayHen: getText(henKhamNode, 'SO_GIAYHEN_KL'),
-            ngayHenKL: formatDateTimeForDisplay(getText(henKhamNode, 'NGAY_HEN_KL'))
-        };
-    }
+    const xml14ContentNode = getFileContent('XML14');
+    let appointmentInfo = null;
+    if (xml14ContentNode && xml14ContentNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI')) {
+        const henKhamNode = xml14ContentNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI');
+        appointmentInfo = {
+            soGiayHen: getText(henKhamNode, 'SO_GIAYHEN_KL'),
+            ngayHenKL: formatDateTimeForDisplay(getText(henKhamNode, 'NGAY_HEN_KL'))
+        };
+    }
 
-    const originalHoSoData = {
-        patientInfo: updatedPatientInfo,
-        drugList: drugList,
-        serviceList: serviceList,
-        xml4Details: xml4Details,
-        appointmentInfo: appointmentInfo,
-        xml4RawContentForPrompt: xml4ContentNode ? xml4ContentNode.innerHTML.trim() : null,
-        xml14RawContentForPrompt: xml14ContentNode ? xml14ContentNode.innerHTML.trim() : null,
-    };
+    const originalHoSoData = {
+        patientInfo: updatedPatientInfo,
+        drugList: drugList,
+        serviceList: serviceList,
+        xml4Details: xml4Details,
+        appointmentInfo: appointmentInfo,
+        xml4RawContentForPrompt: xml4ContentNode ? xml4ContentNode.innerHTML.trim() : null,
+        xml14RawContentForPrompt: xml14ContentNode ? xml14ContentNode.innerHTML.trim() : null,
+    };
 
-    const generalFileInfo = {
-        maCSKCB: xmlDoc.querySelector('MACSKCB')?.textContent.trim(),
-        ngayLapFile: formatDateTimeForDisplay(xmlDoc.querySelector('NGAYLAP')?.textContent.trim())
-    };
-    
-    return { originalHoSoData, generalFileInfo };
+    const generalFileInfo = {
+        maCSKCB: xmlDoc.querySelector('MACSKCB')?.textContent.trim(),
+        ngayLapFile: formatDateTimeForDisplay(xmlDoc.querySelector('NGAYLAP')?.textContent.trim())
+    };
+    
+    return { originalHoSoData, generalFileInfo };
 }
 
     // ===================================================================
