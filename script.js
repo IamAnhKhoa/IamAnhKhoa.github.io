@@ -40,7 +40,7 @@ const ERROR_TYPES = {
     'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
   'KQ_DVKT_SAU_YL_THUOC': 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
     'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT', 
-  'THUOC_DVKT_THYL_TRUNG_GIO': 'XML3. NGÀY TH Y lệnh DVKT bằng NGÀY TH lệnh THUỐC', // <-- SỬA DÒNG NÀY
+  'THUOC_DVKT_THYL_TRUNG_GIO': 'XML3. NGÀY TH Y lệnh DVKT bằng NGÀY TH Y lệnh THUỐC', // <-- SỬA DÒNG NÀY
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)'
     
 };
@@ -2166,7 +2166,7 @@ const notifications = [
         date: '27-08-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
         title: 'Bổ sung CẢNH BÁO',
-        content: 'XML3. NGÀY TH Y lệnh DVKT bằng NGÀY TH lệnh THUỐC'
+        content: 'XML3. NGÀY TH Y lệnh DVKT bằng NGÀY TH Y lệnh THUỐC'
     },
     
     {
