@@ -40,6 +40,7 @@ const ERROR_TYPES = {
     'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
   'KQ_DVKT_SAU_YL_THUOC': 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
     'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT', 
+  'THUOC_DVKT_THYL_TRUNG_GIO': 'XML3. NGÀY TH Y lệnh DVKT bằng NGÀY TH lệnh THUỐC', // <-- SỬA DÒNG NÀY
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)'
     
 };
@@ -465,7 +466,7 @@ function performCrossRecordValidation(records) {
     const machineTimeMap = new Map();
     const doctorTimeMap = new Map();
 
-    // Step 1, 2, 3: Populate maps for other rules (giữ nguyên)
+    // Gom dữ liệu cho các quy tắc cũ
     records.forEach(record => {
         if (record.services) {
             record.services.forEach(service => {
@@ -487,7 +488,7 @@ function performCrossRecordValidation(records) {
         }
     });
 
-    // Step 2: Find MA_MAY conflicts
+    // Xử lý lỗi trùng máy
     machineTimeMap.forEach((conflicts, key) => {
         const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
         if (uniqueMaLksInConflict.length > 1) {
@@ -496,20 +497,17 @@ function performCrossRecordValidation(records) {
                 const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                 if (recordToUpdate) {
                     const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
-                    const otherMaLks = uniqueMaLksInConflict
-                        .filter(maLk => maLk !== currentMaLk)
-                        .map(maLk => {
-                            const r = records.find(rec => rec.maLk === maLk);
-                            return r ? `${r.hoTen} (${r.maBn || r.maLk})` : maLk;
-                        }).join(', ');
-                    
+                    const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).map(maLk => {
+                        const r = records.find(rec => rec.maLk === maLk);
+                        return r ? `${r.hoTen} (${r.maBn || r.maLk})` : maLk;
+                    }).join(', ');
                     const ruleKey = 'MA_MAY_TRUNG_THOI_GIAN';
                     if (validationSettings[ruleKey]?.enabled) {
                         recordToUpdate.errors.push({
                             type: ruleKey,
                             severity: validationSettings[ruleKey].severity,
-                            message: `DV "${firstConflictForThisPatient.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
-                            cost: firstConflictForThisPatient.cost,
+                            message: `DVKT "${firstConflictForThisPatient.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
+                            cost: costIfCritical(ruleKey, firstConflictForThisPatient.cost),
                             itemName: firstConflictForThisPatient.tenDv
                         });
                     }
@@ -518,7 +516,7 @@ function performCrossRecordValidation(records) {
         }
     });
 
-    // Step 3: Find MA_BAC_SI conflicts (XML2 – thuốc)
+    // Xử lý lỗi trùng bác sĩ cho y lệnh thuốc
     doctorTimeMap.forEach((conflicts, key) => {
         const uniqueMaLksInConflict = Array.from(new Set(conflicts.map(c => c.maLk)));
         if (uniqueMaLksInConflict.length > 1) {
@@ -528,20 +526,17 @@ function performCrossRecordValidation(records) {
                 const recordToUpdate = records.find(r => r.maLk === currentMaLk);
                 if (recordToUpdate) {
                     const firstConflictForThisPatient = conflicts.find(c => c.maLk === currentMaLk);
-                    const otherMaLks = uniqueMaLksInConflict
-                        .filter(maLk => maLk !== currentMaLk)
-                        .map(maLk => {
-                            const r = records.find(rec => rec.maLk === maLk);
-                            return r ? `${r.hoTen} (${r.maBn || r.maLk})` : maLk;
-                        }).join(', ');
-                    
+                    const otherMaLks = uniqueMaLksInConflict.filter(maLk => maLk !== currentMaLk).map(maLk => {
+                        const r = records.find(rec => rec.maLk === maLk);
+                        return r ? `${r.hoTen} (${r.maBn || r.maLk})` : maLk;
+                    }).join(', ');
                     const ruleKey = 'BS_TRUNG_THOI_GIAN';
                     if (validationSettings[ruleKey]?.enabled) {
                         recordToUpdate.errors.push({
                             type: ruleKey,
                             severity: validationSettings[ruleKey].severity,
                             message: `BS ${tenBacSi} cho y lệnh thuốc "${firstConflictForThisPatient.tenThuoc}" trùng thời điểm [${formatDateTimeForDisplay(ngayYl)}] với các ca khác: ${otherMaLks}`,
-                            cost: firstConflictForThisPatient.cost,
+                            cost: costIfCritical(ruleKey, firstConflictForThisPatient.cost),
                             itemName: firstConflictForThisPatient.tenThuoc
                         });
                     }
@@ -550,119 +545,96 @@ function performCrossRecordValidation(records) {
         }
     });
     
-    // Step 4: BS_KHAM_CHONG_LAN theo XML3 — CHỈ check hồ sơ "khám-only"
- const doctorXml3Windows = new Map(); // maBs -> Map(maLk -> { startTHYL, endKQ, khamOnly: true })
+    // Xử lý lỗi khám chồng lấn (phần này vẫn giữ nguyên vì logic của nó đúng)
+    const doctorXml3Windows = new Map();
     const take12 = s => (typeof s === 'string' && s.length >= 12 ? s.substring(0, 12) : null);
     const isKham = (svc) => (svc.ten_dich_vu || '').toLowerCase().includes('khám');
-
     records.forEach(record => {
         if (!record.services || record.services.length === 0) return;
-
         let hasKham = false;
         let hasNonKham = false;
         record.services.forEach(svc => {
             if (isKham(svc)) hasKham = true; else hasNonKham = true;
         });
-
-        if (!hasKham || hasNonKham) return; // Chỉ xét hồ sơ "chỉ có công khám"
-
+        if (!hasKham || hasNonKham) return;
         record.services.forEach(svc => {
             if (!isKham(svc)) return;
-
             const maBs = svc.ma_bac_si;
-            const th = take12(svc.ngay_th_yl); // Lấy NGAY_TH_YL làm mốc bắt đầu
+            const th = take12(svc.ngay_th_yl);
             const kq = take12(svc.ngay_kq);
-
-            if (!maBs || !th || !kq) return; // Yêu cầu phải có cả NGAY_TH_YL và NGAY_KQ
-
+            if (!maBs || !th || !kq) return;
             if (!doctorXml3Windows.has(maBs)) doctorXml3Windows.set(maBs, new Map());
             const byRecord = doctorXml3Windows.get(maBs);
-
             if (!byRecord.has(record.maLk)) {
                 byRecord.set(record.maLk, { startTHYL: th, endKQ: kq, khamOnly: true });
             } else {
                 const win = byRecord.get(record.maLk);
-                if (th < win.startTHYL) win.startTHYL = th; // Lấy thời gian bắt đầu sớm nhất
-                if (kq > win.endKQ) win.endKQ = kq;       // Lấy thời gian kết thúc muộn nhất
+                if (th < win.startTHYL) win.startTHYL = th;
+                if (kq > win.endKQ) win.endKQ = kq;
             }
         });
     });
-
-    // So sánh chồng lấn chỉ giữa các hồ sơ "chỉ có công khám"
     doctorXml3Windows.forEach((byRecord, maBs) => {
         const tenBacSi = staffNameMap.get(maBs) || maBs;
         const windows = Array.from(byRecord.entries())
             .map(([maLk, w]) => ({ maLk, ...w }))
-            .filter(w => w.khamOnly && w.startTHYL && w.endKQ); // Lọc theo startTHYL
-
+            .filter(w => w.khamOnly && w.startTHYL && w.endKQ);
         const containsMap = new Map();
-
         for (let i = 0; i < windows.length; i++) {
             for (let j = 0; j < windows.length; j++) {
                 if (i === j) continue;
-                const A = windows[i]; // Ca lớn hơn (chứa)
-                const B = windows[j]; // Ca nhỏ hơn (bị chứa)
-                
-                // So sánh bằng startTHYL
+                const A = windows[i];
+                const B = windows[j];
                 if (B.startTHYL >= A.startTHYL && B.endKQ <= A.endKQ) {
                     if (!containsMap.has(B.maLk)) containsMap.set(B.maLk, { Bwin: B, Aset: new Set() });
                     containsMap.get(B.maLk).Aset.add(A.maLk);
                 }
             }
         }
-
         const ruleKey = 'BS_KHAM_CHONG_LAN';
-        if (!validationSettings[ruleKey]?.enabled) return;
-
-        containsMap.forEach(({ Bwin, Aset }, bMaLk) => {
-            if (Aset.size === 0) return;
-
-            const recordB = records.find(r => r.maLk === bMaLk);
-            if (!recordB) return;
-
-            const idB = recordB.maBn || recordB.maLk;
-            const B_TH = formatDateTimeForDisplay(Bwin.startTHYL); // Định dạng startTHYL
-            const B_KQ = formatDateTimeForDisplay(Bwin.endKQ);
-
-            const AInfo = Array.from(Aset)
-                .map(aLk => records.find(r => r.maLk === aLk))
-                .filter(Boolean)
-                .map(recA => {
-                    const idA = recA.maBn || recA.maLk;
-                    const wA = byRecord.get(recA.maLk);
-                    const A_TH = formatDateTimeForDisplay(wA.startTHYL); // Định dạng startTHYL
-                    const A_KQ = formatDateTimeForDisplay(wA.endKQ);
-                    return {
-                        textShort: `"${recA.hoTen}" (${idA})`,
-                        detailLine: `• ${recA.hoTen} (${idA}): [TH_YL: ${A_TH} → KQ: ${A_KQ}]` // Cập nhật chi tiết
-                    };
+        if (validationSettings[ruleKey]?.enabled) {
+            containsMap.forEach(({ Bwin, Aset }, bMaLk) => {
+                if (Aset.size === 0) return;
+                const recordB = records.find(r => r.maLk === bMaLk);
+                if (!recordB) return;
+                const idB = recordB.maBn || recordB.maLk;
+                const B_TH = formatDateTimeForDisplay(Bwin.startTHYL);
+                const B_KQ = formatDateTimeForDisplay(Bwin.endKQ);
+                const AInfo = Array.from(Aset)
+                    .map(aLk => records.find(r => r.maLk === aLk))
+                    .filter(Boolean)
+                    .map(recA => {
+                        const idA = recA.maBn || recA.maLk;
+                        const wA = byRecord.get(recA.maLk);
+                        const A_TH = formatDateTimeForDisplay(wA.startTHYL);
+                        const A_KQ = formatDateTimeForDisplay(wA.endKQ);
+                        return {
+                            textShort: `"${recA.hoTen}" (${idA})`,
+                            detailLine: `• ${recA.hoTen} (${idA}): [TH_YL: ${A_TH} → KQ: ${A_KQ}]`
+                        };
+                    });
+                const headerAs = AInfo.map(a => a.textShort).join(', ');
+                const sumKhamCost = (rec) => {
+                    if (!rec || !rec.services) return 0;
+                    return rec.services
+                        .filter(svc => (svc.ten_dich_vu || '').toLowerCase().includes('khám'))
+                        .reduce((acc, svc) => acc + (Number(svc.thanh_tien_bh) || 0), 0);
+                };
+                const khamCost = sumKhamCost(recordB);
+                const msg =
+                    `BS ${tenBacSi} khám chồng (XML 3 công khám): Khoảng thời gian của "${recordB.hoTen}" (${idB}) ` +
+                    `[TH_YL: ${B_TH} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
+                    `<br><strong>Chi tiết CÔNG KHÁM (XML 3):</strong><br>` +
+                    `${AInfo.map(a => a.detailLine).join('<br>')}`;
+                recordB.errors.push({
+                    type: ruleKey,
+                    severity: validationSettings[ruleKey].severity,
+                    message: msg,
+                    cost: costIfCritical(ruleKey, khamCost),
+                    itemName: 'Công khám'
                 });
-
-            const headerAs = AInfo.map(a => a.textShort).join(', ');
-
-            const sumKhamCost = (rec) => {
-                if (!rec || !rec.services) return 0;
-                return rec.services
-                    .filter(svc => (svc.ten_dich_vu || '').toLowerCase().includes('khám'))
-                    .reduce((acc, svc) => acc + (Number(svc.thanh_tien_bh) || 0), 0);
-            };
-            const khamCost = sumKhamCost(recordB);
-
-            // Cập nhật thông báo lỗi
-            const msg =
-                `BS ${tenBacSi} khám chồng (XML 3 công khám): Khoảng thời gian của "${recordB.hoTen}" (${idB}) ` +
-                `[TH_YL: ${B_TH} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
-                `<br><strong>Chi tiết CÔNG KHÁM (XML 3):</strong><br>` +
-                `${AInfo.map(a => a.detailLine).join('<br>')}`;
-
-            recordB.errors.push({
-                type: ruleKey,
-                severity: validationSettings[ruleKey].severity,
-                message: msg,
-                cost: validationSettings[ruleKey]?.severity === 'critical' ? khamCost : 0,
-                itemName: 'Công khám'
             });
-        });
+        }
     });
 }
 
@@ -777,7 +749,7 @@ function validateSingleHoso(hoso) {
             const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
             const maBacSiStr = getText(item, 'MA_BAC_SI');
             const ngayYl = getText(item, 'NGAY_YL');
-            const ngayThYl = getText(item, 'NGAY_TH_YL');
+           const ngayThYl = getText(item, 'NGAY_TH_YL');
 
             drugsForGlobalList.push({
                 ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
@@ -785,12 +757,17 @@ function validateSingleHoso(hoso) {
                 thanh_tien_bh: thanhTienBH
             });
             if(maBacSiStr && ngayYl) {
-                record.drugs.push({
-                    ma_bac_si: maBacSiStr,
-                    ngay_yl: ngayYl,
-                    ten_thuoc: tenThuoc,
-                    thanh_tien_bh: thanhTienBH
-                });
+            // Lấy người thực hiện, nếu không có thì lấy BS chỉ định đầu tiên
+            const performer = getText(item, 'NGUOI_THUC_HIEN') || maBacSiStr.split(/[,;]/)[0].trim();
+            
+            record.drugs.push({
+                ma_bac_si: maBacSiStr,
+                ngay_yl: ngayYl,
+                ten_thuoc: tenThuoc,
+                thanh_tien_bh: thanhTienBH,
+                ngay_th_yl: ngayThYl, // <-- Thêm thuộc tính này
+                performer: performer   // <-- Thêm thuộc tính này
+            });
                 if (!record.mainDoctor) {
                     record.mainDoctor = maBacSiStr.split(/[,;]/)[0].trim();
                 }
@@ -1044,6 +1021,44 @@ function validateSingleHoso(hoso) {
     // =================================================================
     // KẾT THÚC: KIỂM TRA BÁC SĨ KHÁM TRONG NGÀY NGHỈ
     // =================================================================
+  // =================================================================
+// BẮT ĐẦU: KIỂM TRA THYL DVKT (KHÁC KHÁM) TRÙNG VỚI THYL THUỐC
+// =================================================================
+const ruleKeyThylConflict = 'THUOC_DVKT_THYL_TRUNG_GIO';
+if (validationSettings[ruleKeyThylConflict]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
+    // Lấy tất cả các mốc thời gian THYL của thuốc trong hồ sơ này
+    const drugThylTimes = new Set(
+        record.drugs.map(d => d.ngay_th_yl).filter(Boolean)
+    );
+
+    if (drugThylTimes.size > 0) {
+        // Lặp qua các dịch vụ trong cùng hồ sơ
+        record.services.forEach(service => {
+            // Điều kiện 1: Dịch vụ không phải là "khám"
+            const isKham = (service.ten_dich_vu || '').toLowerCase().includes('khám');
+            
+            // Điều kiện 2: Thời gian THYL của dịch vụ này có trong danh sách thời gian của thuốc
+            if (!isKham && service.ngay_th_yl && drugThylTimes.has(service.ngay_th_yl)) {
+                
+                // Tìm tên thuốc tương ứng để thông báo lỗi rõ ràng hơn
+                const conflictingDrug = record.drugs.find(d => d.ngay_th_yl === service.ngay_th_yl);
+                const drugName = conflictingDrug ? conflictingDrug.ten_thuoc : 'một thuốc khác';
+
+                record.errors.push({
+                    type: ruleKeyThylConflict,
+                    severity: validationSettings[ruleKeyThylConflict].severity,
+                    message: `DVKT "${service.ten_dich_vu}" có THYL [${formatDateTimeForDisplay(service.ngay_th_yl)}] trùng với THYL của thuốc "${drugName}".`,
+                    cost: costIfCritical(ruleKeyThylConflict, service.thanh_tien_bh),
+                    itemName: service.ten_dich_vu
+                });
+            }
+        });
+    }
+}
+// =================================================================
+// KẾT THÚC
+// =================================================================
+
     const isSimple = record.t_thuoc > 0 &&
         record.t_xn === 0 &&
         record.t_cdha === 0 &&
@@ -2057,7 +2072,8 @@ function initializeValidationSettings() {
         'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
         'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC',
         'NGAY_TAI_KHAM_NO_XML14',
-        'KQ_DVKT_SAU_YL_THUOC' // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
+        'KQ_DVKT_SAU_YL_THUOC', // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
+      'THUOC_DVKT_THYL_TRUNG_GIO' // <-- THÊM VÀO ĐÂY
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
@@ -2145,6 +2161,14 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+    {
+        id: 12,
+        date: '27-08-2025',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Bổ sung CẢNH BÁO',
+        content: 'XML3. NGÀY TH Y lệnh DVKT bằng NGÀY TH lệnh THUỐC'
+    },
+    
     {
         id: 11,
         date: '19-08-2025',
