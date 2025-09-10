@@ -183,7 +183,29 @@ const isOutsideWorkingHours = (dateTimeString) => {
 // NEW: helper—only assign cost when rule is set to critical
 const costIfCritical = (ruleKey, base) =>
   (validationSettings[ruleKey]?.severity === 'critical' ? (Number(base) || 0) : 0);
-
+/**
+ * Lấy nội dung text của một phần tử XML một cách an toàn.
+ * Hàm sẽ thử lần lượt các selector được cung cấp cho đến khi tìm thấy một giá trị.
+ * @param {Element} element - Phần tử XML cha để bắt đầu tìm kiếm.
+ * @param {...string} selectors - Một hoặc nhiều CSS selector để tìm phần tử con.
+ * @returns {string} - Nội dung text của phần tử tìm thấy, hoặc chuỗi rỗng nếu không tìm thấy.
+ */
+function getText(element, ...selectors) {
+    if (!element) {
+        return ''; // Trả về rỗng nếu phần tử cha không tồn tại
+    }
+    for (const selector of selectors) {
+        const node = element.querySelector(selector);
+        // Kiểm tra xem node có tồn tại và có nội dung text hay không
+        if (node && node.textContent) {
+            const text = node.textContent.trim(); // Lấy nội dung và xóa khoảng trắng thừa
+            if (text) {
+                return text; // Trả về ngay khi tìm thấy giá trị
+            }
+        }
+    }
+    return ''; // Trả về rỗng nếu thử hết các selector mà không thấy
+}
 // ============================= TAB MANAGEMENT =============================
 function openTab(evt, tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -391,7 +413,8 @@ function handleFileUpload(event, type) {
     }
 }
 
-function processXmlContent(xmlContent) {
+function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
+    console.log("Bắt đầu xử lý nội dung..."); // <-- DÒNG THEO DÕI SỐ 1
     const { records, drugs, services, xml4Details } = validateXmlContent(xmlContent);
     globalData.allRecords = records;
     globalData.allDrugs = drugs;
@@ -411,73 +434,57 @@ function processXmlContent(xmlContent) {
     // === TÍNH TOÁN KẾT QUẢ VÀ HIỂN THỊ POPUP ===
     const total = globalData.allRecords.length;
     // **SỬA LỖI 1**: Chỉ khai báo totalErrorRecords một lần ở đây
-    const totalErrorRecords = globalData.allRecords.filter(r => r.errors.length > 0).length;
+   const totalErrorRecords = globalData.allRecords.filter(r => r.errors.length > 0).length;
     const validRecords = total - totalErrorRecords;
-    
     let criticalErrorRecords = 0;
-    let warningOnlyRecords = 0;
     let totalDenialAmount = 0;
-
-    globalData.allRecords.forEach(r => {
+     globalData.allRecords.forEach(r => {
         if (r.errors.length > 0) {
-            const hasCritical = r.errors.some(e => e.severity === 'critical');
-            if (hasCritical) {
-                criticalErrorRecords++;
-            }
-
-            const countedItemsInRecord = new Set();
+            if (r.errors.some(e => e.severity === 'critical')) criticalErrorRecords++;
             r.errors.forEach(e => {
-                if (e.severity === 'critical' && e.cost > 0 && e.itemName && !countedItemsInRecord.has(e.itemName)) {
-                    totalDenialAmount += e.cost;
-                    countedItemsInRecord.add(e.itemName);
-                }
+                if (e.severity === 'critical' && e.cost > 0) totalDenialAmount += e.cost;
             });
         }
     });
-    
-    warningOnlyRecords = totalErrorRecords - criticalErrorRecords;
 
-    showSummaryPopup({ 
-        total: total, 
+    const summaryStats = {
+        maCskcb: getText(new DOMParser().parseFromString(xmlContent, 'text/xml'), 'MACSKCB', 'MA_CSKCB'),
+        total: total,
         totalError: totalErrorRecords,
+        valid: validRecords,
         criticalError: criticalErrorRecords,
-        warningOnly: warningOnlyRecords,
-        denialAmount: totalDenialAmount,
-        valid: validRecords 
-    });
+        warningOnly: totalErrorRecords - criticalErrorRecords,
+        denialAmount: totalDenialAmount
+    };
+
+    showSummaryPopup(summaryStats);
     
-    // === GỬI LOG VỀ TELEGRAM ===
-    const xmlDoc = new DOMParser().parseFromString(globalData.xmlDataContent, 'text/xml');
-    const maCskcb = getText(xmlDoc, 'MACSKCB', 'MA_CSKCB');
+    console.log("Đã tính toán xong stats, chuẩn bị cập nhật Telegram..."); // <-- DÒNG THEO DÕI SỐ 2
+    console.log("Đang gọi updateTelegramLog với messageId:", messageId); // <-- DÒNG THEO DÕI SỐ 3
 
-    sendTelegramLog({
-        maCskcb: maCskcb,
-        totalRecords: total,
-        errorRecords: totalErrorRecords,
-        validRecords: validRecords
-    });
-} // <-- **SỬA LỖI 2**: Thêm dấu ngoặc nhọn bị thiếu ở đây
+    // CẬP NHẬT tin nhắn Telegram đã có với kết quả chi tiết
+    updateTelegramLog(messageId, summaryStats);
+}
 
-function processXmlFile() {
+// HÀM BẮT ĐẦU QUÁ TRÌNH
+async function processXmlFile() { // Thêm "async" ở đây
     const file = document.getElementById('validatorFileInput').files[0];
     if (!file) {
         alert('Vui lòng chọn file XML!');
-        return; // Dừng lại nếu không có file
+        return;
     }
-
-    // ==========================================================
-    // >> GỌI HÀM GỬI LOG BẮT ĐẦU TẠI ĐÂY <<
-    sendTelegramStartLog(file);
-    // ==========================================================
     
     showLoading('validatorLoading');
+
+    // Gửi log "Bắt đầu" và chờ để lấy message_id
+    const messageId = await sendTelegramStartLog(file);
+    
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
             globalData.xmlDataContent = e.target.result;
-            // Dùng setTimeout để đảm bảo log "bắt đầu" được gửi đi
-            // trước khi bắt đầu các tác vụ nặng có thể làm treo trình duyệt
-            setTimeout(() => processXmlContent(globalData.xmlDataContent), 100);
+            // Truyền messageId vào hàm xử lý nội dung
+            setTimeout(() => processXmlContent(globalData.xmlDataContent, messageId), 100);
         } catch (error) {
             hideLoading('validatorLoading');
             alert('Lỗi đọc file: ' + error.message);
@@ -485,6 +492,7 @@ function processXmlFile() {
     };
     reader.readAsText(file, 'UTF-8');
 }
+
 
 function performCrossRecordValidation(records) {
     const machineTimeMap = new Map();
@@ -745,17 +753,7 @@ function validateXmlContent(xmlString) {
 }
 
 function validateSingleHoso(hoso) {
-    const getText = (element, ...selectors) => {
-        if (!element) return '';
-        for (const selector of selectors) {
-            const node = element.querySelector(selector);
-            if (node && node.textContent) {
-                const text = node.textContent.trim();
-                if (text) return text;
-            }
-        }
-        return '';
-    };
+    
     
     const findFileContent = (type) => {
         for (const fileNode of hoso.children) {
@@ -2747,54 +2745,81 @@ function sendTelegramLog(stats) {
 }
 
 /**
- * Gửi tin nhắn thông báo BẮT ĐẦU kiểm tra file về Telegram.
+ * Gửi tin nhắn "Bắt đầu" và trả về ID của tin nhắn đó để cập nhật sau.
  * @param {File} file - Đối tượng file đang được xử lý.
+ * @returns {Promise<number|null>} - Promise chứa message_id hoặc null nếu có lỗi.
  */
-function sendTelegramStartLog(file) {
-    // ⚙️ CẤU HÌNH: Các giá trị này nên giống với hàm sendTelegramLog
+async function sendTelegramStartLog(file) {
     const BOT_TOKEN = '7653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- Token của bạn
     const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
 
-    // Định dạng thời gian
-    const now = new Date();
-    const timestamp = now.toLocaleString('vi-VN', {
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        timeZone: 'Asia/Ho_Chi_Minh'
-    }).replace(',', '');
-
-    // Định dạng kích thước file cho dễ đọc
+    const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
     const fileSizeKB = (file.size / 1024).toFixed(2);
 
-    // Tạo nội dung tin nhắn
+    // Tin nhắn ban đầu
     let message = `<b>🚀 BẮT ĐẦU KIỂM TRA</b>\n\n`;
     message += `📄 <b>Tên file:</b> ${file.name}\n`;
-    message += `💾 <b>Kích thước:</b> ${fileSizeKB} KB\n\n`;
-    message += `⏰ <b>Thời gian bắt đầu:</b> ${timestamp}`;
+    message += `<i>Vui lòng chờ, đang xử lý...</i>`;
 
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
 
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params)
+        });
+        const data = await response.json();
+        if (data.ok) {
+            console.log('Tin nhắn ban đầu đã gửi, message_id:', data.result.message_id);
+            return data.result.message_id; // Trả về ID của tin nhắn
+        } else {
+            console.error('Lỗi khi gửi tin nhắn ban đầu:', data.description);
+            return null;
+        }
+    } catch (error) {
+        console.error('Lỗi mạng hoặc fetch:', error);
+        return null;
+    }
+}
+
+/**
+ * Cập nhật một tin nhắn đã có trên Telegram với kết quả chi tiết.
+ * @param {number} messageId - ID của tin nhắn cần cập nhật.
+ * @param {object} stats - Đối tượng chứa tất cả các thông số thống kê.
+ */
+function updateTelegramLog(messageId, stats) {
+    if (!messageId) return; // Không làm gì nếu không có messageId
+
+    const BOT_TOKEN = '7653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- Token của bạn
+    const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
+
+    // Nội dung tin nhắn cập nhật
+    let message = `<b>🔎 Kết Quả Kiểm Tra</b>\n\n`;
+    message += `🏥 <b>Mã CSKCB:</b> ${stats.maCskcb}\n`;
+    message += `📒 <b>Tổng hồ sơ:</b> ${stats.total}\n`;
+    message += `✔️ <b>Số hồ sơ hợp lệ:</b> ${stats.valid}\n`;
+    message += `❌ <b>Tổng số hồ sơ lỗi:</b> ${stats.totalError}\n`;
+    message += `🔴 <b>Lỗi nghiêm trọng:</b> ${stats.criticalError}\n`;
+    message += `🟡 <b>Chỉ có cảnh báo:</b> ${stats.warningOnly}\n`;
+    message += `🎉 <b>Tổng tiền dự kiến XT:</b> ${formatCurrency(stats.denialAmount)}`;
+
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`;
     const params = {
         chat_id: CHAT_ID,
+        message_id: messageId,
         text: message,
         parse_mode: 'HTML'
     };
 
-    // Gửi yêu cầu đến Telegram
     fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.ok) {
-            console.log('Thông báo bắt đầu đã được gửi đến Telegram!');
-        } else {
-            console.error('Lỗi khi gửi thông báo bắt đầu:', data.description);
-        }
-    })
-    .catch(error => {
-        console.error('Lỗi mạng hoặc fetch:', error);
-    });
+    }).then(response => response.json()).then(data => {
+        if (data.ok) console.log('Tin nhắn đã được cập nhật thành công!');
+        else console.error('Lỗi khi cập nhật tin nhắn:', data.description);
+    }).catch(error => console.error('Lỗi mạng:', error));
 }
+
