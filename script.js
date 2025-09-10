@@ -408,16 +408,18 @@ function processXmlContent(xmlContent) {
     updateDashboard();
     updateDenialProjectionTab();
 
-    // === CALCULATION LOGIC FOR SUMMARY POPUP ===
+    // === TÍNH TOÁN KẾT QUẢ VÀ HIỂN THỊ POPUP ===
     const total = globalData.allRecords.length;
-    let totalErrorRecords = 0;
+    // **SỬA LỖI 1**: Chỉ khai báo totalErrorRecords một lần ở đây
+    const totalErrorRecords = globalData.allRecords.filter(r => r.errors.length > 0).length;
+    const validRecords = total - totalErrorRecords;
+    
     let criticalErrorRecords = 0;
     let warningOnlyRecords = 0;
     let totalDenialAmount = 0;
 
     globalData.allRecords.forEach(r => {
         if (r.errors.length > 0) {
-            totalErrorRecords++;
             const hasCritical = r.errors.some(e => e.severity === 'critical');
             if (hasCritical) {
                 criticalErrorRecords++;
@@ -441,19 +443,40 @@ function processXmlContent(xmlContent) {
         criticalError: criticalErrorRecords,
         warningOnly: warningOnlyRecords,
         denialAmount: totalDenialAmount,
-        valid: total - totalErrorRecords 
+        valid: validRecords 
     });
-}
+    
+    // === GỬI LOG VỀ TELEGRAM ===
+    const xmlDoc = new DOMParser().parseFromString(globalData.xmlDataContent, 'text/xml');
+    const maCskcb = getText(xmlDoc, 'MACSKCB', 'MA_CSKCB');
+
+    sendTelegramLog({
+        maCskcb: maCskcb,
+        totalRecords: total,
+        errorRecords: totalErrorRecords,
+        validRecords: validRecords
+    });
+} // <-- **SỬA LỖI 2**: Thêm dấu ngoặc nhọn bị thiếu ở đây
 
 function processXmlFile() {
     const file = document.getElementById('validatorFileInput').files[0];
-    if (!file) return alert('Vui lòng chọn file XML!');
+    if (!file) {
+        alert('Vui lòng chọn file XML!');
+        return; // Dừng lại nếu không có file
+    }
+
+    // ==========================================================
+    // >> GỌI HÀM GỬI LOG BẮT ĐẦU TẠI ĐÂY <<
+    sendTelegramStartLog(file);
+    // ==========================================================
     
     showLoading('validatorLoading');
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
             globalData.xmlDataContent = e.target.result;
+            // Dùng setTimeout để đảm bảo log "bắt đầu" được gửi đi
+            // trước khi bắt đầu các tác vụ nặng có thể làm treo trình duyệt
             setTimeout(() => processXmlContent(globalData.xmlDataContent), 100);
         } catch (error) {
             hideLoading('validatorLoading');
@@ -2663,3 +2686,115 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSchedules();
     initializeScheduler();
 });
+
+/**
+ * Gửi tin nhắn thông báo BẮT ĐẦU kiểm tra file về Telegram.
+ */
+function sendTelegramStartLog(file) {
+    const BOT_TOKEN = '653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- THAY TOKEN CỦA BẠN
+    const CHAT_ID = 'YOUR_CHANNEL_ID_HERE';    // <-- THAY ID KÊNH CỦA BẠN
+
+    const now = new Date();
+    const timestamp = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
+    const fileSizeKB = (file.size / 1024).toFixed(2);
+
+    let message = `<b>🚀 BẮT ĐẦU KIỂM TRA</b>\n\n`;
+    message += `📄 <b>Tên file:</b> ${file.name}\n`;
+    message += `💾 <b>Kích thước:</b> ${fileSizeKB} KB\n\n`;
+    message += `⏰ <b>Thời gian bắt đầu:</b> ${timestamp}`;
+
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+    }).then(response => response.json()).then(data => {
+        if (data.ok) console.log('Thông báo bắt đầu đã được gửi!');
+        else console.error('Lỗi gửi thông báo bắt đầu:', data.description);
+    }).catch(error => console.error('Lỗi mạng:', error));
+}
+
+/**
+ * Gửi tin nhắn log KẾT QUẢ kiểm tra file về Telegram.
+ */
+function sendTelegramLog(stats) {
+    const BOT_TOKEN = '653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- THAY TOKEN CỦA BẠN
+    const CHAT_ID = '1734114014';    // <-- THAY ID KÊNH CỦA BẠN
+
+    const now = new Date();
+    const timestamp = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
+
+    let message = `<b>📊 KẾT QUẢ KIỂM TRA</b>\n\n`;
+    message += `🏥 Mã CSKCB: ${stats.maCskcb || 'Không xác định'}\n`;
+    message += `🗂️ Tổng hồ sơ: ${stats.totalRecords}\n`;
+    message += `❌ Số hồ sơ lỗi: ${stats.errorRecords}\n`;
+    message += `✅ Số hồ sơ đúng: ${stats.validRecords}\n\n`;
+    message += `⏰ Thời gian gửi: ${timestamp}`;
+
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+    }).then(response => response.json()).then(data => {
+        if (data.ok) console.log('Log kết quả đã được gửi!');
+        else console.error('Lỗi gửi log kết quả:', data.description);
+    }).catch(error => console.error('Lỗi mạng:', error));
+}
+
+/**
+ * Gửi tin nhắn thông báo BẮT ĐẦU kiểm tra file về Telegram.
+ * @param {File} file - Đối tượng file đang được xử lý.
+ */
+function sendTelegramStartLog(file) {
+    // ⚙️ CẤU HÌNH: Các giá trị này nên giống với hàm sendTelegramLog
+    const BOT_TOKEN = '7653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- Token của bạn
+    const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
+
+    // Định dạng thời gian
+    const now = new Date();
+    const timestamp = now.toLocaleString('vi-VN', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        timeZone: 'Asia/Ho_Chi_Minh'
+    }).replace(',', '');
+
+    // Định dạng kích thước file cho dễ đọc
+    const fileSizeKB = (file.size / 1024).toFixed(2);
+
+    // Tạo nội dung tin nhắn
+    let message = `<b>🚀 BẮT ĐẦU KIỂM TRA</b>\n\n`;
+    message += `📄 <b>Tên file:</b> ${file.name}\n`;
+    message += `💾 <b>Kích thước:</b> ${fileSizeKB} KB\n\n`;
+    message += `⏰ <b>Thời gian bắt đầu:</b> ${timestamp}`;
+
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
+    const params = {
+        chat_id: CHAT_ID,
+        text: message,
+        parse_mode: 'HTML'
+    };
+
+    // Gửi yêu cầu đến Telegram
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            console.log('Thông báo bắt đầu đã được gửi đến Telegram!');
+        } else {
+            console.error('Lỗi khi gửi thông báo bắt đầu:', data.description);
+        }
+    })
+    .catch(error => {
+        console.error('Lỗi mạng hoặc fetch:', error);
+    });
+}
