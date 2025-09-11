@@ -881,17 +881,18 @@ function validateSingleHoso(hoso) {
        // TÌM VÀ THAY THẾ TOÀN BỘ KHỐI LOGIC NÀY TRONG VÒNG LẶP DUYỆT THUỐC
 
 // ===============================================================
-// BẮT ĐẦU: LOGIC KIỂM TRA CHỐNG CHỈ ĐỊNH ICD (PHIÊN BẢN MỚI)
+// ===============================================================
+// BẮT ĐẦU: LOGIC KIỂM TRA CHỐNG CHỈ ĐỊNH ICD (ĐÃ CẬP NHẬT)
 // ===============================================================
 if (contraindicationMap.has(maThuoc)) {
     const rule = contraindicationMap.get(maThuoc);
     
     // 1. Gom tất cả các mã bệnh của bệnh nhân vào một mảng
-    // Xử lý trường hợp MA_BENH_KT có nhiều mã cách nhau bởi dấu phẩy
+    // SỬA ĐỔI: Dùng regex /[;,]/ để tách chuỗi bằng cả dấu phẩy và chấm phẩy
     const patientDiagnoses = [
         record.chanDoan,
-        ...(record.maBenhKemTheo || '').split(','),
-        ...(record.maBenhYHCT || '').split(',')
+        ...(record.maBenhKemTheo || '').split(/[;,]/), // Xử lý cả ',' và ';'
+        ...(record.maBenhYHCT || '').split(/[;,]/)     // Xử lý cả ',' và ';'
     ].map(d => d.trim()).filter(Boolean); // Làm sạch mảng, xóa các mục rỗng
 
     // 2. Kiểm tra từng mã bệnh của bệnh nhân với danh sách chống chỉ định
