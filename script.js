@@ -15,6 +15,20 @@ let globalData = {
     filteredComparisonResults: [],
     charts: {}
 };
+// Đặt đoạn code này ở phần đầu script của bạn
+
+const contraindicationMap = new Map([
+    // Ví dụ: Thuốc HoAstex chống chỉ định với các mã ICD cho bệnh Đái tháo đường (E10-E14)
+    // LƯU Ý: Bạn cần thay 'MA_THUOC_CUA_HOASTEX' bằng mã thuốc thực tế trong danh mục.
+    ['05C.150', {
+        drugName: 'HoAstex',
+        icdCodes: ['E10', 'E11', 'E12', 'E13', 'E14','E11.9']
+    }],
+    
+    // Thêm các quy tắc khác ở đây...
+    // Ví dụ: ['MA_THUOC_XYZ', { drugName: 'Tên Thuốc XYZ', icdCodes: ['J45', 'I10'] }]
+]);
+
 
 const ERROR_TYPES = {
   
@@ -42,7 +56,9 @@ const ERROR_TYPES = {
     'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT', 
   'THUOC_DVKT_THYL_TRUNG_GIO': 'XML3. NGÀY TH Y lệnh DVKT bằng hoặc sau NGÀY TH Y lệnh THUỐC', // <-- SỬA DÒNG NÀY
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)',
-  'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)'
+  
+  'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
+    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)'
     
 };
 
@@ -753,6 +769,7 @@ function validateXmlContent(xmlString) {
 }
 
 function validateSingleHoso(hoso) {
+  
     
     
     const findFileContent = (type) => {
@@ -801,7 +818,9 @@ function validateSingleHoso(hoso) {
         t_vanchuyen: parseFloat(getText(tongHopNode, 'T_VANCHUYEN') || '0'),
         gioiTinh: getText(tongHopNode,'GIOI_TINH'),
         ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
-        chanDoan: getText(tongHopNode,'CHAN_DOAN_RV', 'MA_BENH'),
+       chanDoan: getText(tongHopNode, 'MA_BENH_CHINH', 'MA_BENH_KT','MA_BENH_YHCT', 'CHAN_DOAN_RV'),
+      maBenhKemTheo: getText(tongHopNode, 'MA_BENH_KT'), 
+    maBenhYHCT: getText(tongHopNode, 'MA_BENH_YHCT'), 
         maKhoa: getText(tongHopNode,'MA_KHOA'),
         isSimpleCase: false,
         mainDoctor: null,
@@ -824,7 +843,8 @@ function validateSingleHoso(hoso) {
             const maBacSiStr = getText(item, 'MA_BAC_SI');
             const ngayYl = getText(item, 'NGAY_YL');
            const ngayThYl = getText(item, 'NGAY_TH_YL');
-
+        const maThuoc = getText(item, 'MA_THUOC'); // Lấy mã thuốc
+        const maBenhChinh = record.chanDoan; // Lấy mã bệnh chính của bệnh nhân
             drugsForGlobalList.push({
                 ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
                 so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
@@ -848,6 +868,48 @@ function validateSingleHoso(hoso) {
             }
 
             if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
+       // TÌM VÀ THAY THẾ TOÀN BỘ KHỐI LOGIC NÀY TRONG VÒNG LẶP DUYỆT THUỐC
+
+// ===============================================================
+// BẮT ĐẦU: LOGIC KIỂM TRA CHỐNG CHỈ ĐỊNH ICD (PHIÊN BẢN MỚI)
+// ===============================================================
+if (contraindicationMap.has(maThuoc)) {
+    const rule = contraindicationMap.get(maThuoc);
+    
+    // 1. Gom tất cả các mã bệnh của bệnh nhân vào một mảng
+    // Xử lý trường hợp MA_BENH_KT có nhiều mã cách nhau bởi dấu phẩy
+    const patientDiagnoses = [
+        record.chanDoan,
+        ...(record.maBenhKemTheo || '').split(','),
+        ...(record.maBenhYHCT || '').split(',')
+    ].map(d => d.trim()).filter(Boolean); // Làm sạch mảng, xóa các mục rỗng
+
+    // 2. Kiểm tra từng mã bệnh của bệnh nhân với danh sách chống chỉ định
+    let matchingIcd = null;
+    const isContraindicated = patientDiagnoses.some(patientIcd => {
+        if (rule.icdCodes.some(icdPrefix => patientIcd.startsWith(icdPrefix))) {
+            matchingIcd = patientIcd; // Lưu lại mã bệnh gây ra lỗi
+            return true;
+        }
+        return false;
+    });
+
+    // 3. Nếu tìm thấy chống chỉ định, tạo lỗi
+    if (isContraindicated) {
+        record.errors.push({
+            type: 'THUOC_CHONG_CHI_DINH_ICD',
+            severity: 'critical',
+            message: `Thuốc "${tenThuoc}" chống chỉ định với chẩn đoán "${matchingIcd}" (${rule.diseaseName}).`,
+            cost: thanhTienBH,
+            itemName: tenThuoc
+        });
+    }
+}
+// ===============================================================
+// KẾT THÚC: LOGIC KIỂM TRA CHỐNG CHỈ ĐỊNH ICD
+// ===============================================================
+
+
             if (ngayThYl) {
                 if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenThuoc });
                 if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
@@ -2144,7 +2206,7 @@ function initializeValidationSettings() {
         'NGAY_TAI_KHAM_NO_XML14',
         'KQ_DVKT_SAU_YL_THUOC', // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
       'THUOC_DVKT_THYL_TRUNG_GIO', // <-- THÊM VÀO ĐÂY
-       'BS_KHAM_VUOT_DINH_MUC'
+       'BS_KHAM_VUOT_DINH_MUC','THUOC_CHONG_CHI_DINH_ICD'
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
@@ -2715,36 +2777,6 @@ function sendTelegramStartLog(file) {
 }
 
 /**
- * Gửi tin nhắn log KẾT QUẢ kiểm tra file về Telegram.
- */
-function sendTelegramLog(stats) {
-    const BOT_TOKEN = '653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- THAY TOKEN CỦA BẠN
-    const CHAT_ID = '1734114014';    // <-- THAY ID KÊNH CỦA BẠN
-
-    const now = new Date();
-    const timestamp = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
-
-    let message = `<b>📊 KẾT QUẢ KIỂM TRA</b>\n\n`;
-    message += `🏥 Mã CSKCB: ${stats.maCskcb || 'Không xác định'}\n`;
-    message += `🗂️ Tổng hồ sơ: ${stats.totalRecords}\n`;
-    message += `❌ Số hồ sơ lỗi: ${stats.errorRecords}\n`;
-    message += `✅ Số hồ sơ đúng: ${stats.validRecords}\n\n`;
-    message += `⏰ Thời gian gửi: ${timestamp}`;
-
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
-
-    fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-    }).then(response => response.json()).then(data => {
-        if (data.ok) console.log('Log kết quả đã được gửi!');
-        else console.error('Lỗi gửi log kết quả:', data.description);
-    }).catch(error => console.error('Lỗi mạng:', error));
-}
-
-/**
  * Gửi tin nhắn "Bắt đầu" và trả về ID của tin nhắn đó để cập nhật sau.
  * @param {File} file - Đối tượng file đang được xử lý.
  * @returns {Promise<number|null>} - Promise chứa message_id hoặc null nếu có lỗi.
@@ -2822,4 +2854,3 @@ function updateTelegramLog(messageId, stats) {
         else console.error('Lỗi khi cập nhật tin nhắn:', data.description);
     }).catch(error => console.error('Lỗi mạng:', error));
 }
-
