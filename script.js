@@ -18,15 +18,25 @@ let globalData = {
 // Đặt đoạn code này ở phần đầu script của bạn
 
 const contraindicationMap = new Map([
-    // Ví dụ: Thuốc HoAstex chống chỉ định với các mã ICD cho bệnh Đái tháo đường (E10-E14)
-    // LƯU Ý: Bạn cần thay 'MA_THUOC_CUA_HOASTEX' bằng mã thuốc thực tế trong danh mục.
-    ['05C.150', {
-        drugName: 'HoAstex',
-        icdCodes: ['E10', 'E11', 'E12', 'E13', 'E14','E11.9']
-    }],
+   // --- Sheet: Hoastex, Hometex, Mizho ---
+    ['05C.150', { drugName: 'Hoastex 45g; 11,25g; 83,7mg', icdCodes: ['E10', 'E11', 'E12', 'E13', 'E14'], diseaseName: 'Đái tháo đường' }],
+
+    // --- Sheet: Acetylcystein (CẬP NHẬT MỚI) ---
+    ['40.998', { drugName: 'Acetylcystein 200mg', icdCodes: ['J02', 'J45'], diseaseName: 'Viêm họng cấp' }],
     
-    // Thêm các quy tắc khác ở đây...
-    // Ví dụ: ['MA_THUOC_XYZ', { drugName: 'Tên Thuốc XYZ', icdCodes: ['J45', 'I10'] }]
+
+    // --- Sheet: Katrypsin Fort, Dopolys - S ---
+    ['40.67', { drugName: 'Katrypsin Fort', icdCodes: ['J02', 'J00', 'J45'], diseaseName: 'Viêm họng' }],
+   ['40.734', { drugName: 'Dopolys - S', icdCodes: ['H81'], diseaseName: 'Chưa rõ, H81 sẽ xuất toán' }],
+
+    // --- Sheet: Nhóm ức chế bơm proton ---
+    ['01.01.01.12', { drugName: 'Lansoprazol 30mg', icdCodes: ['K29'], diseaseName: 'Viêm dạ dày' }],
+   ['40.677', { drugName: 'Omeprazol 20mg', icdCodes: ['K29', 'J02', 'H81'], diseaseName: 'Viêm dạ dày' }],
+    ['40.678', { drugName: 'Esomeprazol 40mg', icdCodes: ['K29'], diseaseName: 'Viêm dạ dày' }],
+
+    // --- Sheet: Hoạt huyết dưỡng não, Midatan ---
+    ['05C.127.1', { drugName: 'Hoạt huyết dưỡng não', icdCodes: ['I10', 'K25'], diseaseName: 'chưa rõ' }],
+    ['40.155', { drugName: 'Midata', icdCodes: ['J20', 'J00', 'J45'], diseaseName: 'Kháng sinh không cần thiết cho viêm phế quản cấp (J20) thông thường (thường do virus)' }],
 ]);
 
 
