@@ -52,7 +52,7 @@ const contraindicationMap = new Map([
 
     // --- Sheet: Hoạt huyết dưỡng não, Midatan ---
     ['05C.127.1', { drugName: 'Hoạt huyết dưỡng não', icdCodes: ['I10', 'K25'], diseaseName: 'chưa rõ' }],
-    ['40.155', { drugName: 'Midata', icdCodes: ['J20', 'J00', 'J45'], diseaseName: 'Kháng sinh không cần thiết cho viêm phế quản cấp (J20) thông thường (thường do virus)' }],
+    ['40.155', { drugName: 'Midata', icdCodes: ['J20', 'J00', 'J45'], diseaseName: 'Kháng sinh không cần thiết cho viêm phế quản thông thường (thường do virus)' }],
 ]);
 
 
