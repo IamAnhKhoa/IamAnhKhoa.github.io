@@ -27,7 +27,7 @@ const indicationMap = new Map([
     }],
  ['40.677', {
         drugName: 'Omeprazol 20mg',
-       requiredIcdCodes: ['K25'], 
+       requiredIcdCodes: ['K21','K25','K30'], 
         diseaseName: 'Loét dạ dày'
     }]
     // Bạn có thể thêm các quy tắc khác cho các thuốc khác ở đây
