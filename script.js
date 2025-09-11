@@ -16,7 +16,23 @@ let globalData = {
     charts: {}
 };
 // Đặt đoạn code này ở phần đầu script của bạn
+// Đặt đoạn code này ở phần đầu script của bạn
 
+const indicationMap = new Map([
+    // Ví dụ: Kê thuốc Mizho (05C.11) thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30
+    ['05C.11', { 
+        drugName: 'Mizho', 
+        requiredIcdCodes: ['K21', 'R10', 'K30','U50.101'], 
+        diseaseName: 'bệnh lý tiêu hóa' 
+    }],
+ ['40.677', {
+        drugName: 'Omeprazol 20mg',
+        requiredIcds: ['K25'],
+        diseaseName: 'Loét dạ dày'
+    }]
+    // Bạn có thể thêm các quy tắc khác cho các thuốc khác ở đây
+    // Ví dụ: ['MÃ_THUỐC', { requiredIcdCodes: ['ICD1', 'ICD2'], diseaseName: 'TÊN NHÓM BỆNH' }],
+]);
 const contraindicationMap = new Map([
    // --- Sheet: Hoastex, Hometex, Mizho ---
     ['05C.150', { drugName: 'Hoastex 45g; 11,25g; 83,7mg', icdCodes: ['E10', 'E11', 'E12', 'E13', 'E14'], diseaseName: 'Đái tháo đường' }],
@@ -68,7 +84,7 @@ const ERROR_TYPES = {
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)',
   
   'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
-    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)'
+    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp' // <-- THÊM DÒNG NÀY
     
 };
 
@@ -780,8 +796,6 @@ function validateXmlContent(xmlString) {
 
 function validateSingleHoso(hoso) {
   
-    
-    
     const findFileContent = (type) => {
         for (const fileNode of hoso.children) {
             if (fileNode.nodeName === 'FILEHOSO') {
@@ -828,7 +842,7 @@ function validateSingleHoso(hoso) {
         t_vanchuyen: parseFloat(getText(tongHopNode, 'T_VANCHUYEN') || '0'),
         gioiTinh: getText(tongHopNode,'GIOI_TINH'),
         ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
-       chanDoan: getText(tongHopNode, 'MA_BENH_CHINH', 'MA_BENH_KT','MA_BENH_YHCT', 'CHAN_DOAN_RV'),
+      chanDoan: getText(tongHopNode, 'MA_BENH_CHINH'), // Chỉ lấy mã bệnh chính
       maBenhKemTheo: getText(tongHopNode, 'MA_BENH_KT'), 
     maBenhYHCT: getText(tongHopNode, 'MA_BENH_YHCT'), 
         maKhoa: getText(tongHopNode,'MA_KHOA'),
@@ -877,47 +891,77 @@ function validateSingleHoso(hoso) {
                 }
             }
 
-            if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
-       // TÌM VÀ THAY THẾ TOÀN BỘ KHỐI LOGIC NÀY TRONG VÒNG LẶP DUYỆT THUỐC
+         if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
+            
+            // Gom tất cả các mã bệnh của bệnh nhân vào một mảng để tái sử dụng
+            const patientDiagnoses = [
+                record.chanDoan,
+                ...(record.maBenhKemTheo || '').split(/[;,]/),
+                ...(record.maBenhYHCT || '').split(/[;,]/)
+            ].map(d => d.trim()).filter(Boolean);
 
+            // ===============================================================
+            // KHỐI 1: KIỂM TRA CHỐNG CHỈ ĐỊNH (LOGIC CŨ ĐƯỢC NÂNG CẤP)
+            // ===============================================================
+            if (contraindicationMap.has(maThuoc)) {
+                const rule = contraindicationMap.get(maThuoc);
+                let matchingIcd = null;
+                const isContraindicated = patientDiagnoses.some(patientIcd => {
+                    if (rule.icdCodes.some(icdPrefix => patientIcd.startsWith(icdPrefix))) {
+                        matchingIcd = patientIcd;
+                        return true;
+                    }
+                    return false;
+                });
+                if (isContraindicated) {
+                    record.errors.push({
+                        type: 'THUOC_CHONG_CHI_DINH_ICD',
+                        severity: 'critical',
+                        message: `Thuốc "${tenThuoc}" chống chỉ định với chẩn đoán "${matchingIcd}" (${rule.diseaseName}).`,
+                        cost: thanhTienBH,
+                        itemName: tenThuoc
+                    });
+                }
+            }
+
+            // ===============================================================
+            // KHỐI 2: KIỂM TRA CHỈ ĐỊNH BẮT BUỘC (LOGIC MỚI THÊM VÀO)
+            // ===============================================================
+           // ===============================================================
+// BẮT ĐẦU: LOGIC KIỂM TRA CHỈ ĐỊNH BẮT BUỘC (ĐÃ CẬP NHẬT LẠI)
 // ===============================================================
-// ===============================================================
-// BẮT ĐẦU: LOGIC KIỂM TRA CHỐNG CHỈ ĐỊNH ICD (ĐÃ CẬP NHẬT)
-// ===============================================================
-if (contraindicationMap.has(maThuoc)) {
-    const rule = contraindicationMap.get(maThuoc);
-    
-    // 1. Gom tất cả các mã bệnh của bệnh nhân vào một mảng
-    // SỬA ĐỔI: Dùng regex /[;,]/ để tách chuỗi bằng cả dấu phẩy và chấm phẩy
+if (indicationMap.has(maThuoc)) {
+    const rule = indicationMap.get(maThuoc);
+
+    // Dùng lại mảng chẩn đoán đã được tách ở phần kiểm tra chống chỉ định
     const patientDiagnoses = [
         record.chanDoan,
-        ...(record.maBenhKemTheo || '').split(/[;,]/), // Xử lý cả ',' và ';'
-        ...(record.maBenhYHCT || '').split(/[;,]/)     // Xử lý cả ',' và ';'
-    ].map(d => d.trim()).filter(Boolean); // Làm sạch mảng, xóa các mục rỗng
+        ...(record.maBenhKemTheo || '').split(/[;,]/),
+        ...(record.maBenhYHCT || '').split(/[;,]/)
+    ].map(d => d.trim()).filter(Boolean);
 
-    // 2. Kiểm tra từng mã bệnh của bệnh nhân với danh sách chống chỉ định
-    let matchingIcd = null;
-    const isContraindicated = patientDiagnoses.some(patientIcd => {
-        if (rule.icdCodes.some(icdPrefix => patientIcd.startsWith(icdPrefix))) {
-            matchingIcd = patientIcd; // Lưu lại mã bệnh gây ra lỗi
-            return true;
-        }
-        return false;
-    });
+    // Kiểm tra xem bệnh nhân có ÍT NHẤT MỘT chẩn đoán phù hợp không
+    const hasRequiredDiagnosis = patientDiagnoses.some(patientIcd => 
+        rule.requiredIcdCodes.some(requiredPrefix => patientIcd.startsWith(requiredPrefix))
+    );
 
-    // 3. Nếu tìm thấy chống chỉ định, tạo lỗi
-    if (isContraindicated) {
+    // Nếu không tìm thấy bất kỳ chẩn đoán phù hợp nào, tạo lỗi
+    if (!hasRequiredDiagnosis) {
+        // Lấy chuỗi các chẩn đoán thực tế của bệnh nhân
+        const actualDiagnoses = patientDiagnoses.join(', ');
+        
         record.errors.push({
-            type: 'THUOC_CHONG_CHI_DINH_ICD',
-            severity: 'critical',
-            message: `Thuốc "${tenThuoc}" chống chỉ định với chẩn đoán "${matchingIcd}" (${rule.diseaseName}).`,
+            type: 'THUOC_KHONG_PHU_HOP_ICD',
+            severity: 'critical', 
+            // CẬP NHẬT LẠI THÔNG BÁO LỖI ĐỂ RÕ RÀNG HƠN
+            message: `Thuốc "${tenThuoc}" yêu cầu chẩn đoán (${rule.diseaseName}: ${rule.requiredIcdCodes.join(', ')}), nhưng chẩn đoán của bệnh nhân là [${actualDiagnoses}].`,
             cost: thanhTienBH,
             itemName: tenThuoc
         });
     }
 }
 // ===============================================================
-// KẾT THÚC: LOGIC KIỂM TRA CHỐNG CHỈ ĐỊNH ICD
+// KẾT THÚC: LOGIC KIỂM TRA CHỈ ĐỊNH BẮT BUỘC
 // ===============================================================
 
 
@@ -2305,6 +2349,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+      {
+        id: 14,
+        date: '11-09-2025',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Bổ sung CẢNH BÁO',
+        content: 'Y lệnh thuốc sai, chống chỉ định'
+    },
      {
         id: 13,
         date: '09-09-2025',
@@ -2763,7 +2814,7 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function sendTelegramStartLog(file) {
     const BOT_TOKEN = '653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- THAY TOKEN CỦA BẠN
-    const CHAT_ID = 'YOUR_CHANNEL_ID_HERE';    // <-- THAY ID KÊNH CỦA BẠN
+    const CHAT_ID = '1734114014';    // <-- THAY ID KÊNH CỦA BẠN
 
     const now = new Date();
     const timestamp = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
