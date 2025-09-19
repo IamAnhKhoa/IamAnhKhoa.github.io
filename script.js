@@ -23,13 +23,14 @@ const indicationMap = new Map([
     ['05C.11', { 
         drugName: 'Mizho', 
         requiredIcdCodes: ['K21', 'R10', 'K30','U50.101'], 
-        diseaseName: 'bệnh lý tiêu hóa' 
+        diseaseName: 'Kê thuốc Mizho thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30' 
     }],
  ['40.677', {
         drugName: 'Omeprazol 20mg',
        requiredIcdCodes: ['K21','K25','K30'], 
-        diseaseName: 'Loét dạ dày'
-    }]
+        diseaseName: 'Kê thuốc Omeprazol 20mg thì BẮT BUỘC phải có chẩn đoán K21, K25 hoặc K30'
+    }],
+     ['40.734', { drugName: 'Dopolys - S', icdCodes: ['I83'], diseaseName: 'Kê thuốc Dopolys - S thì BẮT BUỘC phải có chẩn đoán I83' }],
     // Bạn có thể thêm các quy tắc khác cho các thuốc khác ở đây
     // Ví dụ: ['MÃ_THUỐC', { requiredIcdCodes: ['ICD1', 'ICD2'], diseaseName: 'TÊN NHÓM BỆNH' }],
 ]);
@@ -43,7 +44,7 @@ const contraindicationMap = new Map([
 
     // --- Sheet: Katrypsin Fort, Dopolys - S ---
     ['40.67', { drugName: 'Katrypsin Fort', icdCodes: ['J02', 'J00', 'J45'], diseaseName: 'Viêm họng' }],
-   ['40.734', { drugName: 'Dopolys - S', icdCodes: ['H81'], diseaseName: 'Chưa rõ, H81 sẽ xuất toán' }],
+  
 
     // --- Sheet: Nhóm ức chế bơm proton ---
     ['01.01.01.12', { drugName: 'Lansoprazol 30mg', icdCodes: ['K29'], diseaseName: 'Viêm dạ dày' }],
