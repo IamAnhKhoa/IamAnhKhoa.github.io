@@ -25,12 +25,18 @@ const indicationMap = new Map([
         requiredIcdCodes: ['K21', 'R10', 'K30','U50.101'], 
         diseaseName: 'Kê thuốc Mizho thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30' 
     }],
+    
+     ['40.734', { 
+         drugName: 'Dopolys - S',
+         requiredIcdCodes: ['I83'], 
+         diseaseName: 'Kê thuốc Dopolys - S thì BẮT BUỘC phải có chẩn đoán I83' }],
+    
  ['40.677', {
         drugName: 'Omeprazol 20mg',
        requiredIcdCodes: ['K21','K25','K30'], 
         diseaseName: 'Kê thuốc Omeprazol 20mg thì BẮT BUỘC phải có chẩn đoán K21, K25 hoặc K30'
     }],
-     ['40.734', { drugName: 'Dopolys - S', icdCodes: ['I83'], diseaseName: 'Kê thuốc Dopolys - S thì BẮT BUỘC phải có chẩn đoán I83' }],
+    
     // Bạn có thể thêm các quy tắc khác cho các thuốc khác ở đây
     // Ví dụ: ['MÃ_THUỐC', { requiredIcdCodes: ['ICD1', 'ICD2'], diseaseName: 'TÊN NHÓM BỆNH' }],
 ]);
