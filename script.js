@@ -507,7 +507,14 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     };
 
     showSummaryPopup(summaryStats);
-    
+    // =======================================================
+    // 👉👉 CODE MỚI CẦN THÊM VÀO ĐÂY ĐỂ GHI LỊCH SỬ SHEET
+    // =======================================================
+    const finalMaCoSo = summaryStats.maCskcb; // Lấy Mã cơ sở đã trích xuất
+    const finalTotalRecords = summaryStats.total; // Lấy Tổng hồ sơ đã tính
+    logCheckHistoryToGoogleSheet(finalTotalRecords, finalMaCoSo); 
+    // =======================================================
+
     console.log("Đã tính toán xong stats, chuẩn bị cập nhật Telegram..."); // <-- DÒNG THEO DÕI SỐ 2
     console.log("Đang gọi updateTelegramLog với messageId:", messageId); // <-- DÒNG THEO DÕI SỐ 3
 
@@ -2922,4 +2929,45 @@ function updateTelegramLog(messageId, stats) {
         if (data.ok) console.log('Tin nhắn đã được cập nhật thành công!');
         else console.error('Lỗi khi cập nhật tin nhắn:', data.description);
     }).catch(error => console.error('Lỗi mạng:', error));
+}
+
+// Thay thế bằng URL Web App bạn đã lấy ở Bước 3
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5pQsM15B9vKXf6cubtcaE6VyjM6SkK5utD6cTwPWcs1RUGCyLU9kwIZk4Ycj9NvR4/exec'; 
+
+/**
+ * Gửi dữ liệu lịch sử kiểm tra tới Google Apps Script.
+ * @param {number} totalRecords - Tổng số hồ sơ đã kiểm tra.
+ * @param {string} maCoSo - Mã cơ sở BHYT.
+ */
+function logCheckHistoryToGoogleSheet(totalRecords, maCoSo) {
+    if (!APPS_SCRIPT_URL.startsWith('https://script.google.com/macros/s/')) {
+        console.error("Lỗi: Vui lòng thay thế APPS_SCRIPT_URL bằng URL Web App Apps Script thực tế của bạn.");
+        return;
+    }
+
+    const data = {
+        tong_ho_so: totalRecords,
+        ma_co_so: maCoSo,
+    };
+
+    console.log("Đang gửi lịch sử kiểm tra:", data);
+
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Cần thiết cho Google Apps Script POST
+        cache: 'no-cache',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+    .then(response => {
+        // Vì mode: 'no-cors', response.ok sẽ luôn là false và không thể đọc body,
+        // nên ta chỉ cần kiểm tra xem request có được gửi đi không.
+        console.log("Request đã được gửi thành công (kiểm tra Google Sheet để xác nhận).");
+        // Nếu muốn xác nhận, bạn cần triển khai phức tạp hơn với JSONP hoặc CORS proxy.
+    })
+    .catch(error => {
+        console.error("Lỗi khi gửi dữ liệu đến Google Sheet:", error);
+    });
 }
