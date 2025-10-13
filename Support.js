@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <!-- Contact Section -->
             <div id="contactPage" class="support-section active">
                 <div class="contact-card">
-                    <img src="https://scontent.fhan3-3.fna.fbcdn.net/v/t39.30808-6/483527725_4115468078774609_2790477911463350643_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=iRY_oK4EXakQ7kNvwFDF0Xp&_nc_oc=Adkp18Ep0CNc2fSDxHs0O79XP1xk1S8ev-oIv4VzsxSe7gXszWgxiOv01XZGa3xfuZ0&_nc_zt=23&_nc_ht=scontent.fhan3-3.fna&_nc_gid=fdCMgW-SAheqOUgyrF0-Gw&oh=00_AfV9-jP3F5sPnoIVnHzQcZZDtT8ExYqEOsKbPxASSQ6Y-Q&oe=68A1CF33" alt="Avatar" class="avatar">
+                    <img src="https://github.com/lqthai97/lqthai97.github.io/blob/main/anhkhoa.jpg?raw=true" alt="Avatar" class="avatar">
                     <div>
                         <h2>Trần Anh Khoa</h2>
                         <p class="title">Admin & Developer</p>
