@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <!-- Contact Section -->
             <div id="contactPage" class="support-section active">
                 <div class="contact-card">
-                    <img src="https://github.com/lqthai97/lqthai97.github.io/blob/main/anhkhoa.jpg?raw=true" alt="Avatar" class="avatar">
+                    <img src="https://raw.githubusercontent.com/lqthai97/lqthai97.github.io/refs/heads/main/anhkhoa.jpg" alt="Avatar" class="avatar">
                     <div>
                         <h2>Trần Anh Khoa</h2>
                         <p class="title">Admin & Developer</p>
