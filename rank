@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/9717/9717739.png"/>
+<title>Chuyển Tệp Trực Tuyến</title>
+<style type="text/css">
+::-webkit-scrollbar {
+ display: none;}
+</style>
+</head>
+<body style="padding: 0px;margin: 0px;width: 100%;height: 100vh;border: none">
+<iframe src="https://script.google.com/macros/s/AKfycbz5pQsM15B9vKXf6cubtcaE6VyjM6SkK5utD6cTwPWcs1RUGCyLU9kwIZk4Ycj9NvR4/exec" style="width: 100%; height: 100%;border: none;"></iframe>
+</body>
+</html>
