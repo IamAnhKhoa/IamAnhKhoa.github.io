@@ -3,415 +3,375 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Trần Anh Khoa // Portfolio</title>
+  <title>Trần Anh Khoa // 3D Portfolio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=VT323&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg1:#0a1f27; --bg2:#0f3a47;
-      --neon:#00ffaa; --neon-soft:#00ffaa88; --neon-glow:#00ffff;
-      --text:#d9fff5; --muted:#9deee0; --accent:#ff00ff;
+    :root {
+      --neon: #00ffaa; --neon-light: #00ffff; --accent: #ff00ff;
+      --text: #d9fff5; --bg: #0a1f27;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%; margin:0}
-    body{
-      overflow-x:hidden; color:var(--text);
-      background: var(--bg1); /* Solid background for canvas behind */
-      font-family: 'Space Mono', system-ui, sans-serif; letter-spacing:.2px;
-      scroll-behavior:smooth;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      font-family: 'Space Mono', monospace; background: var(--bg); color: var(--text);
+      cursor: none;
     }
+    #canvas { display: block; position: fixed; top: 0; left: 0; z-index: 1; }
+    .ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
     
-    /* NEW: Custom scrollbar for a consistent theme */
-    body::-webkit-scrollbar { width: 8px; }
-    body::-webkit-scrollbar-track { background: var(--bg2); }
-    body::-webkit-scrollbar-thumb {
-        background-color: var(--neon);
-        border-radius: 10px;
-        border: 2px solid var(--bg1);
-    }
-
-    /* UPDATED: Canvas is now a fixed background */
-    canvas{ 
-        display:block; width:100% !important; height:100% !important; 
-        margin:0; padding:0; position:fixed; top:0; left:0; z-index:1;
-    }
-
-    /* UPDATED: Content is on top of the canvas */
-    .content{
-      position:relative; z-index:2;
-      /* Add a subtle gradient to the content background */
-      background: linear-gradient(135deg, rgba(10,31,39,0.9) 0%, rgba(15,58,71,0.8) 50%, rgba(10,31,39,0.9) 100%);
-    }
-
-    /* ====== Top Bar ====== */
-    .topbar{
-      position:fixed; z-index:10; inset:0 0 auto 0; display:flex;
-      align-items:center; justify-content:space-between; padding:16px 24px;
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 30px;
       background: linear-gradient(to bottom, rgba(10,31,39,.8), transparent);
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(0,255,170,.2);
+      border-bottom: 1px solid rgba(0,255,170,.1);
+      pointer-events: auto;
     }
-    .logo{
-      display:flex; align-items:center; gap:12px; color:var(--neon);
-      text-shadow:0 0 15px var(--neon); user-select:none; font-weight:700;
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--neon); text-shadow: 0 0 20px var(--neon);
+      font-weight: 700; font-size: 16px;
     }
-    .logo .mark{
-      width:44px; height:44px; border:2px solid var(--neon); border-radius:12px;
-      display:grid; place-items:center; font-family:"VT323", monospace; font-size:24px;
-      box-shadow:0 0 15px var(--neon-soft), inset 0 0 10px rgba(0,255,255,.15);
+    .logo-mark {
+      width: 44px; height: 44px; border: 2px solid var(--neon); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+      box-shadow: 0 0 20px var(--neon), inset 0 0 15px rgba(0,255,255,.2);
       background: linear-gradient(135deg, rgba(0,255,170,.1), rgba(0,255,255,.05));
     }
-    nav.menu{ display:flex; gap:8px; flex-wrap:wrap }
-    nav.menu a{
-      text-decoration:none; color:var(--neon); padding:.5rem 1rem; border:1px solid var(--neon);
-      border-radius:8px; transition: .3s all; font-size:13px; font-weight:600;
-      background: linear-gradient(135deg, rgba(0,255,170,.05), rgba(0,255,200,.02));
+    nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    nav a {
+      text-decoration: none; color: var(--neon); padding: 8px 16px;
+      border: 1px solid var(--neon); border-radius: 6px; font-size: 12px;
+      font-weight: 600; cursor: pointer; transition: all .3s;
+      background: rgba(0,255,170,.05); text-shadow: 0 0 10px var(--neon);
     }
-    nav.menu a:hover{  
-      box-shadow:0 0 20px var(--neon), inset 0 0 10px rgba(0,255,255,.2);
-      transform: translateY(-2px);
+    nav a:hover {
+      box-shadow: 0 0 20px var(--neon); transform: translateY(-2px);
+      background: rgba(0,255,170,.15);
     }
-    nav.menu a.active{  
-      box-shadow:0 0 25px var(--neon), inset 0 0 15px rgba(0,255,255,.3);
-      border-color:var(--neon-glow);
+    nav a.active { background: var(--neon); color: var(--bg); box-shadow: 0 0 30px var(--neon); }
+
+    .hero {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      text-align: center; z-index: 15; width: 90%;
+      transition: opacity .5s, transform .5s;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 72px); color: var(--neon);
+      font-family: 'Orbitron', sans-serif; text-shadow: 0 0 30px var(--neon), 0 0 60px rgba(0,255,170,.3);
+      animation: glow 3s ease-in-out infinite alternate;
+    }
+    @keyframes glow { to { text-shadow: 0 0 50px var(--neon), 0 0 100px rgba(0,255,170,.5); } }
+    .hero p { font-size: 14px; margin: 15px auto; max-width: 600px; line-height: 1.7; }
+    .hero-buttons { display: flex; gap: 15px; justify-content: center; margin-top: 25px; pointer-events: auto; }
+    .btn {
+      padding: 12px 28px; border: 2px solid var(--neon); background: transparent; color: var(--neon);
+      cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 6px;
+      transition: all .3s; position: relative; overflow: hidden; text-shadow: 0 0 10px var(--neon);
+      box-shadow: 0 0 15px rgba(0,255,170,.3);
+    }
+    .btn:hover { color: var(--bg); box-shadow: 0 0 30px var(--neon); transform: scale(1.05); }
+    .btn::before {
+      content: ''; position: absolute; inset: 0; background: var(--neon); transform: scaleX(0);
+      transform-origin: left; transition: transform .4s; z-index: -1;
+    }
+    .btn:hover::before { transform: scaleX(1); }
+    
+    .sections { position: fixed; inset: 0; z-index: 11; }
+    section {
+      position: absolute; inset: 0; padding: 120px 40px 40px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      opacity: 0; transform: scale(1.1);
+      transition: opacity .8s ease-out, transform .8s ease-out;
+      pointer-events: none;
+    }
+    section.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+    .hero.hidden { opacity: 0; transform: translate(-50%, -50%) scale(0.9); pointer-events: none; }
+    
+    .section-content { max-width: 1000px; width: 100%; }
+    .section-title {
+      font-size: clamp(28px, 4vw, 48px); color: var(--neon);
+      font-family: 'Orbitron', sans-serif; text-shadow: 0 0 20px var(--neon); margin-bottom: 30px;
+    }
+    .grid { display: grid; gap: 20px; }
+    .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 900px) { .grid.cols-4 { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 768px) { .grid.cols-2, .grid.cols-3 { grid-template-columns: 1fr; } }
+    
+    .card {
+      border: 1px solid rgba(0,255,170,.3); border-radius: 12px; padding: 25px;
+      background: linear-gradient(135deg, rgba(10,31,39,.5), rgba(15,58,71,.3));
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      box-shadow: 0 0 20px rgba(0,255,170,.1); transition: all .3s;
+    }
+    .card:hover { border-color: var(--neon); box-shadow: 0 0 30px rgba(0,255,170,.2); transform: translateY(-8px); }
+    .card h3 { color: var(--neon-light); font-size: 18px; margin-bottom: 15px; }
+    .card p, .card li { font-size: 14px; line-height: 1.7; opacity: 0.9; }
+    .card .hint { font-family: 'VT323', monospace; color: #aef; font-size: 12px; margin-top: 15px; }
+    
+    .cursor {
+      position: fixed; width: 30px; height: 30px; border: 2px solid var(--neon);
+      border-radius: 50%; pointer-events: none; z-index: 999;
+      transform: translate(-50%, -50%); transition: width .3s, height .3s;
+      mix-blend-mode: difference;
     }
     
-    /* ====== Content Sections ====== */
-    header.hero{
-      position:relative; min-height:100vh; display:grid; place-items:center;
-      text-align:center; padding:120px 20px 60px;
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(10, 31, 39, 0.7);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .4s ease;
     }
-    .hero-content{ position:relative; }
-    .glitch{
-      font-size: clamp(36px, 8vw, 72px); color:var(--neon); font-weight:700;
-      font-family: Orbitron, sans-serif; letter-spacing:2px;
-      text-shadow: 0 0 20px var(--neon), 0 0 40px rgba(0,255,170,.4);
-      animation: glitch-anim 4s ease-in-out infinite;
+    .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+    .modal-window {
+      background: #c0c0c0; border: 2px solid;
+      border-top-color: #fff; border-left-color: #fff;
+      border-right-color: #000; border-bottom-color: #000;
+      box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
+      width: 90%; max-width: 600px;
+      transform: scale(0.9); transition: transform .4s ease;
     }
-    @keyframes glitch-anim {
-      0%{text-shadow: 0 0 20px var(--neon), 0 0 40px rgba(0,255,170,.4)}
-      50%{text-shadow: 0 0 30px var(--neon-glow), 0 0 60px rgba(0,255,255,.5)}
-      100%{text-shadow: 0 0 20px var(--neon), 0 0 40px rgba(0,255,170,.4)}
+    .modal-overlay.visible .modal-window { transform: scale(1); }
+    .modal-title-bar {
+      background: linear-gradient(to right, #000080, #1084d0);
+      color: #fff; font-family: 'VT323', monospace; font-size: 18px;
+      padding: 5px 8px; display: flex; justify-content: space-between; align-items: center;
+      user-select: none;
     }
-    .subtitle{
-      margin-top:16px; font-size:clamp(15px, 2vw, 18px); color:var(--muted);
-      max-width:900px; margin-inline:auto; line-height:1.8;
-      animation: fadeInUp .8s ease .3s backwards;
+    .modal-close-btn {
+      background: #c0c0c0; width: 22px; height: 22px;
+      border: 2px solid; border-top-color: #fff; border-left-color: #fff;
+      border-right-color: #000; border-bottom-color: #000;
+      font-family: 'monospace'; font-weight: bold;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
     }
-    @keyframes fadeInUp { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
-    .cta{
-      margin-top:28px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
-      animation: fadeInUp .8s ease .5s backwards;
+    .modal-content { padding: 10px; background: #fff; }
+    .modal-content img { display: block; width: 100%; height: auto; }
+    .achievement-item {
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      gap: 10px; padding: 15px; cursor: pointer; transition: transform .3s;
     }
-    .btn{
-      cursor:pointer; background:transparent; color:var(--neon);
-      border:2px solid var(--neon); border-radius:10px; padding:.7rem 1.4rem;
-      font-weight:600; font-size:14px; position:relative; overflow:hidden;
-      transition:.3s all; font-family:inherit;
-      box-shadow:0 0 15px rgba(0,255,170,.3);
-    }
-    .btn::before{
-      content:""; position:absolute; inset:0; background:var(--neon);
-      transform:scaleX(0); transform-origin:left; transition:.4s;
-      z-index:-1;
-    }
-    .btn:hover::before{ transform:scaleX(1) }
-    .btn:hover{
-      color:var(--bg1); box-shadow:0 0 30px var(--neon);
-      transform: translateY(-3px) scale(1.05);
-    }
-    section{
-      position:relative; padding:100px 20px; max-width:1200px; margin:0 auto;
-    }
-    .section-title{
-      color:var(--neon); font-size:clamp(24px, 4vw, 36px); margin-bottom:20px;
-      font-family: Orbitron, sans-serif; text-shadow:0 0 15px var(--neon);
-    }
-    .card{
-      border:1px solid rgba(0,255,170,.3); border-radius:14px; padding:24px;
-      background: linear-gradient(135deg, rgba(10,31,39,.5), rgba(15,58,71,.3));
-      box-shadow: 0 0 20px rgba(0,255,170,.15), inset 0 0 15px rgba(0,255,255,.05);
-      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-      transition: .4s all;
-    }
-    .card:hover{
-      border-color:var(--neon);
-      box-shadow: 0 0 30px rgba(0,255,170,.25);
-      transform: translateY(-8px);
-    }
-    .card h3{ margin-top:0; color:var(--neon-glow); font-size:18px; font-weight:700; }
-    .card p{ line-height:1.7; margin:.8rem 0 }
-    .grid{ display:grid; gap:20px; }
-    @media (min-width: 768px){  
-      .grid.cols-2{ grid-template-columns:1fr 1fr }
-      .grid.cols-3{ grid-template-columns:repeat(3,1fr) }
-    }
-    .hint{ font-family: 'VT323', monospace; color:#aef; opacity:.7; font-size:12px; }
-    input, textarea{
-      width:100% !important; padding:.8rem !important; border-radius:8px !important;
-      border:1px solid var(--neon) !important; background:#041e23cc !important;
-      color:var(--text) !important; font-family:inherit !important;
-      font-size:14px !important;
-    }
-    footer{
-      position:relative; padding:50px 20px 30px; text-align:center;
-      border-top: 1px solid rgba(0,255,170,.1);
-    }
-    .reveal{ opacity:0; transform: translateY(30px); transition: .7s all; }
-    .reveal.in{ opacity:1; transform: translateY(0) }
+    .achievement-item:hover { transform: translateY(-5px); }
+    .achievement-item .icon { font-size: 48px; }
+    .achievement-item .title { font-size: 13px; font-weight: 600; transition: color .3s; }
+    .achievement-item:hover .title { color: var(--neon); text-shadow: 0 0 10px var(--neon); }
   </style>
 </head>
 <body>
-  <canvas id="three-canvas"></canvas>
+  <canvas id="canvas"></canvas>
 
-  <div class="content">
+  <div class="ui">
     <div class="topbar">
-      <div class="logo">
-        <div class="mark">KA</div>
-        <div><strong>Trần Anh Khoa</strong></div>
-      </div>
-      <nav class="menu" aria-label="Main">
-        <a href="#home" class="active">HOME</a> <a href="#about">ABOUT</a> <a href="#work">WORK</a> <a href="#contact">CONTACT</a>
+      <div class="logo"><div class="logo-mark">KA</div><div>TRẦN ANH KHOA</div></div>
+      <nav>
+        <a href="#home" class="nav-link active" data-index="0">TRANG CHỦ</a>
+        <a href="#about" class="nav-link" data-index="1">GIỚI THIỆU</a>
+        <a href="#work" class="nav-link" data-index="2">DỰ ÁN</a>
+        <a href="#achievements" class="nav-link" data-index="3">THÀNH TỰU</a>
+        <a href="#contact" class="nav-link" data-index="4">LIÊN HỆ</a>
       </nav>
     </div>
 
-    <header id="home" class="hero">
-      <div class="hero-content">
-        <div class="glitch">Trần Anh Khoa</div>
-        <p class="subtitle">
-          Tôi xây dựng các hệ thống <strong>tự động hóa y tế</strong>, <strong>giám sát BHYT</strong>,
-          và <strong>dashboard dữ liệu toàn diện</strong>. Hiện công tác tại
-          <em>Trung tâm Y tế huyện Củ Chi</em>.
-        </p>
-        <div class="cta">
-          <a class="btn" href="#work">XEM DỰ ÁN</a> <a class="btn" href="#about">VỀ TÔI</a>
-        </div>
-      </div>
-    </header>
+    <div class="hero">
+      <h1>TRẦN ANH KHOA</h1>
+      <p>Tôi xây dựng các hệ thống <strong>tự động hóa y tế</strong>, <strong>giám sát BHYT</strong>, và <strong>dashboard dữ liệu toàn diện</strong>. Hiện công tác tại <em>Trung tâm Y tế huyện Củ Chi</em>.</p>
+      <div class="hero-buttons"><button class="btn" onclick="navigateTo(2)">XEM DỰ ÁN →</button></div>
+    </div>
 
-    <section id="about">
-      <h2 class="section-title">/ ABOUT</h2>
-      <div class="grid cols-2">
-        <div class="card reveal">
-          <h3>🎯 Triết lý</h3>
-          <p>Đơn giản hóa quy trình – tự động hóa bước lặp – đo lường minh bạch – phản hồi nhanh.</p>
+    <div class="sections">
+      <section id="home" class="active"></section>
+      
+      <section id="about">
+        <div class="section-content">
+          <div class="section-title">/ GIỚI THIỆU</div>
+          <div class="grid cols-2">
+            <div class="card">
+              <h3>🎯 TRIẾT LÝ</h3>
+              <p>Đơn giản hóa quy trình – tự động hóa bước lặp – đo lường minh bạch – phản hồi nhanh.</p>
+            </div>
+            <div class="card">
+              <h3>⚡ NĂNG LỰC CỐT LÕI</h3>
+              <ul style="list-style: none; padding: 0;">
+                <li style="padding: 5px 0;">→ Giám sát & kiểm tra KCB BHYT</li>
+                <li style="padding: 5px 0;">→ Dashboard vận hành (GAS / WebApp)</li>
+                <li style="padding: 5px 0;">→ Tự động hóa báo cáo 21 trạm</li>
+                <li style="padding: 5px 0;">→ Tích hợp dữ liệu đa nguồn</li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <div class="card reveal">
-          <h3>⚡ Năng lực cốt lõi</h3>
-          <ul style="margin:10px 0; padding-left:20px; line-height:1.9">
-            <li>Giám sát & kiểm tra KCB BHYT</li>
-            <li>Dashboard vận hành (GAS / WebApp)</li>
-            <li>Tự động hóa báo cáo 21 trạm</li>
-            <li>Tích hợp dữ liệu đa nguồn</li>
-          </ul>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="work">
-      <h2 class="section-title">/ WORK</h2>
-      <div class="grid cols-3">
-        <div class="card reveal">
-          <h3>🏥 Giám sát BHYT</h3>
-          <p>Phát hiện lỗi XML, cảnh báo xuất toán.</p>
-          <p class="hint">→ GAS, HTML/JS, Chart.js</p>
+      <section id="work">
+        <div class="section-content">
+          <div class="section-title">/ DỰ ÁN</div>
+          <div class="grid cols-3">
+            <div class="card"><h3>🏥 Giám sát BHYT</h3><p>Phát hiện lỗi XML, cảnh báo xuất toán, sai sót quy trình trước khi gửi cổng giám định.</p><p class="hint">→ GAS • HTML/JS • Chart.js</p></div>
+            <div class="card"><h3>📊 Dashboard NCT</h3><p>Tự động hóa lịch khám sức khỏe, thống kê theo từng trạm, và xuất biểu mẫu nhanh chóng.</p><p class="hint">→ GAS Web App • Sheets API</p></div>
+            <div class="card"><h3>📄 File Văn Bản 2.0</h3><p>Kho biểu mẫu số hóa tập trung, tích hợp ký số, phân quyền và theo dõi tiến độ.</p><p class="hint">→ HTML/JS • Drive API • e-Sign</p></div>
+          </div>
         </div>
-        <div class="card reveal">
-          <h3>📊 Dashboard NCT</h3>
-          <p>Tự động lịch KSK, thống kê theo trạm.</p>
-          <p class="hint">→ GAS Web App, Sheets API</p>
-        </div>
-        <div class="card reveal">
-          <h3>📄 File Văn Bản 2.0</h3>
-          <p>Kho biểu mẫu số hóa, ký số, phân quyền.</p>
-          <p class="hint">→ HTML/JS, Drive, e-Sign</p>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="contact">
-      <h2 class="section-title">/ CONTACT</h2>
-      <div class="grid cols-2">
-        <div class="card reveal">
-          <h3>💬 Kết nối</h3>
-          <p>Rất sẵn lòng chia sẻ & cộng tác.</p>
-          <button class="btn" id="mailtoBtn">GỬI EMAIL →</button>
+      <section id="achievements">
+        <div class="section-content">
+          <div class="section-title">/ THÀNH TỰU</div>
+          <div class="grid cols-4" id="achievements-grid">
+            </div>
         </div>
-        <div class="card reveal">
-          <h3>✉️ Lời nhắn nhanh</h3>
-          <form id="contactForm">
-            <label>Tiêu đề:</label>
-            <input type="text" name="subject" placeholder="Xin chào..." required/>
-            <label style="margin-top:12px">Nội dung:</label>
-            <textarea name="body" rows="4" placeholder="Tôi muốn..." required></textarea>
-            <button class="btn" type="submit" style="margin-top:14px; width:100%">GỬI →</button>
+      </section>
+      
+      <section id="contact">
+        <div class="section-content">
+          <div class="section-title">/ LIÊN HỆ</div>
+          <form id="contactForm" class="card" onsubmit="sendMail(event)">
+            <p>Rất sẵn lòng chia sẻ và cộng tác về các dự án tự động hóa y tế, BHYT, và dashboard dữ liệu. Hãy kết nối!</p>
+            <div class="grid cols-2">
+                <input type="text" name="subject" placeholder="Tiêu đề..." required />
+                <input type="email" name="user_email" placeholder="Email của bạn..." required />
+            </div>
+            <textarea name="body" rows="4" placeholder="Lời nhắn của bạn..." required></textarea>
+            <button class="btn" type="submit" style="width: 100%; margin-top: 15px;">GỬI LỜI NHẮN →</button>
           </form>
         </div>
-      </div>
-    </section>
-
-    <footer>
-      <p>© <span id="year"></span> Trần Anh Khoa — Digital borders are thin 🌐</p>
-    </footer>
+      </section>
+    </div>
   </div>
 
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
-      }
-    }
-  </script>
+  <div class="cursor"></div>
 
+  <div class="modal-overlay" id="achievement-modal">
+    <div class="modal-window">
+      <div class="modal-title-bar">
+        <span id="modal-title"></span>
+        <div class="modal-close-btn" onclick="closeModal()">X</div>
+      </div>
+      <div class="modal-content"><img id="modal-image" src="" alt="Certificate Image" /></div>
+    </div>
+  </div>
+
+  <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.164.1/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/" } }</script>
   <script type="module">
     import * as THREE from 'three';
     import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
     import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
     import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-    // ===================== SETUP =====================
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 10;
-
-    const renderer = new THREE.WebGLRenderer({ 
-        canvas: document.getElementById('three-canvas'), 
-        antialias: true 
-    });
+    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // ===================== POST-PROCESSING (BLOOM EFFECT) =====================
-    const renderScene = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.threshold = 0;
-    bloomPass.strength = 1.5; // Intensity of the glow
-    bloomPass.radius = 0.8;
-
     const composer = new EffectComposer(renderer);
-    composer.addPass(renderScene);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.5, 0);
     composer.addPass(bloomPass);
 
-    // ===================== OBJECTS =====================
-    const group = new THREE.Group();
-    scene.add(group);
-
-    // NEW: Central Energy Core with custom Shader
-    const core_geom = new THREE.IcosahedronGeometry(3, 30); // Sphere with many faces
+    const core_geom = new THREE.IcosahedronGeometry(4, 30);
     const core_mat = new THREE.ShaderMaterial({
-        uniforms: {
-            time: { value: 0 },
-            color: { value: new THREE.Color('#00ffaa') }
-        },
-        vertexShader: `
-            uniform float time;
-            varying vec3 vNormal;
-            void main() {
-                vNormal = normal;
-                vec3 pos = position;
-                float noise = sin(pos.x * 2.0 + time * 0.5) * cos(pos.y * 1.5 + time * 0.6) * 0.15;
-                pos += normal * noise;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 color;
-            varying vec3 vNormal;
-            void main() {
-                float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
-                gl_FragColor = vec4(color * intensity, 1.0);
-            }
-        `,
-        blending: THREE.AdditiveBlending,
-        transparent: true,
+        uniforms: { time: { value: 0 }, color: { value: new THREE.Color('#00ffaa') } },
+        vertexShader: `uniform float time;varying vec3 vN;void main(){vN=normal;vec3 p=position;float n=sin(p.x*2.5+time*0.7)*cos(p.y*2.0+time*0.5)*0.2;p+=normal*n;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,
+        fragmentShader: `uniform vec3 c;varying vec3 vN;void main(){float i=pow(0.6-dot(vN,vec3(0,0,1)),2.0);gl_FragColor=vec4(c*i,1.0);}`,
+        blending: THREE.AdditiveBlending, transparent: true,
     });
     const core = new THREE.Mesh(core_geom, core_mat);
-    group.add(core);
-
-    // Outer wireframe shell
-    const wire_mat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.3 });
-    const wireframe = new THREE.Mesh(core_geom, wire_mat);
+    scene.add(core);
+    const wireframe = new THREE.Mesh(core_geom, new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.2 }));
     wireframe.scale.setScalar(1.001);
     core.add(wireframe);
 
-    // ===================== PARTICLES =====================
-    const particlesGeo = new THREE.BufferGeometry();
-    const particlePositions = new Float32Array(5000 * 3);
-    for (let i = 0; i < particlePositions.length; i++) {
-        particlePositions[i] = (Math.random() - 0.5) * 50;
-    }
-    particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-    const particlesMat = new THREE.PointsMaterial({
-        size: 0.05, color: 0x00ffaa, transparent: true, opacity: 0.7, sizeAttenuation: true,
-    });
-    const particles = new THREE.Points(particlesGeo, particlesMat);
-    scene.add(particles);
+    const cameraStates = [
+        { pos: new THREE.Vector3(0, 0, 15), target: new THREE.Vector3(0, 0, 0) },
+        { pos: new THREE.Vector3(-12, 5, 12), target: new THREE.Vector3(0, 0, 0) },
+        { pos: new THREE.Vector3(0, -8, 18), target: new THREE.Vector3(0, 0, 0) },
+        { pos: new THREE.Vector3(0, 8, 18), target: new THREE.Vector3(0, 0, 0) },
+        { pos: new THREE.Vector3(12, 5, 12), target: new THREE.Vector3(0, 0, 0) },
+    ];
+    let currentSection = 0;
+    const targetCameraPos = new THREE.Vector3().copy(cameraStates[0].pos);
+    const targetCameraLookAt = new THREE.Vector3().copy(cameraStates[0].target);
 
-    // ===================== ANIMATION LOOP =====================
     const clock = new THREE.Clock();
-    let scrollY = 0;
-
-    window.addEventListener('scroll', () => { scrollY = window.scrollY; });
-
     function animate() {
-        requestAnimationFrame(animate);
-        const elapsedTime = clock.getElapsedTime();
+      const elapsedTime = clock.getElapsedTime();
+      core_mat.uniforms.time.value = elapsedTime;
+      core.rotation.y = elapsedTime * 0.05;
+      
+      camera.position.lerp(targetCameraPos, 0.05);
+      const currentLookAt = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).add(camera.position);
+      currentLookAt.lerp(targetCameraLookAt, 0.05);
+      camera.lookAt(currentLookAt);
 
-        // Update shader time for wave effect
-        core_mat.uniforms.time.value = elapsedTime;
-
-        // Animate objects
-        group.rotation.y = elapsedTime * 0.1;
-        group.rotation.x = elapsedTime * 0.05;
-        particles.rotation.y = -elapsedTime * 0.02;
-
-        // Animate based on scroll - move camera up/down
-        camera.position.y = -scrollY * 0.01;
-        
-        composer.render();
+      composer.render();
+      requestAnimationFrame(animate);
     }
     animate();
 
-    // ===================== HELPERS =====================
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        composer.setSize(window.innerWidth, window.innerHeight);
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const hero = document.querySelector('.hero');
+    const cursor = document.querySelector('.cursor');
+
+    window.navigateTo = function(index) {
+      if (index < 0 || index >= sections.length || index === currentSection) return;
+      currentSection = index;
+      sections.forEach((sec, i) => sec.classList.toggle('active', i === index));
+      navLinks.forEach((link, i) => link.classList.toggle('active', i === index));
+      hero.classList.toggle('hidden', index !== 0);
+      targetCameraPos.copy(cameraStates[index].pos);
+      targetCameraLookAt.copy(cameraStates[index].target);
+    }
+    
+    navLinks.forEach(link => link.addEventListener('click', e => { e.preventDefault(); navigateTo(parseInt(link.dataset.index)); }));
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') navigateTo(currentSection + 1);
+      if (e.key === 'ArrowUp') navigateTo(currentSection - 1);
+    });
+    document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
+    
+    const modal = document.getElementById('achievement-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalImage = document.getElementById('modal-image');
+    
+    const achievementsData = [
+      { icon: '🏆', title: 'Giấy Khen - Hiphop Neva Die 2025', imageSrc: 'https://i.imgur.com/l50GS8s.png' },
+      { icon: '📄', title: 'Chứng Chỉ A.pdf', imageSrc: 'https://via.placeholder.com/800x600.png?text=Certificate+A' },
+    ];
+
+    const achievementsGrid = document.getElementById('achievements-grid');
+    achievementsData.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'achievement-item';
+      div.innerHTML = `<div class="icon">${item.icon}</div><div class="title">${item.title}</div>`;
+      div.onclick = () => openModal(item.title, item.imageSrc);
+      achievementsGrid.appendChild(div);
     });
 
-    // ===================== UI SCRIPT (No changes needed) =====================
-    const links = [...document.querySelectorAll('nav.menu a')];
-    const sections = links.map(a => document.querySelector(a.getAttribute('href')));
-    const io = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
-            }
-        });
-    }, { rootMargin: '-40% 0px -50% 0px' });
-    sections.forEach(sec => sec && io.observe(sec));
-    const reveals = [...document.querySelectorAll('.reveal')];
-    const io2 = new IntersectionObserver((es) => {
-        es.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
-    }, { threshold: 0.1 });
-    reveals.forEach(el => io2.observe(el));
-    document.getElementById('year').textContent = new Date().getFullYear();
-    document.getElementById('mailtoBtn').addEventListener('click', () => {
-        window.location.href = `mailto:trananhkhoa@example.com?subject=Hello`;
-    });
-    document.getElementById('contactForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const form = e.target;
-        window.location.href = `mailto:trananhkhoa@example.com?subject=${encodeURIComponent(form.subject.value)}&body=${encodeURIComponent(form.body.value)}`;
-    });
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            target && target.scrollIntoView({ behavior: 'smooth' });
-        });
+    function openModal(title, imageSrc) {
+      modalTitle.textContent = title;
+      modalImage.src = imageSrc;
+      modal.classList.add('visible');
+    }
+
+    window.closeModal = function() { modal.classList.remove('visible'); }
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    const EMAIL = "trananhkhoa@example.com";
+    window.sendMail = function(e) {
+      e.preventDefault(); const form = e.target;
+      const body = `From: ${form.user_email.value}\n\n${form.body.value}`;
+      window.location.href = `mailto:${EMAIL}?subject=${encodeURIComponent(form.subject.value)}&body=${encodeURIComponent(body)}`;
+    }
+    
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
     });
   </script>
 </body>
