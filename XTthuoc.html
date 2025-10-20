@@ -179,6 +179,11 @@
             border-left: 3px solid #6c757d;
             border-radius: 4px;
         }
+        .summary-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -187,7 +192,7 @@
         <h1>Dashboard Phân Tích Xuất Toán BHYT</h1>
         
         <div class="api-config">
-            <h5>🔑 Cấu hình Gemini API</h5>
+            <h5>Cấu hình Gemini API</h5>
             <div class="row">
                 <div class="col-md-8">
                     <input type="password" id="api-key" class="form-control" placeholder="Nhập API Key của Gemini (Google AI Studio)">
@@ -205,7 +210,7 @@
         
         <div id="dashboard-container" style="display: none;">
             <div class="stats-card">
-                <h4 class="mb-3 text-white">📊 Tổng Quan</h4>
+                <h4 class="mb-3 text-white">Tổng Quan</h4>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number" id="total-amount">0 đ</div>
@@ -241,6 +246,7 @@
     <script>
         let rawDataByCSKCB = {};
         let analysisResults = {};
+        let allMedicinesData = [];
         const resultsContainer = document.getElementById('results-container');
         const loader = document.getElementById('loader');
         const apiStatus = document.getElementById('api-status');
@@ -276,14 +282,8 @@
             return name ? `${name} (${cskcb})` : cskcb;
         }
 
-        if (typeof(Storage) !== "undefined") {
-            geminiApiKey = sessionStorage.getItem('gemini-api-key') || '';
-            if (geminiApiKey) document.getElementById('api-key').value = geminiApiKey;
-        }
-
         document.getElementById('api-key').addEventListener('input', function() {
             geminiApiKey = this.value;
-            if (typeof(Storage) !== "undefined") sessionStorage.setItem('gemini-api-key', geminiApiKey);
         });
 
         document.getElementById('test-api').addEventListener('click', async function() {
@@ -292,23 +292,26 @@
                 showApiStatus('Vui lòng nhập API key.', 'error');
                 return;
             }
-            this.disabled = true; this.textContent = 'Đang kiểm tra...';
+            this.disabled = true;
+            this.textContent = 'Đang kiểm tra...';
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: "Test" }] }] })
                 });
                 if (response.ok) {
-                    showApiStatus('✅ API key hợp lệ!', 'success');
+                    showApiStatus('✓ API key hợp lệ!', 'success');
                     geminiApiKey = apiKey;
                 } else {
                     const error = await response.json();
-                    showApiStatus(`❌ API key không hợp lệ: ${error.error?.message || 'Lỗi không xác định'}`, 'error');
+                    showApiStatus(`✗ API key không hợp lệ: ${error.error?.message || 'Lỗi không xác định'}`, 'error');
                 }
             } catch (error) {
-                showApiStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
+                showApiStatus(`✗ Lỗi kết nối: ${error.message}`, 'error');
             }
-            this.disabled = false; this.textContent = 'Kiểm tra API';
+            this.disabled = false;
+            this.textContent = 'Kiểm tra API';
         });
 
         function showApiStatus(message, type) {
@@ -322,7 +325,10 @@
             document.getElementById('dashboard-container').style.display = 'none';
             document.getElementById('medicine-stats-container').innerHTML = '';
             loader.style.display = 'block';
-            rawDataByCSKCB = {}; analysisResults = {};
+            rawDataByCSKCB = {};
+            analysisResults = {};
+            allMedicinesData = [];
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -363,10 +369,9 @@
                 return;
             }
             
-            // MODIFIED: Removed deduplication logic to sum all rows including duplicates.
             let overallTotal = 0;
             const facilityErrorTotals = {};
-            validSheetData.forEach(row => { // Calculate directly on all valid data
+            validSheetData.forEach(row => {
                 const amount = parseFloat(row['TONG_XUATTOAN']) || 0;
                 overallTotal += amount;
                 const cskcb = row['MA_CSKCB'];
@@ -385,8 +390,7 @@
             });
             dashboardHTML += `</tbody></table></div></div>`;
             
-            // MODIFIED: Updated the note to reflect the new calculation logic.
-            let tableHTML = `<h4 class="text-danger mt-4"> Lỗi Logic: Ngày Y Lệnh Sau Ngày Ra Viện (Tổng tiền XT: ${overallTotal.toLocaleString('vi-VN')} đ)</h4>
+            let tableHTML = `<h4 class="text-danger mt-4">Lỗi Logic: Ngày Y Lệnh Sau Ngày Ra Viện (Tổng tiền XT: ${overallTotal.toLocaleString('vi-VN')} đ)</h4>
                                  <p>Hiển thị <b>tất cả</b> các trường hợp có lỗi. Lưu ý: Tổng tiền và thống kê được tính trên tất cả các dòng lỗi, bao gồm cả các ca trùng lặp.</p>
                                  <div class="table-responsive">
                                      <table class="table table-bordered table-hover">
@@ -431,6 +435,7 @@
                 if (cskcb) {
                     if (!rawDataByCSKCB[cskcb]) rawDataByCSKCB[cskcb] = [];
                     rawDataByCSKCB[cskcb].push(row);
+                    allMedicinesData.push(row);
                 }
             });
         }
@@ -469,7 +474,10 @@
         function renderMedicineStats(medicineTotals) {
             const sortedMedicine = Object.entries(medicineTotals).sort(([, a], [, b]) => b - a);
             let html = `<div class="dashboard-section bg-light text-dark p-3">
-                            <h4 class="text-danger">Thống Kê Xuất Toán Theo Chế Phẩm</h4>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 class="text-danger mb-0">Thống Kê Xuất Toán Theo Chế Phẩm</h4>
+                                <button class="btn btn-success btn-sm btn-modern" id="export-medicines-btn">Xuất Tất Cả Thuốc</button>
+                            </div>
                             <div class="table-responsive" style="max-height: 300px;">
                                 <table class="table table-striped table-hover table-sm">
                                     <thead class="table-dark"><tr><th>#</th><th>Tên Chế Phẩm</th><th>Tổng Tiền</th></tr></thead>
@@ -478,7 +486,57 @@
                 html += `<tr><td>${index + 1}</td><td class="text-start">${name}</td><td>${amount.toLocaleString('vi-VN')} đ</td></tr>`;
             });
             html += `</tbody></table></div></div>`;
-            document.getElementById('medicine-stats-container').innerHTML = html;
+            const container = document.getElementById('medicine-stats-container');
+            container.innerHTML = html;
+            
+            document.getElementById('export-medicines-btn').addEventListener('click', () => exportAllMedicines(medicineTotals));
+        }
+
+        function exportAllMedicines(medicineTotals) {
+            const dataToExport = allMedicinesData.map((row, index) => {
+                const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : row['NGAY_VAO'];
+                return {
+                    'STT': index + 1,
+                    'MA_CSKCB': row['MA_CSKCB'] || '',
+                    'TEN_CSKCB': facilityNameMap[row['MA_CSKCB']] || row['MA_CSKCB'] || '',
+                    'HO_TEN': row['HO_TEN'] || '',
+                    'NGAY_VAO': ngayVao,
+                    'TEN_CHE_PHAM': row['TEN_CP'] || '',
+                    'THANH_TIEN': parseFloat(row['THANH_TIEN']) || 0,
+                    'MA_BENH_CHINH': row['MA_BENH'] || '',
+                    'MA_BENH_KEM_THEO': row['MA_BENHKHAC'] || ''
+                };
+            });
+
+            const summaryData = Object.entries(medicineTotals).map(([name, amount]) => ({
+                'TEN_CHE_PHAM': name,
+                'TONG_TIEN': amount,
+                'SO_LAN_SU_DUNG': allMedicinesData.filter(r => r['TEN_CP'] === name).length
+            })).sort((a, b) => b.TONG_TIEN - a.TONG_TIEN);
+
+            const filename = `DuLieuThuoc_${new Date().toISOString().slice(0, 10)}`;
+            downloadAsMultiSheetExcel(dataToExport, summaryData, filename);
+        }
+
+        function downloadAsMultiSheetExcel(detailData, summaryData, filename) {
+            const worksheet1 = XLSX.utils.json_to_sheet(detailData);
+            const worksheet2 = XLSX.utils.json_to_sheet(summaryData);
+            
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet2, 'Thong Ke');
+            XLSX.utils.book_append_sheet(workbook, worksheet1, 'Chi Tiet');
+            
+            const colsDetail = Object.keys(detailData[0]);
+            worksheet1['!cols'] = colsDetail.map(col => ({ 
+                wch: Math.max(...detailData.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 
+            }));
+            
+            const colsSummary = Object.keys(summaryData[0]);
+            worksheet2['!cols'] = colsSummary.map(col => ({ 
+                wch: Math.max(...summaryData.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 
+            }));
+            
+            XLSX.writeFile(workbook, filename + '.xlsx');
         }
         
         function updateAnalysisStats() {
@@ -535,12 +593,13 @@
             const detailColumns = ['HO_TEN', 'NGAY_VAO', 'TEN_CP', 'THANH_TIEN', 'MA_BENH', 'MA_BENHKHAC'];
             let html = `
                 <div class="detail-header">
-                    <h5 class="mb-3"><span class="header-icon">📄</span>Chi tiết ca xuất toán - ${getFacilityDisplayName(cskcb)}</h5>
+                    <h5 class="mb-3">Chi tiết ca xuất toán - ${getFacilityDisplayName(cskcb)}</h5>
                     <div class="d-flex justify-content-between align-items-center">
-                         <input type="text" id="filter-detail-${cskcb}" class="form-control w-50" placeholder="🔍 Lọc theo tên thuốc, họ tên, mã bệnh...">
+                         <input type="text" id="filter-detail-${cskcb}" class="form-control w-50" placeholder="Lọc theo tên thuốc, họ tên, mã bệnh...">
                          <div class="d-flex gap-2">
-                            <button class="btn btn-success btn-sm btn-modern" id="export-excel-${cskcb}">📊 Xuất Excel</button>
-                            <button class="btn btn-danger btn-sm btn-modern" id="analyze-all-${cskcb}">🤖 Phân tích tất cả</button>
+                            <button class="btn btn-success btn-sm btn-modern" id="export-facility-medicines-${cskcb}">Xuất Thuốc</button>
+                            <button class="btn btn-primary btn-sm btn-modern" id="export-excel-${cskcb}">Xuất Excel</button>
+                            <button class="btn btn-danger btn-sm btn-modern" id="analyze-all-${cskcb}">Phân tích tất cả</button>
                          </div>
                     </div>
                 </div>
@@ -575,8 +634,15 @@
         }
 
         function addDetailViewListeners(cskcb) {
-            document.getElementById(`filter-detail-${cskcb}`).addEventListener('input', function() { filterDetailTable(cskcb, this.value); });
-            document.getElementById(`export-excel-${cskcb}`).addEventListener('click', () => exportToExcel(cskcb));
+            document.getElementById(`filter-detail-${cskcb}`).addEventListener('input', function() { 
+                filterDetailTable(cskcb, this.value); 
+            });
+            document.getElementById(`export-facility-medicines-${cskcb}`).addEventListener('click', () => {
+                exportFacilityMedicines(cskcb);
+            });
+            document.getElementById(`export-excel-${cskcb}`).addEventListener('click', () => {
+                exportToExcel(cskcb);
+            });
             document.getElementById(`analyze-all-${cskcb}`).addEventListener('click', function() {
                 if (!geminiApiKey) { alert('Vui lòng cấu hình API key.'); return; }
                 const buttons = document.querySelectorAll(`#tbody-${cskcb} .ai-analyze-btn:not(:disabled)`);
@@ -588,24 +654,28 @@
                     const rowIndex = this.dataset.rowIndex, cskcb = this.dataset.cskcb;
                     const rowData = rawDataByCSKCB[cskcb][rowIndex];
                     const reasonCell = document.getElementById(`reason-${cskcb}-${rowIndex}`);
-                    this.disabled = true; this.innerHTML = '⏳ Đang xử lý...';
-                    reasonCell.innerHTML = '🤖 Đang phân tích...'; reasonCell.className = 'reason-cell analyzing';
+                    this.disabled = true; 
+                    this.innerHTML = 'Đang xử lý...';
+                    reasonCell.innerHTML = 'Đang phân tích...'; 
+                    reasonCell.className = 'reason-cell analyzing';
                     try {
                         const analysis = await analyzeWithGemini(rowData);
                         if (!analysisResults[cskcb]) analysisResults[cskcb] = {};
                         analysisResults[cskcb][rowIndex] = analysis;
-                        reasonCell.innerHTML = `<div class="reason-header">❌ LÝ DO XUẤT TOÁN</div>
+                        reasonCell.innerHTML = `<div class="reason-header">LÝ DO XUẤT TOÁN</div>
                                                  <div class="reason-content"><strong>Lý do chính:</strong> ${analysis.summary}
                                                  ${analysis.details && analysis.details.length > 0 ? `<div class="analysis-summary"><strong>Chi tiết:</strong> ${analysis.details.join('; ')}</div>` : ''}
                                                  </div>`;
                         reasonCell.className = 'reason-cell rejected';
-                        this.innerHTML = '✅ Đã xem';
-                        updateAnalysisStats(); updateFacilityStatus(cskcb);
+                        this.innerHTML = 'Đã xem';
+                        updateAnalysisStats(); 
+                        updateFacilityStatus(cskcb);
                     } catch (error) {
-                        reasonCell.innerHTML = `<div class="reason-header">⚠️ LỖI</div>
+                        reasonCell.innerHTML = `<div class="reason-header">LỖI</div>
                                                  <div class="reason-content"><strong>Lỗi:</strong> ${error.message}</div>`;
                         reasonCell.className = 'reason-cell rejected';
-                        this.disabled = false; this.innerHTML = '🔄 Thử lại';
+                        this.disabled = false; 
+                        this.innerHTML = 'Thử lại';
                     }
                 });
             });
@@ -618,7 +688,44 @@
                 row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
             }
         }
-                
+
+        function exportFacilityMedicines(cskcb) {
+            const facilityRows = rawDataByCSKCB[cskcb];
+            if (!facilityRows || facilityRows.length === 0) { 
+                alert('Không có dữ liệu để xuất.'); 
+                return; 
+            }
+
+            const medicineTotals = {};
+            facilityRows.forEach(row => {
+                const medicine = row['TEN_CP'] || 'Không xác định';
+                const amount = parseFloat(row['THANH_TIEN']) || 0;
+                medicineTotals[medicine] = (medicineTotals[medicine] || 0) + amount;
+            });
+
+            const detailData = facilityRows.map((row, index) => {
+                const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : row['NGAY_VAO'];
+                return {
+                    'STT': index + 1,
+                    'HO_TEN': row['HO_TEN'] || '',
+                    'NGAY_VAO': ngayVao,
+                    'TEN_CHE_PHAM': row['TEN_CP'] || '',
+                    'THANH_TIEN': parseFloat(row['THANH_TIEN']) || 0,
+                    'MA_BENH_CHINH': row['MA_BENH'] || '',
+                    'MA_BENH_KEM_THEO': row['MA_BENHKHAC'] || ''
+                };
+            });
+
+            const summaryData = Object.entries(medicineTotals).map(([name, amount]) => ({
+                'TEN_CHE_PHAM': name,
+                'TONG_TIEN': amount,
+                'SO_LAN_SU_DUNG': facilityRows.filter(r => r['TEN_CP'] === name).length
+            })).sort((a, b) => b.TONG_TIEN - a.TONG_TIEN);
+
+            const filename = `ThuocCSKCB_${cskcb}_${new Date().toISOString().slice(0, 10)}`;
+            downloadAsMultiSheetExcel(detailData, summaryData, filename);
+        }
+
         function exportToExcel(cskcb) {
             const allRows = rawDataByCSKCB[cskcb];
             if (!allRows || allRows.length === 0) { alert('Không có dữ liệu để xuất.'); return; }
@@ -649,7 +756,9 @@
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'KetQua');
             const cols = Object.keys(data[0]);
-            worksheet['!cols'] = cols.map(col => ({ wch: Math.max(...data.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 }));
+            worksheet['!cols'] = cols.map(col => ({ 
+                wch: Math.max(...data.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 
+            }));
             XLSX.writeFile(workbook, filename + '.xlsx');
         }
 
@@ -657,210 +766,27 @@
             if (!geminiApiKey) throw new Error('API key chưa được cấu hình');
             const prompt = `Bạn là chuyên gia giám định BHYT Việt Nam. Giả định việc BHYT từối thanh toán là ĐÚNG. LƯU Ý: Chế phẩm này LUÔN THUỘC DANH MỤC BHYT.
                                 THÔNG TIN: Chế phẩm: ${rowData['TEN_CP'] || 'Không có'}, Mã bệnh chính (ICD-10): ${rowData['MA_BENH'] || 'Không có'}, Mã bệnh kèm theo (ICD-10): ${rowData['MA_BENHKHAC'] || 'Không có'}.
-                                YÊU CẦU: 1. summary: Tóm tắt lý do chính từối. 2. details (Chi tiết)**: Để làm rõ, hãy giải thích tại sao chẩn đoán hiện tại không phù hợp VÀ liệt kê một vài bệnh lý khác (kèm mã ICD-10) mà chế phẩm này chống chỉ định, tương tác thuốc. Tên thuốc Hoạt chất Loại cảnh báo Điều kiện Mã ICD Tên ICD Ghi chú
-Meloxicam Meloxicam Chống chỉ định Loét dạ dày tá tràng K25 Loét dạ dày Tăng nguy cơ xuất huyết tiêu hóa – đặc biệt ở người có tiền sử
-Meloxicam Meloxicam Thận trọng Tăng huyết áp I10 Tăng huyết áp Có thể gây giữ muối nước – tăng huyết áp
-Meloxicam Meloxicam Thận trọng Hen phế quản J45 Hen phế quản Có thể gây co thắt phế quản ở người mẫn cảm aspirin
-Ketoprofen Ketoprofen Chống chỉ định Loét dạ dày tá tràng K25 Loét dạ dày Tăng nguy cơ loét và xuất huyết tiêu hóa
-Ketoprofen Ketoprofen Thận trọng Suy thận N18 Suy thận mạn Hiệu chỉnh liều – tránh dùng kéo dài
-Tenoxicam Tenoxicam Chống chỉ định Loét dạ dày tá tràng K25 Loét dạ dày Chống chỉ định tuyệt đối – tăng nguy cơ biến chứng xuất huyết
-Paracetamol Paracetamol Chống chỉ định Suy gan nặng K72 Suy gan Nguy cơ độc gan nghiêm trọng – tránh dùng
-Paracetamol Paracetamol Thận trọng Thiếu men G6PD D55 Thiếu G6PD Có thể gây tán huyết nếu dùng liều cao
-Dexamethason Dexamethason Thận trọng Loét dạ dày tá tràng K25 Loét dạ dày Corticoid làm tăng tiết acid và giảm bảo vệ niêm mạc dạ dày
-Dexamethason Dexamethason Thận trọng Tăng huyết áp I10 Tăng huyết áp Có thể làm tăng huyết áp nếu dùng kéo dài
-Losartan Losartan Thận trọng Suy thận N18 Suy thận mạn Cần hiệu chỉnh liều, theo dõi creatinin huyết thanh
-Losartan Losartan Chống chỉ định Phụ nữ có thai 3 tháng giữa và cuối O36.4 Thai kỳ nguy cơ Ảnh hưởng đến thai – gây quái thai, giảm sản thận
-Amlodipin Amlodipin Thận trọng Hạ huyết áp I95 Hạ huyết áp Có thể gây tụt huyết áp quá mức ở liều cao
-Amlodipin Amlodipin Thận trọng Suy gan K72 Suy gan Giảm chuyển hóa – cần giảm liều
-Spironolacton Spironolacton Chống chỉ định Tăng kali máu E87.5 Rối loạn điện giải Có thể gây loạn nhịp, ngừng tim nếu K+ > 5.5 mmol/L
-Spironolacton Spironolacton Thận trọng Suy gan K72 Suy gan Cần theo dõi sát điện giải và chức năng gan
-Bisoprolol Bisoprolol Chống chỉ định Hen phế quản J45 Hen phế quản Ức chế beta gây co thắt phế quản
-Bisoprolol Bisoprolol Chống chỉ định Block nhĩ thất độ II–III I44.1 Block nhĩ thất Gây chậm nhịp tim nặng hơn
-Digoxin Digoxin Thận trọng Suy thận N18 Suy thận mạn Thải trừ qua thận – nguy cơ ngộ độc nếu không chỉnh liều
-Digoxin Digoxin Chống chỉ định Block AV hoàn toàn I44.2 Block nhĩ thất hoàn toàn Gây nguy cơ ngừng tim
-Metformin Metformin Chống chỉ định Suy thận nặng (eGFR <30) N18.5 Bệnh thận mạn G5 Nguy cơ nhiễm toan lactic – không dùng
-Metformin Metformin Chống chỉ định Suy gan K72 Suy gan Tăng nguy cơ nhiễm toan lactic
-Metformin Metformin Thận trọng Người cao tuổi Z72.3 Người cao tuổi Cần đánh giá chức năng thận định kỳ
-Glimepiride Glimepiride Chống chỉ định Đái tháo đường type 1 E10 ĐTĐ type 1 Không hiệu quả – nguy cơ hạ đường huyết nghiêm trọng
-Glimepiride Glimepiride Thận trọng Người cao tuổi Z72.3 Người cao tuổi Dễ hạ đường huyết kéo dài – cần theo dõi
-Gliclazide Gliclazide Chống chỉ định Suy gan nặng K72 Suy gan Nguy cơ tích lũy thuốc – tăng hạ đường huyết
-Gliclazide Gliclazide Thận trọng Suy thận N18 Suy thận mạn Chỉnh liều – tránh tích lũy gây hạ đường huyết
-Sitagliptin Sitagliptin Thận trọng Suy thận N18 Suy thận mạn Cần hiệu chỉnh liều theo mức eGFR
-Sitagliptin Sitagliptin Thận trọng Viêm tụy cấp K85 Viêm tụy cấp Ngừng thuốc nếu có biểu hiện viêm tụy
-Sitagliptin Sitagliptin Chống chỉ định Quá mẫn với Sitagliptin T78 Phản ứng dị ứng Phản vệ – mày đay, phù mạch đã ghi nhận
-Amoxicillin Amoxicillin Chống chỉ định Dị ứng penicillin T88.7 Phản ứng dị ứng với thuốc Nguy cơ sốc phản vệ, nổi mề đay, phù mạch
-Amoxicillin + Clavulanat Amoxicillin + Clavulanic acid Thận trọng Bệnh gan K76 Bệnh gan khác Có thể gây viêm gan ứ mật – theo dõi men gan
-Cefuroxim Cefuroxim Thận trọng Suy thận N18 Suy thận mạn Cần hiệu chỉnh liều – thải qua thận
-Ciprofloxacin Ciprofloxacin Chống chỉ định Trẻ em < 18 tuổi Z00.12 Khám sức khỏe trẻ em Ảnh hưởng phát triển sụn khớp
-Ciprofloxacin Ciprofloxacin Thận trọng Người cao tuổi Z72.3 Người cao tuổi Tăng nguy cơ gân bị viêm hoặc đứt gân
-Erythromycin Erythromycin Chống chỉ định Kéo dài QT I45.81 Hội chứng QT kéo dài Tăng nguy cơ loạn nhịp nghiêm trọng
-Erythromycin Erythromycin Thận trọng Suy gan K72 Suy gan Cần hiệu chỉnh liều, nguy cơ tích lũy
-Metronidazol Metronidazol Chống chỉ định Dị ứng metronidazol T88.7 Phản ứng dị ứng với thuốc Phản vệ, nổi mề đay, nguy cơ sốc
-Metronidazol Metronidazol Thận trọng Bệnh lý thần kinh ngoại biên G62 Bệnh thần kinh ngoại biên Có thể làm nặng thêm triệu chứng
-Metronidazol Metronidazol Thận trọng Suy gan K72 Suy gan Cần giảm liều nếu suy gan trung bình/nặng
-Berberin Berberin Thận trọng Thiếu men G6PD D55 Thiếu G6PD Có thể gây tán huyết ở người thiếu G6PD
-Berberin Berberin Thận trọng Phụ nữ có thai O26.8 Biến chứng thai kỳ Kích thích tử cung – có nguy cơ co bóp tử cung sớm
-Actisô Cynara scolymus Thận trọng Tắc ống mật K83.1 Tắc ống mật Tăng tiết mật – không dùng nếu đã tắc
-Rau đắng đất Glinus oppositifolius Thận trọng Huyết áp thấp I95 Hạ huyết áp Có thể làm tụt huyết áp thêm – theo dõi sát
-Hoàng bá Phellodendron amurense Chống chỉ định Người đang dùng kháng sinh quinolon Z92.2 Tiền sử dùng kháng sinh Hiệp đồng tăng độc tính thần kinh trung ương
-Hương phụ Cyperus rotundus Thận trọng Rối loạn kinh nguyệt N92 Rối loạn kinh nguyệt Cần thận trọng vì ảnh hưởng nội tiết
-Quế chi Cinnamomum cassia Thận trọng Tăng huyết áp I10 Tăng huyết áp Có thể làm tăng huyết áp nhẹ – cần theo dõi
-Ngưu tất Achyranthes bidentata Chống chỉ định Phụ nữ có thai O26.8 Biến chứng thai kỳ Kích thích tử cung – có thể gây sẩy thai
-Hà thủ ô đỏ Fallopia multiflora Chống chỉ định Suy gan K72 Suy gan Đã ghi nhận nhiều ca độc gan do chế phẩm
-Cát căn Pueraria thomsonii Thận trọng Tiêu chảy K59.1 Tiêu chảy chức năng Tăng tiết – có thể làm nặng triệu chứng
-Levocetirizine Levocetirizine dihydrochloride Thận trọng Suy thận N18 Suy thận mạn Cần hiệu chỉnh liều theo eGFR
-Fexofenadine Fexofenadine hydrochloride Thận trọng Suy thận N18 Suy thận mạn Thải qua thận – giảm liều nếu eGFR < 50
-Loperamide Loperamide hydrochloride Chống chỉ định Viêm đại tràng nặng K51 Viêm loét đại tràng Tăng nguy cơ phình đại tràng nhiễm độc
-Loperamide Loperamide hydrochloride Chống chỉ định Trẻ < 2 tuổi Z00.12 Khám sức khỏe trẻ em Nguy cơ ức chế thần kinh trung ương – không dùng
-Alverin Alverine citrate Thận trọng Suy gan K72 Suy gan Chưa có dữ liệu an toàn – thận trọng khi dùng
-Alverin Alverine citrate Thận trọng Suy thận N18 Suy thận mạn Cần cân nhắc liều ở người suy thận nặng
-Bromhexin Bromhexine hydrochloride Thận trọng Loét dạ dày K25 Loét dạ dày Kích thích niêm mạc – dùng thận trọng
-Bromhexin Bromhexine hydrochloride Thận trọng Hen phế quản J45 Hen phế quản Có thể kích thích ho co thắt – theo dõi
-Ambroxol Ambroxol hydrochloride Thận trọng Loét dạ dày K25 Loét dạ dày Có thể gây kích ứng dạ dày
-Ambroxol Ambroxol hydrochloride Thận trọng Suy gan K72 Suy gan Chuyển hóa qua gan – nên thận trọng nếu suy gan nặng
-Clorpheniramin Chlorpheniramine maleate Chống chỉ định Glaucoma góc đóng H40 Glaucoma góc đóng Tăng nhãn áp – có thể làm nặng bệnh
-Clorpheniramin Chlorpheniramine maleate Chống chỉ định Phì đại tuyến tiền liệt N40 Phì đại tuyến tiền liệt Nguy cơ bí tiểu – chống chỉ định
-Salbutamol Salbutamol sulfate Thận trọng Bệnh tim thiếu máu cục bộ I25 Bệnh mạch vành mãn Có thể gây loạn nhịp, đau ngực – cần theo dõi
-Salbutamol Salbutamol sulfate Thận trọng Đái tháo đường E14 Đái tháo đường Tăng glucose huyết – cần kiểm soát đường máu
-Acetylcystein Acetylcysteine Thận trọng Loét dạ dày K25 Loét dạ dày Kích ứng niêm mạc – cần thận trọng
-Acetylcystein Acetylcysteine Thận trọng Hen phế quản J45 Hen phế quản Có thể gây co thắt phế quản ở một số bệnh nhân
-Prednisolon Prednisolone Thận trọng Tăng huyết áp I10 Tăng huyết áp Có thể giữ nước, tăng huyết áp khi dùng kéo dài
-Prednisolon Prednisolone Thận trọng Loét dạ dày K25 Loét dạ dày Corticoid làm tăng nguy cơ xuất huyết tiêu hóa
-Magnesi B6 Magnesium lactate + Pyridoxine Thận trọng Suy thận N18 Suy thận mạn Nguy cơ tăng Mg máu nếu chức năng thận suy
-Cimetidin Cimetidine Thận trọng Suy gan K72 Suy gan Chuyển hóa tại gan – cần giảm liều nếu nặng
-Alpha chymotrypsin Alpha chymotrypsin Chống chỉ định Dị ứng với protein T78 Phản ứng dị ứng Có thể gây phản vệ – đặc biệt ở người dị ứng chế phẩm enzyme
-Alpha chymotrypsin Alpha chymotrypsin Thận trọng Rối loạn đông máu D68 Rối loạn đông máu Tăng nguy cơ chảy máu – không dùng trước phẫu thuật
-Bacillus clausii Bacillus clausii spores Thận trọng Suy giảm miễn dịch D84 Suy giảm miễn dịch Thận trọng vì là chế phẩm vi sinh sống
-Sorbitol Sorbitol Chống chỉ định Tắc ruột K56 Tắc ruột Tăng nguy cơ đầy hơi, chướng bụng – chống chỉ định khi tắc nghẽn cơ học
-Alimemazin Alimemazine tartrate Chống chỉ định Trẻ < 2 tuổi Z00.12 Khám sức khỏe trẻ em Nguy cơ ức chế hô hấp ở trẻ nhỏ
-Alimemazin Alimemazine tartrate Thận trọng Bệnh Parkinson G20 Parkinson Kháng cholinergic – có thể làm nặng run cứng
-Acid folic Folic acid Thận trọng Thiếu máu không do thiếu folat D64.9 Thiếu máu không xác định Có thể che lấp thiếu máu ác tính – làm chậm chẩn đoán
-Clotrimazole Clotrimazole Thận trọng Viêm da tiếp xúc L23 Viêm da tiếp xúc Dễ gây kích ứng nếu dùng bôi nhiều lần/ngày
-Betamethasone Betamethasone Thận trọng Nhiễm khuẩn chưa điều trị B99 Nhiễm trùng không đặc hiệu Corticoid làm che dấu triệu chứng, lan rộng nhiễm khuẩn
-Betamethasone Betamethasone Thận trọng Đái tháo đường E14 Đái tháo đường Có thể gây tăng đường huyết – cần theo dõi chặt
-Ranitidin Ranitidine Chống chỉ định Quá mẫn với Ranitidine T78 Phản ứng dị ứng Ghi nhận phản vệ và mày đay – chống chỉ định
-Ranitidin Ranitidine Thận trọng Suy thận N18 Suy thận mạn Thải qua thận – cần giảm liều
-Lansoprazole Lansoprazole Thận trọng Suy gan K72 Suy gan Chuyển hóa qua gan – giảm liều nếu nặng
-Aluminum hydroxide Aluminum hydroxide Thận trọng Suy thận N18 Suy thận mạn Tăng nguy cơ tích lũy nhôm – gây độc thần kinh
-Simethicone Simethicone Thận trọng Tắc ruột K56 Tắc ruột Không hiệu quả khi có tắc cơ học – thận trọng
-Bismuth subcitrate Bismuth subcitrate Thận trọng Suy thận N18 Suy thận mạn Tăng tích lũy – nguy cơ độc thần kinh
-Misoprostol Misoprostol Chống chỉ định Phụ nữ có thai O26.8 Biến chứng thai kỳ Có thể gây co bóp tử cung – sẩy thai
-Misoprostol Misoprostol Thận trọng Tiêu chảy K59.1 Tiêu chảy chức năng Tác dụng phụ thường gặp – có thể làm nặng thêm
-Hydrotalcite Hydrotalcite Thận trọng Suy thận N18 Suy thận mạn Tăng nguy cơ tích lũy Mg, Al – dùng thận trọng
-Domperidone Domperidone Chống chỉ định Loạn nhịp tim I49 Rối loạn nhịp tim Kéo dài QT – nguy cơ rung thất
-Atorvastatin Atorvastatin Chống chỉ định Bệnh gan hoạt động K76 Bệnh gan khác Tăng men gan rõ rệt – không dùng
-Atorvastatin Atorvastatin Thận trọng Người uống nhiều rượu F10.2 Rối loạn do rượu Nguy cơ độc gan cao hơn – cần theo dõi
-Fenofibrate Fenofibrate Chống chỉ định Suy gan K72 Suy gan Gây rối loạn chuyển hóa lipid – tăng độc tính
-Fenofibrate Fenofibrate Thận trọng Suy thận N18 Suy thận mạn Cần hiệu chỉnh liều – tránh tích lũy
-Aspirin Acetylsalicylic acid Chống chỉ định Loét dạ dày tá tràng tiến triển K25 Loét dạ dày Nguy cơ chảy máu tiêu hóa – chống chỉ định tuyệt đối
-Aspirin Acetylsalicylic acid Chống chỉ định Hen do aspirin J45.0 Hen dạng nhạy cảm aspirin Co thắt phế quản – ngừng ngay
-Clopidogrel Clopidogrel Thận trọng Chảy máu đang diễn tiến R58 Chảy máu Tăng nguy cơ xuất huyết – ngưng nếu không kiểm soát được
-Clopidogrel Clopidogrel Thận trọng Suy gan nặng K72 Suy gan Cần theo dõi chức năng đông máu
-Nitroglycerin Nitroglycerin Chống chỉ định Huyết áp thấp I95 Hạ huyết áp Tụt huyết áp nghiêm trọng – không dùng khi huyết áp thấp
-Nitroglycerin Nitroglycerin Chống chỉ định Dùng chung với thuốc ức chế PDE5 Z92.2 Tiền sử dùng thuốc Nguy cơ tụt huyết áp nghiêm trọng nếu phối hợp
-Carbocisteine Carbocisteine Thận trọng Loét dạ dày K25 Loét dạ dày Kích ứng niêm mạc dạ dày – dùng thận trọng
-Pseudoephedrine Pseudoephedrine hydrochloride Chống chỉ định Tăng huyết áp nặng I10 Tăng huyết áp Co mạch mạnh – tăng huyết áp hơn
-Dextromethorphan Dextromethorphan hydrobromide Chống chỉ định Trẻ em < 2 tuổi Z00.12 Khám sức khỏe trẻ em Ức chế hô hấp – không dùng cho trẻ nhỏ
-Phenylephrine Phenylephrine hydrochloride Chống chỉ định Bệnh tim thiếu máu cục bộ I25 Thiếu máu cơ tim Tăng co bóp – làm nặng triệu chứng
-Guaifenesin Guaifenesin Thận trọng Loét dạ dày K25 Loét dạ dày Có thể gây kích ứng dạ dày nếu dùng liều cao
-Tetracycline Tetracycline Chống chỉ định Trẻ < 8 tuổi Z00.12 Khám sức khỏe trẻ em Làm hỏng men răng, ảnh hưởng xương dài
-Tetracycline Tetracycline Chống chỉ định Phụ nữ có thai O26.8 Biến chứng thai kỳ Qua nhau thai – ảnh hưởng men răng thai nhi
-Ketoconazole Ketoconazole Thận trọng Bệnh gan K76 Bệnh gan khác Gây tăng men gan – cần theo dõi men ALT/AST
-Griseofulvin Griseofulvin Chống chỉ định Bệnh gan cấp K71 Viêm gan do thuốc Có thể làm nặng độc tính gan – không dùng
-Nystatin Nystatin Thận trọng Dị ứng với nấm T78 Phản ứng dị ứng Ghi nhận phản ứng chéo với kháng nguyên nấm
-Mephenesin Mephenesin Thận trọng Suy gan K72 Suy gan Chuyển hóa qua gan – cần thận trọng khi dùng liều cao
-Mephenesin Mephenesin Thận trọng Người cao tuổi Z72.3 Người cao tuổi Nguy cơ buồn ngủ, chóng mặt – tăng té ngã
-Nimodipin Nimodipine Chống chỉ định Hạ huyết áp nặng I95 Hạ huyết áp Tụt huyết áp mạnh – ngừng thuốc nếu HA < 90
-Methyldopa Methyldopa Chống chỉ định Bệnh gan hoạt động K76 Bệnh gan khác Tăng men gan, vàng da – chống chỉ định tuyệt đối
-Methyldopa Methyldopa Thận trọng Người cao tuổi Z72.3 Người cao tuổi Nguy cơ an thần quá mức – giảm liều nếu cần
-Triamcinolone Triamcinolone Thận trọng Đái tháo đường E14 Đái tháo đường Tăng đường huyết – cần theo dõi glucose
-Triamcinolone Triamcinolone Thận trọng Nhiễm khuẩn chưa kiểm soát B99 Nhiễm trùng không đặc hiệu Che lấp triệu chứng – làm lan rộng nhiễm khuẩn
-Hydrocortisone Hydrocortisone Thận trọng Tăng huyết áp I10 Tăng huyết áp Có thể gây giữ nước – tăng huyết áp thêm
-Hydrocortisone Hydrocortisone Chống chỉ định Nhiễm nấm toàn thân B49 Nhiễm nấm không đặc hiệu Tăng nguy cơ tử vong – không dùng corticoid toàn thân
-Terpin Terpin hydrate Thận trọng Suy gan K72 Suy gan Thải trừ qua gan – nguy cơ tích lũy nếu suy gan
-Kẽm gluconat Zinc gluconate Thận trọng Suy thận N18 Suy thận mạn Tăng nguy cơ tích lũy kẽm
-Vitamin C liều cao Ascorbic acid ≥ 1g/ngày Thận trọng Sỏi thận N20 Sỏi thận Tăng oxalat niệu – dễ kết tinh tạo sỏi
-Mephenesin Mephenesin Thận trọng Suy gan K72 Suy gan Chuyển hóa qua gan – cần thận trọng khi dùng liều cao
-Mephenesin Mephenesin Thận trọng Người cao tuổi Z72.3 Người cao tuổi Nguy cơ buồn ngủ, chóng mặt – tăng té ngã
-Nimodipin Nimodipine Chống chỉ định Hạ huyết áp nặng I95 Hạ huyết áp Tụt huyết áp mạnh – ngừng thuốc nếu HA < 90
-Triamcinolone Triamcinolone Thận trọng Đái tháo đường E14 Đái tháo đường Tăng đường huyết – cần theo dõi glucose
-Triamcinolone Triamcinolone Thận trọng Nhiễm khuẩn chưa kiểm soát B99 Nhiễm trùng không đặc hiệu Che lấp triệu chứng – làm lan rộng nhiễm khuẩn
-Hydrocortisone Hydrocortisone Thận trọng Tăng huyết áp I10 Tăng huyết áp Có thể gây giữ nước – tăng huyết áp thêm
-Hydrocortisone Hydrocortisone Chống chỉ định Nhiễm nấm toàn thân B49 Nhiễm nấm không đặc hiệu Tăng nguy cơ tử vong – không dùng corticoid toàn thân
-Terpin Terpin hydrate Thận trọng Suy gan K72 Suy gan Thải trừ qua gan – nguy cơ tích lũy nếu suy gan
-Kẽm gluconat Zinc gluconate Thận trọng Suy thận N18 Suy thận mạn Tăng nguy cơ tích lũy kẽm
-Vitamin C liều cao Ascorbic acid ≥ 1g/ngày Thận trọng Sỏi thận N20 Sỏi thận Tăng oxalat niệu – dễ kết tinh tạo sỏi
-CAO GINKGO Ginkgo biloba extract Chống chỉ định Rối loạn đông máu D68 Rối loạn đông máu Có thể làm tăng nguy cơ chảy máu – ngưng trước phẫu thuật
-CAO GINKGO Ginkgo biloba extract Thận trọng Dùng chung với aspirin Z92.2 Tiền sử dùng thuốc Tăng nguy cơ xuất huyết nội sọ – thận trọng phối hợp
-HOASTEX Codein + Terpin + Alimemazin Chống chỉ định Đái tháo đường E14 Đái tháo đường Có chứa đường – tăng glucose huyết
-HOASTEX Codein + Terpin + Alimemazin Chống chỉ định Trẻ em có tiền sử co giật R56.0 Co giật do sốt Alimemazin và codein có thể kích thích thần kinh trung ương
-HOASTEX Codein + Terpin + Alimemazin Chống chỉ định Dị ứng thành phần T78 Phản ứng dị ứng Cần khai thác kỹ tiền sử mẫn cảm
-IBUPROFEN Ibuprofen Chống chỉ định Loét dạ dày tá tràng K25 Loét dạ dày Tăng nguy cơ xuất huyết tiêu hóa
-IBUPROFEN Ibuprofen Thận trọng Tăng huyết áp I10 Tăng huyết áp Có thể làm tăng huyết áp – cần theo dõi
-IBUPROFEN Ibuprofen Thận trọng Suy thận N18 Suy thận mạn Có thể gây độc thận – đặc biệt ở người lớn tuổi
-ACTISO Cynara scolymus Chống chỉ định Tắc ống mật K83.1 Tắc ống mật Tăng tiết mật – không dùng nếu đã tắc nghẽn
-RAU ĐẮNG Glinus oppositifolius Thận trọng Huyết áp thấp I95 Hạ huyết áp Có thể làm tụt huyết áp thêm – cần theo dõi sát
-NEUROTRIVIT Vitamin B1 + B6 + B12 Thận trọng Quá liều vitamin B6 T78 Phản ứng dị ứng / độc tính Dùng kéo dài liều cao B6 có thể gây viêm dây thần kinh ngoại biên
-ROSUVASTATIN Rosuvastatin Chống chỉ định Bệnh gan hoạt động K76 Bệnh gan khác Tăng men gan – không dùng khi ALT > 3 lần ULN
-ROSUVASTATIN Rosuvastatin Thận trọng Dùng chung gemfibrozil Z92.2 Tiền sử dùng thuốc Tăng nguy cơ tiêu cơ vân – cần theo dõi CK
-AGIMLISIN 5 Lisinopril 5 mg Chống chỉ định Phù mạch do ACEI T78.3 Phù mạch Phản ứng phù mạch nghiêm trọng – không dùng lại thuốc cùng nhóm
-ATORVASTATIN 40 Atorvastatin 40 mg Thận trọng Bệnh gan K76 Bệnh gan khác Cần theo dõi men gan định kỳ – tăng nguy cơ độc gan
-LACISARTAN HCT 100/12.5 Irbesartan + Hydrochlorothiazide Chống chỉ định Suy thận nặng N18.5 Bệnh thận mạn G5 Gây mất cân bằng điện giải – cần hiệu chỉnh liều hoặc ngưng
-CINNARIZIN Cinnarizine Thận trọng Bệnh Parkinson G20 Parkinson Có thể làm nặng triệu chứng run và cứng
-DIMENHYDRINAT Dimenhydrinate Thận trọng Glaucoma góc đóng H40 Glaucoma góc đóng Tăng áp lực nội nhãn – có thể gây cơn cấp
-CARBAMAZEPIN 200 MG Carbamazepine Chống chỉ định Block nhĩ thất độ 2 hoặc 3 I44.1 Block nhĩ thất Gây chậm dẫn truyền tim – nguy cơ ngừng tim
-ATROPIN SULFAT Atropin sulfate Thận trọng Tăng nhãn áp H40 Glaucoma góc đóng Chống chỉ định tương đối – tăng áp lực nội nhãn
-KETOPROFEN EC DWP 100MG Ketoprofen Chống chỉ định Loét dạ dày tiến triển K25 Loét dạ dày Tăng nguy cơ xuất huyết tiêu hóa – chống chỉ định tuyệt đối
-VITAMIN C 500MG Ascorbic acid Thận trọng Sỏi thận N20 Sỏi thận Liều cao có thể làm tăng oxalat niệu – nguy cơ kết tinh tạo sỏi
-DẦU DÂN TỘC Tinh dầu hỗn hợp dân tộc Thận trọng Trẻ sơ sinh <6 tháng Z00.12 Khám sức khỏe trẻ em Tinh dầu có thể gây co thắt thanh quản hoặc ngưng thở
-GOLATADIN 60 MR Loratadine 60 mg MR Thận trọng Suy gan K72 Suy gan Chuyển hóa qua gan – giảm liều ở bệnh nhân suy gan nặng
-BUKSER 600 Acetylcysteine 600 mg Thận trọng Loét dạ dày K25 Loét dạ dày Kích ứng dạ dày – cần dùng sau ăn và theo dõi
-HOMETEX Menthol + Cineol + Eucalyptol + Tinh dầu gừng Thận trọng Trẻ < 30 tháng Z00.12 Khám sức khỏe trẻ em Tinh dầu dễ gây co thắt thanh quản, ngừng thở
-VIÊN DẠ DÀY CHOLAPAN OPC Cao mật heo + Nghệ + Trần bì Chống chỉ định Tắc ống mật K83.1 Tắc ống mật Tăng tiết mật – chống chỉ định nếu đã tắc
-MIZHO Kim tiền thảo + Uất kim + Nghệ đen Thận trọng Sỏi thận canxi oxalat N20 Sỏi thận Theo dõi kích thước sỏi – tránh dùng kéo dài nếu không đáp ứng
-TOBIDEX Tobramycin + Dexamethason Thận trọng Loét giác mạc H16.0 Viêm loét giác mạc Steroid làm nặng nhiễm khuẩn – cần cân nhắc lợi ích/nguy cơ
-VASCONCOR 2.5 Bisoprolol fumarate Chống chỉ định Hen phế quản J45 Hen Ức chế beta không chọn lọc có thể gây co thắt phế quản
-HYVALOR PLUS Amlodipin + Valsartan + Hydrochlorothiazide Chống chỉ định Phụ nữ có thai O26.8 Biến chứng thai kỳ Tăng nguy cơ quái thai, suy thận thai nhi
-AMRIAMID 200 Amisulpride 200 mg Chống chỉ định U tủy thượng thận C74 U tủy thượng thận Tăng nguy cơ cơn tăng huyết áp kịch phát – chống chỉ định tuyệt đối
-VACOBUFEN 400 SACHET Ibuprofen 400 mg Chống chỉ định Loét dạ dày tá tràng K25 Loét dạ dày Tăng nguy cơ xuất huyết tiêu hóa
-DAFODIN Diosmin + Hesperidin Thận trọng Phụ nữ có thai 3 tháng đầu O09.0 Thai < 14 tuần Chưa đủ dữ liệu độ an toàn – cân nhắc dùng nếu cần
-VINPHAXICAM Piroxicam beta-cyclodextrin Chống chỉ định Loét dạ dày tá tràng tiến triển K25 Loét dạ dày NSAID gây độc niêm mạc – chống chỉ định nếu có tiền sử loét
-MIDATAN 500/62,5 Amoxicillin + Clavulanic acid Thận trọng Suy gan K72 Suy gan Tăng men gan – cần theo dõi chức năng gan định kỳ
-OZANTA Olanzapine Thận trọng Đái tháo đường E14 Đái tháo đường Tăng đường huyết – cần theo dõi glucose máu thường xuyên
-STADNEX 20 CAP Esomeprazole 20 mg Thận trọng Suy gan K72 Suy gan Giảm liều ở bệnh nhân suy gan nặng
-REMINT-S FORT Ginkgo biloba + Troxerutin + Heptaminol Thận trọng Rối loạn đông máu D68 Rối loạn đông máu Tăng nguy cơ chảy máu – cần theo dõi nếu dùng chung aspirin/warfarin
-SULFADIAZIN BẠC Silver sulfadiazine Chống chỉ định Dị ứng sulfonamid T88.7 Phản ứng dị ứng với thuốc Không dùng nếu tiền sử dị ứng sulfa
-FORDIA MR Metformin + Gliclazide MR Chống chỉ định Suy thận nặng N18.5 Bệnh thận mạn G5 Tăng nguy cơ nhiễm toan lactic và hạ đường huyết
-APITIM 10 Atorvastatin 10 mg Thận trọng Suy gan K76 Bệnh gan khác Theo dõi men gan ALT/AST thường xuyên
-KATRYPSIN FORT Alpha chymotrypsin Chống chỉ định Dị ứng protein T78 Phản ứng dị ứng Có thể gây phản vệ – đặc biệt người dị ứng enzyme
-GIKANIN Ginkgo biloba + B1 + B6 + B12 Thận trọng Rối loạn đông máu D68 Rối loạn đông máu Tăng nguy cơ chảy máu nếu phối hợp thuốc kháng đông
-CEFACLOR 125MG Cefaclor 125 mg Thận trọng Suy thận N18 Suy thận mạn Hiệu chỉnh liều – nguy cơ tích lũy
-LAMIVUDIN HASAN 150 Lamivudine Thận trọng Suy gan K72 Suy gan Cần theo dõi chức năng gan nếu có viêm gan mạn tính
-SA VILEUCIN Acetyl leucine Thận trọng Phụ nữ có thai O26.8 Biến chứng thai kỳ Chưa có dữ liệu an toàn đầy đủ – cân nhắc lợi ích/nguy cơ
-THELIZIN Cetirizine + Pseudoephedrine Chống chỉ định Tăng huyết áp nặng I10 Tăng huyết áp Co mạch mạnh – có thể làm nặng tăng huyết áp
-DOPOLYS - S Acetylcysteine + Loratadin Thận trọng Loét dạ dày K25 Loét dạ dày Cần dùng sau ăn – tránh kích ứng niêm mạc
-Omeprazol Omeprazole Thận trọng Suy gan nặng K72 Suy gan Cần hiệu chỉnh liều – tăng nguy cơ tích lũy thuốc
-Omeprazol Omeprazole Thận trọng Dùng kéo dài >12 tuần E83.5 Rối loạn chuyển hóa calci Nguy cơ loãng xương, gãy xương – bổ sung canxi khi cần
-Omeprazol Omeprazole Thận trọng Nhiễm H. pylori không điều trị K29.5 Viêm dạ dày mạn Không dùng đơn độc kéo dài – cần phối hợp kháng sinh nếu H. pylori dương tính
-Omeprazol Omeprazole Thận trọng Sử dụng đồng thời với Clopidogrel Z92.2 Tiền sử dùng thuốc Tương tác làm giảm tác dụng kháng tiểu cầu của Clopidogrel
-Omeprazol Omeprazole Chống chỉ định Dị ứng với dẫn xuất benzimidazol T78 Phản ứng dị ứng Cần hỏi kỹ tiền sử dị ứng thuốc họ PPI
-Alpha chymotrypsin AlphaCHY Chống chỉ định Viêm loét dạ dày tá tràng tiến triển K25–K28 Loét dạ dày – tá tràng Có thể gây xuất huyết do hoạt tính enzyme tiêu protein
-Alpha chymotrypsin AlphaCHY Thận trọng Bệnh gan nặng, người đang chảy máu R58 Chảy máu chưa xác định nguyên nhân Tăng nguy cơ chảy máu do ảnh hưởng đông máu
-Alpha chymotrypsin AlphaCHY Chống chỉ định Dị ứng với protein từ bò hoặc alpha-trypsin T78.1 Phản ứng dị ứng với thức ăn Nguy cơ phản vệ, nên hỏi kỹ tiền sử dị ứng.
-                                TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Giải thích chi tiết và ví dụ..."] }`;
+                                YÊU CẦU: 1. summary: Tóm tắt lý do chính từối. 2. details: Giải thích tại sao chẩn đoán không phù hợp và liệt kê các bệnh lý khác (kèm mã ICD-10) có thể chống chỉ định hoặc tương tác với chế phẩm này.
+                                TRẢ LỜI JSON: { "summary": "Lý do tóm tắt...", "details": ["Chi tiết 1...", "Chi tiết 2..."] }`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" }})
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: prompt }] }], 
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
                 });
                 if (!response.ok) {
-                    const error = await response.json(); throw new Error(error.error?.message || `Lỗi API: ${response.status}`);
+                    const error = await response.json(); 
+                    throw new Error(error.error?.message || `Lỗi API: ${response.status}`);
                 }
                 const data = await response.json();
                 const parsedResult = JSON.parse(data.candidates[0].content.parts[0].text);
                 return { summary: parsedResult.summary || "Không có tóm tắt.", details: parsedResult.details || [] };
             } catch (error) {
-                console.error("Lỗi Gemini API:", error); throw new Error('Lỗi phân tích từ Gemini. ' + error.message);
+                console.error("Lỗi Gemini API:", error); 
+                throw new Error('Lỗi phân tích từ Gemini. ' + error.message);
             }
         }
 
@@ -876,7 +802,7 @@ Alpha chymotrypsin AlphaCHY Chống chỉ định Dị ứng với protein từ 
                                            <div class="progress-bar progress-bar-striped bg-warning text-dark" style="width: ${analyzedCount/totalRows*100}%"><b>${analyzedCount}/${totalRows}</b></div>
                                            </div>`;
             } else {
-                statusCell.innerHTML = `<span class="badge bg-success">✅ Đã xong</span>`;
+                statusCell.innerHTML = `<span class="badge bg-success">✓ Đã xong</span>`;
             }
         }
     </script>
