@@ -390,8 +390,15 @@
             });
             dashboardHTML += `</tbody></table></div></div>`;
             
-            let tableHTML = `<h4 class="text-danger mt-4">Lỗi Logic: Ngày Y Lệnh Sau Ngày Ra Viện (Tổng tiền XT: ${overallTotal.toLocaleString('vi-VN')} đ)</h4>
-                                 <p>Hiển thị <b>tất cả</b> các trường hợp có lỗi. Lưu ý: Tổng tiền và thống kê được tính trên tất cả các dòng lỗi, bao gồm cả các ca trùng lặp.</p>
+            let tableHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 15px;">
+                                <div>
+                                    <h4 class="text-danger mb-2">Lỗi Logic: Ngày Y Lệnh Sau Ngày Ra Viện (Tổng tiền XT: ${overallTotal.toLocaleString('vi-VN')} đ)</h4>
+                                    <p class="mb-0">Hiển thị <b>tất cả</b> các trường hợp có lỗi. Lưu ý: Tổng tiền và thống kê được tính trên tất cả các dòng lỗi, bao gồm cả các ca trùng lặp.</p>
+                                </div>
+                                <button class="btn btn-success btn-modern" id="export-date-error-btn">
+                                    <i class="bi bi-file-earmark-excel"></i> Xuất Excel
+                                </button>
+                            </div>
                                  <div class="table-responsive">
                                      <table class="table table-bordered table-hover">
                                          <thead class="table-dark">
@@ -427,6 +434,11 @@
 
             tableHTML += `</tbody></table></div>`;
             resultsContainer.innerHTML = dashboardHTML + tableHTML;
+            
+            // Thêm sự kiện cho nút xuất Excel
+            document.getElementById('export-date-error-btn').addEventListener('click', () => {
+                exportDateErrorToExcel(validSheetData, sortedFacilities, overallTotal);
+            });
         }
 
         function processData(allData) {
@@ -526,6 +538,68 @@
             XLSX.utils.book_append_sheet(workbook, worksheet2, 'Thong Ke');
             XLSX.utils.book_append_sheet(workbook, worksheet1, 'Chi Tiet');
             
+            const colsDetail = Object.keys(detailData[0]);
+            worksheet1['!cols'] = colsDetail.map(col => ({ 
+                wch: Math.max(...detailData.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 
+            }));
+            
+            const colsSummary = Object.keys(summaryData[0]);
+            worksheet2['!cols'] = colsSummary.map(col => ({ 
+                wch: Math.max(...summaryData.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 
+            }));
+            
+            XLSX.writeFile(workbook, filename + '.xlsx');
+        }
+
+        function exportDateErrorToExcel(validSheetData, sortedFacilities, overallTotal) {
+            // Dữ liệu chi tiết
+            const detailData = validSheetData.map((row, index) => {
+                const ngayVao = row['NGAY_VAO'] instanceof Date ? row['NGAY_VAO'].toLocaleDateString('vi-VN') : (row['NGAY_VAO'] || '');
+                const ngayRa = row['NGAY_RA'] instanceof Date ? row['NGAY_RA'].toLocaleDateString('vi-VN') : (row['NGAY_RA'] || '');
+                const ngayYl = row['NGAY_YL'] instanceof Date ? row['NGAY_YL'].toLocaleDateString('vi-VN') : (row['NGAY_YL'] || '');
+                
+                return {
+                    'STT': index + 1,
+                    'MA_CSKCB': row['MA_CSKCB'] || '',
+                    'TEN_CSKCB': facilityNameMap[row['MA_CSKCB']] || row['MA_CSKCB'] || '',
+                    'HO_TEN': row['HO_TEN'] || '',
+                    'NGAY_VAO': ngayVao,
+                    'NGAY_RA': ngayRa,
+                    'NGAY_Y_LENH': ngayYl,
+                    'TIEN_XUAT_TOAN': parseFloat(row['TONG_XUATTOAN']) || 0,
+                    'LY_DO_LOI': 'Ngày y lệnh không được sau ngày ra viện'
+                };
+            });
+
+            // Dữ liệu thống kê theo cơ sở
+            const summaryData = sortedFacilities.map(([cskcb, amount], index) => ({
+                'STT': index + 1,
+                'MA_CSKCB': cskcb,
+                'TEN_CSKCB': facilityNameMap[cskcb] || cskcb,
+                'SO_TRUONG_HOP_LOI': validSheetData.filter(r => r['MA_CSKCB'] === cskcb).length,
+                'TONG_TIEN_LOI': amount
+            }));
+
+            // Thêm dòng tổng cộng
+            summaryData.push({
+                'STT': '',
+                'MA_CSKCB': '',
+                'TEN_CSKCB': 'TỔNG CỘNG',
+                'SO_TRUONG_HOP_LOI': validSheetData.length,
+                'TONG_TIEN_LOI': overallTotal
+            });
+
+            const filename = `LoiNgayYLenh_${new Date().toISOString().slice(0, 10)}`;
+            
+            // Tạo workbook với 2 sheet
+            const worksheet1 = XLSX.utils.json_to_sheet(detailData);
+            const worksheet2 = XLSX.utils.json_to_sheet(summaryData);
+            
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet2, 'Thong Ke Theo CSKCB');
+            XLSX.utils.book_append_sheet(workbook, worksheet1, 'Chi Tiet Loi');
+            
+            // Auto-size columns
             const colsDetail = Object.keys(detailData[0]);
             worksheet1['!cols'] = colsDetail.map(col => ({ 
                 wch: Math.max(...detailData.map(row => row[col] ? row[col].toString().length : 10), col.length) + 2 
