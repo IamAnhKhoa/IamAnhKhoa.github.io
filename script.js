@@ -84,6 +84,7 @@ const ERROR_TYPES = {
     'THUOC_THYL_NGOAI_GIO_HC': 'Thuốc - Thực hiện YL ngoài giờ HC',
     'DVKT_YL_NGOAI_GIO_HC': 'DVKT - Y lệnh ngoài giờ HC',
     'DVKT_THYL_NGOAI_GIO_HC': 'DVKT - Thực hiện YL ngoài giờ HC',
+  'XML4_MISSING_NGAY_KQ': 'XML4 - Thiếu ngày trả kết quả trong HIS (NGAY_KQ)',
     'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
   'KQ_DVKT_SAU_YL_THUOC': 'XML3. NGÀY TH Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
     'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT', 
@@ -1088,12 +1089,14 @@ if (indicationMap.has(maThuoc)) {
     }
     record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
 
-    const xml4Data = [];
+ const xml4Data = [];
     if (record.has_xml4) {
         chiTietCLSNode.querySelectorAll('CHI_TIET_CLS').forEach(cls => {
             const maDichVu = getText(cls, 'MA_DICH_VU');
             const tenChiSo = getText(cls, 'TEN_CHI_SO');
             const maBsDocKq = getText(cls, 'MA_BS_DOC_KQ');
+            const ngayKqRaw = getText(cls, 'NGAY_KQ'); // <-- LẤY NGÀY KQ GỐC
+
             const correspondingService = record.services.find(s => s.ma_dich_vu === maDichVu);
             const nguoiThucHien = correspondingService ? correspondingService.nguoi_thuc_hien : '';
 
@@ -1102,25 +1105,41 @@ if (indicationMap.has(maThuoc)) {
                 ten_chi_so: tenChiSo,
                 gia_tri: getText(cls, 'GIA_TRI'),
                 don_vi_do: getText(cls, 'DON_VI_DO'),
-                ngay_kq: formatDateTimeForDisplay(getText(cls, 'NGAY_KQ')),
+                ngay_kq: formatDateTimeForDisplay(ngayKqRaw), // <-- Sử dụng biến ngayKqRaw
                 ma_bs_doc_kq: maBsDocKq,
                 nguoi_thuc_hien: nguoiThucHien
             });
 
-            const ruleKey = 'XML4_MISSING_MA_BS_DOC_KQ';
-            if (validationSettings[ruleKey]?.enabled && !maBsDocKq) {
-                const associatedService = record.services.find(s => s.ma_dich_vu === maDichVu);
-                const serviceCost = associatedService ? associatedService.thanh_tien_bh : 0;
-                const serviceName = associatedService ? associatedService.ten_dich_vu : `DV có mã ${maDichVu}`;
+            // --- BẮT ĐẦU KHỐI KIỂM TRA XML4 ---
+            // Lấy thông tin DVKT tương ứng để tính chi phí xuất toán
+            const associatedService = record.services.find(s => s.ma_dich_vu === maDichVu);
+            const serviceCost = associatedService ? associatedService.thanh_tien_bh : 0;
+            const serviceName = associatedService ? associatedService.ten_dich_vu : `DV có mã ${maDichVu}`;
 
+            // 1. KIỂM TRA MỚI: Thiếu NGAY_KQ
+            const ruleKeyNgayKq = 'XML4_MISSING_NGAY_KQ';
+            if (validationSettings[ruleKeyNgayKq]?.enabled && !ngayKqRaw) {
                 record.errors.push({
-                    type: ruleKey,
-                    severity: validationSettings[ruleKey].severity,
-                    message: `CLS "${serviceName}" thiếu mã bác sĩ đọc kết quả.`,
-                    cost: serviceCost,
+                    type: ruleKeyNgayKq,
+                    severity: validationSettings[ruleKeyNgayKq].severity,
+                    message: `CLS "${serviceName}" (Chỉ số: ${tenChiSo || 'N/A'}) thiếu ngày trả kết quả (NGAY_KQ).`,
+                    cost: costIfCritical(ruleKeyNgayKq, serviceCost), // Tính chi phí nếu là critical
                     itemName: serviceName
                 });
             }
+
+            // 2. KIỂM TRA CŨ: Thiếu MA_BS_DOC_KQ
+            const ruleKeyBsDoc = 'XML4_MISSING_MA_BS_DOC_KQ';
+            if (validationSettings[ruleKeyBsDoc]?.enabled && !maBsDocKq) {
+                record.errors.push({
+                    type: ruleKeyBsDoc,
+                    severity: validationSettings[ruleKeyBsDoc].severity,
+                    message: `CLS "${serviceName}" thiếu mã bác sĩ đọc kết quả.`,
+                    cost: costIfCritical(ruleKeyBsDoc, serviceCost), // Tính chi phí nếu là critical
+                    itemName: serviceName
+                });
+            }
+            // --- KẾT THÚC KHỐI KIỂM TRA XML4 ---
         });
     }
     
@@ -2289,7 +2308,7 @@ function initializeValidationSettings() {
         'BS_KHAM_TRONG_NGAY_NGHI',
         'NGAY_YL_THUOC_SAU_RA_VIEN', 'NGAY_YL_DVKT_SAU_RA_VIEN', 'NGAY_VAO_SAU_NGAY_RA',
         'THE_BHYT_HET_HAN', 'NGAY_THYL_TRUOC_VAOVIEN', 'NGAY_THYL_SAU_RAVIEN',
-        'MA_MAY_TRUNG_THOI_GIAN', 'XML4_MISSING_MA_BS_DOC_KQ'
+        'MA_MAY_TRUNG_THOI_GIAN', 'XML4_MISSING_MA_BS_DOC_KQ', 'XML4_MISSING_NGAY_KQ'
     ];
 
     configurableRules.forEach(key => {
@@ -2363,6 +2382,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+     {
+        id: 15,
+        date: '27-10-2025',
+        type: 'feature', // 'feature', 'fix', 'announcement'
+        title: 'Bổ sung CẢNH BÁO',
+        content: 'XML4 - NGAY_KQ không được để trống (Thiếu ngày trả kết quả trong HIS)'
+    },
       {
         id: 14,
         date: '11-09-2025',
