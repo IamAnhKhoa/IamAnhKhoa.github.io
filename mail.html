@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f4f7f6;
             min-height: 100vh;
             padding: 20px;
         }
@@ -23,7 +23,7 @@
             margin: 0 auto;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
             overflow: hidden;
         }
 
@@ -38,6 +38,7 @@
             font-size: 32px;
             margin-bottom: 10px;
             font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .header p {
@@ -47,8 +48,8 @@
 
         .search-section {
             padding: 35px;
-            background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
-            border-bottom: 2px solid #e9ecef;
+            background: #ffffff;
+            border-bottom: 1px solid #e9ecef;
         }
 
         .search-container {
@@ -69,21 +70,22 @@
             border-radius: 12px;
             font-size: 16px;
             transition: all 0.3s;
-            background: white;
+            background: #f9f9f9;
         }
 
         .search-input:focus {
             outline: none;
             border-color: #667eea;
+            background: white;
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
-            transform: translateY(-2px);
+            transform: translateY(0);
         }
 
         .filter-section {
             background: white;
-            padding: 20px;
+            padding: 0;
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            box-shadow: none;
         }
 
         .filter-label {
@@ -115,25 +117,26 @@
         }
 
         .tab-btn:hover {
-            background: #667eea;
-            color: white;
+            background: #f4f6ff;
+            color: #667eea;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
         }
 
         .tab-btn.active {
             background: #667eea;
             color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
-        .station-filters {
+        .station-filters, .role-filters { /* [THÊM] Áp dụng style cho .role-filters */
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }
 
-        .station-btn {
+        .station-btn, .role-btn { /* [THÊM] Áp dụng style cho .role-btn */
             padding: 10px 20px;
             border: 2px solid #e9ecef;
             background: white;
@@ -145,7 +148,7 @@
             transition: all 0.3s;
         }
 
-        .station-btn:hover {
+        .station-btn:hover, .role-btn:hover { /* [THÊM] */
             border-color: #764ba2;
             color: #764ba2;
             transform: translateY(-1px);
@@ -156,9 +159,21 @@
             color: white;
             border-color: #764ba2;
         }
+        
+        /* [CSS MỚI] Tạo style riêng cho nút lọc chức danh khi active */
+        .role-btn:hover {
+             border-color: #667eea;
+             color: #667eea;
+        }
+        .role-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
 
         .results-section {
             padding: 35px;
+            background: #f4f7f6;
         }
 
         .stats {
@@ -169,28 +184,31 @@
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #ffffff;
+            color: #333;
             padding: 25px;
             border-radius: 15px;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            transition: transform 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-top: 4px solid #667eea;
         }
 
         .stat-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
         }
 
         .stat-number {
             font-size: 42px;
             font-weight: bold;
             margin-bottom: 5px;
+            color: #667eea;
         }
 
         .stat-label {
             font-size: 15px;
-            opacity: 0.95;
+            color: #555;
             font-weight: 500;
         }
 
@@ -205,7 +223,7 @@
         .table-container {
             overflow-x: auto;
             border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
 
         table {
@@ -215,8 +233,8 @@
         }
 
         thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #f8f9fa;
+            color: #343a40;
         }
 
         th {
@@ -226,6 +244,7 @@
             font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 0.8px;
+            border-bottom: 2px solid #e9ecef;
         }
 
         td {
@@ -239,8 +258,8 @@
         }
 
         tbody tr:hover {
-            background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%);
-            transform: scale(1.01);
+            background: #f8f9fa;
+            transform: none;
         }
 
         .status-badge {
@@ -302,6 +321,7 @@
             height: 140px;
             margin-bottom: 20px;
             opacity: 0.4;
+            color: #764ba2;
         }
 
         .no-results h3 {
@@ -318,7 +338,7 @@
                 grid-template-columns: 1fr;
             }
             
-            .filter-tabs, .station-filters {
+            .filter-tabs, .station-filters, .role-filters { /* [THÊM] */
                 justify-content: center;
             }
             
@@ -369,6 +389,15 @@
                         <button class="station-btn" data-station="Thái Mỹ">Thái Mỹ</button>
                         <button class="station-btn" data-station="Bình Mỹ">Bình Mỹ</button>
                     </div>
+                    
+                    <label class="filter-label" style="margin-top: 20px;">🧑‍⚕️ Lọc theo Chức danh</label>
+                    <div class="role-filters">
+                        <button class="role-btn active" data-role="all">Tất cả</button>
+                        <button class="role-btn" data-role="director">Ban Giám Đốc</button>
+                        <button class="role-btn" data-role="chief">Trưởng Trạm</button>
+                        <button class="role-btn" data-role="deputy">Phó Trưởng Trạm</button>
+                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -993,6 +1022,7 @@
 
         let currentFilter = 'all';
         let currentStation = 'all';
+        let currentRole = 'all'; // [JS MỚI] Biến trạng thái cho chức danh
 
         function updateStats() {
             const data = getFilteredData();
@@ -1015,6 +1045,20 @@
             // Lọc theo trạm
             if (currentStation !== 'all') {
                 data = data.filter(item => item.station === currentStation);
+            }
+
+            // [JS MỚI] Lọc theo Chức danh (Áp dụng sau 2 bộ lọc trên)
+            if (currentRole !== 'all') {
+                if (currentRole === 'director') {
+                    // Dùng === để lọc chính xác "Giám đốc" và "Phó Giám đốc"
+                    data = data.filter(item => item.position === 'Giám đốc' || item.position === 'Phó Giám đốc');
+                } else if (currentRole === 'chief') {
+                    // Dùng includes để lọc "Trưởng Trạm Y tế..."
+                    data = data.filter(item => item.position.includes('Trưởng Trạm'));
+                } else if (currentRole === 'deputy') {
+                    // Dùng includes để lọc "Phó Trưởng Trạm Y tế..."
+                    data = data.filter(item => item.position.includes('Phó Trưởng Trạm'));
+                }
             }
 
             // Tìm kiếm
@@ -1087,6 +1131,16 @@
                 document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentStation = e.target.dataset.station;
+                renderTable();
+            });
+        });
+        
+        // [JS MỚI] Event listener cho nút lọc chức danh
+        document.querySelectorAll('.role-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentRole = e.target.dataset.role;
                 renderTable();
             });
         });
