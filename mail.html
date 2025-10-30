@@ -60,7 +60,7 @@
         .search-box {
             display: flex;
             gap: 15px;
-            margin-bottom: 25px;
+            margin-bottom: 15px; /* [THAY ĐỔI] Giảm margin bottom */
         }
 
         .search-input {
@@ -81,11 +81,60 @@
             transform: translateY(0);
         }
 
+        /* [CSS MỚI] Nút Ẩn/Hiện bộ lọc */
+        .filter-toggle-btn {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #495057;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .filter-toggle-btn:hover {
+            background: #e9ecef;
+            border-color: #ddd;
+        }
+        .filter-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s ease-out;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+        .filter-toggle-btn.active svg {
+            transform: rotate(180deg);
+        }
+
+        /* [CSS MỚI] Thùng chứa bộ lọc có thể thu gọn */
         .filter-section {
             background: white;
-            padding: 0;
             border-radius: 12px;
             box-shadow: none;
+            
+            /* Logic Ẩn/Hiện */
+            max-height: 0;
+            overflow: hidden;
+            padding: 0 20px; /* Ẩn padding-top/bottom */
+            opacity: 0;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease-out;
+            border-top: 1px solid transparent;
+        }
+        
+        /* [CSS MỚI] Trạng thái Kích hoạt cho bộ lọc */
+        .filter-section.active {
+            max-height: 1500px; /* Đủ lớn để chứa tất cả bộ lọc */
+            opacity: 1;
+            padding: 25px 20px; /* Hiện lại padding */
+            border-top: 1px solid #e9ecef; /* Thêm đường kẻ */
+            margin-top: 20px; /* Thêm khoảng cách */
         }
 
         .filter-label {
@@ -148,7 +197,6 @@
             transition: all 0.3s;
         }
 
-        /* --- Bộ lọc Trạm (Màu tím) --- */
         .station-btn:hover {
             border-color: #764ba2;
             color: #764ba2;
@@ -160,7 +208,6 @@
             border-color: #764ba2;
         }
         
-        /* --- Bộ lọc Chức danh (Màu xanh) --- */
         .role-btn:hover {
              border-color: #667eea;
              color: #667eea;
@@ -172,7 +219,6 @@
             border-color: #667eea;
         }
 
-        /* --- Bộ lọc Khoa/Phòng (Màu xanh lá) --- */
         .dept-btn:hover {
              border-color: #20c997;
              color: #20c997;
@@ -225,7 +271,6 @@
             font-weight: 500;
         }
         
-        /* [CSS MỚI] Khu vực công cụ (In, Xuất) */
         .tools-section {
             display: flex;
             justify-content: center;
@@ -258,7 +303,7 @@
         }
 
         #exportButton {
-            background: #1d6f42; /* Màu xanh Excel */
+            background: #1d6f42;
             color: white;
         }
         #exportButton:hover {
@@ -306,7 +351,6 @@
             border-bottom: 1px solid #f1f3f5;
         }
         
-        /* [CSS MỚI] Cột thao tác và các nút copy */
         td.action-cell {
             white-space: nowrap;
             display: flex;
@@ -412,10 +456,9 @@
             margin-bottom: 10px;
         }
 
-        /* [CSS MỚI] Thông báo Toast */
         #toastNotification {
             position: fixed;
-            bottom: -100px; /* Ẩn ban đầu */
+            bottom: -100px;
             left: 50%;
             transform: translateX(-50%);
             background: #222;
@@ -429,16 +472,14 @@
             transition: bottom 0.5s ease;
         }
         #toastNotification.active {
-            bottom: 30px; /* Hiển thị */
+            bottom: 30px;
         }
         
-        /* [CSS MỚI] Cấu hình trang in */
         @media print {
             body {
                 background: #fff;
                 padding: 0;
             }
-            /* Ẩn tất cả các thành phần không cần thiết */
             .header, .search-section, .stats, .tools-section, .results-count {
                 display: none;
             }
@@ -458,21 +499,19 @@
                 overflow: visible;
             }
             table {
-                font-size: 10pt; /* Cỡ chữ nhỏ hơn cho trang in */
+                font-size: 10pt;
             }
             th, td {
                 padding: 8px 10px;
-                border: 1px solid #ccc; /* Thêm viền cho dễ đọc */
+                border: 1px solid #ccc;
             }
             thead {
                 background: #eee;
                 color: #000;
             }
-            /* Ẩn cột thao tác khi in */
             th:last-child, td:last-child {
                 display: none;
             }
-            /* Bỏ các huy hiệu */
             .status-badge, .badge-new {
                 background: none;
                 color: #000;
@@ -485,10 +524,24 @@
                 font-weight: normal;
             }
         }
+        
+        /* [CSS MỚI] Bố cục Tablet */
+        @media (max-width: 992px) {
+             .stats {
+                /* Xếp 2 cột trên tablet */
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px; /* Giảm padding body */
+            }
             .header h1 {
                 font-size: 24px;
+            }
+            .search-section, .results-section {
+                padding: 15px; /* Giảm padding các section */
             }
             .stats {
                 grid-template-columns: 1fr;
@@ -527,7 +580,14 @@
                     >
                 </div>
                 
-                <div class="filter-section">
+                <button class="filter-toggle-btn" id="filterToggleBtn">
+                    <span>Mở Bộ Lọc Nâng Cao</span>
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                
+                <div class="filter-section" id="filterSection">
                     <label class="filter-label">📋 Phân loại</label>
                     <div class="filter-tabs">
                         <button class="tab-btn active" data-filter="all">Tất cả</button>
@@ -617,7 +677,8 @@
                             <th>Chức danh</th>
                             <th style="width: 140px;">Tình trạng</th>
                             <th style="width: 100px;">Ghi chú</th>
-                            <th style="width: 120px;">Thao tác</th> </tr>
+                            <th style="width: 120px;">Thao tác</th>
+                        </tr>
                     </thead>
                     <tbody id="resultsBody"></tbody>
                 </table>
@@ -728,25 +789,19 @@
         let currentFilter = 'all';
         let currentStation = 'all';
         let currentRole = 'all';
-        let currentDepartment = 'all'; // [JS MỚI] Biến trạng thái cho Khoa/Phòng
-        let toastTimer; // [JS MỚI] Biến quản lý thời gian cho toast
+        let currentDepartment = 'all'; 
+        let toastTimer; 
 
-        // [JS MỚI] Hàm hiển thị thông báo
         function showToast(message) {
             const toast = document.getElementById('toastNotification');
             toast.textContent = message;
             toast.classList.add('active');
-
-            // Hủy timer cũ nếu có
             clearTimeout(toastTimer);
-
-            // Tự động ẩn sau 3 giây
             toastTimer = setTimeout(() => {
                 toast.classList.remove('active');
             }, 2000);
         }
 
-        // [JS MỚI] Hàm copy vào clipboard
         function copyToClipboard(text, message) {
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(text).then(() => {
@@ -756,12 +811,10 @@
                     showToast('Lỗi khi copy!');
                 });
             } else {
-                // Fallback cho trình duyệt cũ
                 showToast('Trình duyệt không hỗ trợ copy!');
             }
         }
         
-        // [JS MỚI] Hàm xuất CSV
         function exportToCSV() {
             const data = getFilteredData();
             if (data.length === 0) {
@@ -770,14 +823,11 @@
             }
 
             const headers = ["STT", "Email", "Tên/Đơn vị", "Chức danh", "Tình trạng", "Ghi chú"];
-            
-            // Hàm xử lý một ô (thêm dấu ngoặc kép và escape)
             const escapeCSV = (field) => {
-                const str = String(field || ''); // Đảm bảo là string, xử lý null/undefined
+                const str = String(field || '');
                 return `"${str.replace(/"/g, '""')}"`;
             };
 
-            // Tạo nội dung CSV
             let csvContent = headers.join(',') + '\n';
             data.forEach(item => {
                 const row = [
@@ -791,7 +841,6 @@
                 csvContent += row.map(escapeCSV).join(',') + '\n';
             });
 
-            // Thêm BOM (Byte Order Mark) để Excel đọc UTF-8 (Tiếng Việt) chuẩn
             const bom = '\uFEFF';
             const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -830,17 +879,14 @@
                 data = DATA.individuals;
             }
 
-            // Lọc theo trạm
             if (currentStation !== 'all' && currentFilter !== 'organization') {
                 data = data.filter(item => item.station === currentStation);
             }
             
-            // Lọc theo Khoa/Phòng
             if (currentDepartment !== 'all' && currentFilter !== 'organization') {
                 data = data.filter(item => item.department === currentDepartment);
             }
 
-            // Lọc theo Chức danh
             if (currentRole !== 'all' && currentFilter !== 'organization') {
                 const pos = 'position';
                 if (currentRole === 'director') {
@@ -860,7 +906,6 @@
                 }
             }
 
-            // Tìm kiếm
             const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
             if (searchTerm) {
                 data = data.filter(item => 
@@ -882,7 +927,8 @@
             if (data.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="no-results"> <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <td colspan="7" class="no-results">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                             <h3>Không tìm thấy kết quả</h3>
@@ -894,12 +940,9 @@
                 return;
             }
 
-            // [JS CẬP NHẬT] Thêm cột Thao tác vào .map()
             tbody.innerHTML = data.map(item => {
-                // Tạo chuỗi text cho việc copy dòng (dùng \t (tab) để dán vào Excel đẹp)
                 const rowText = `STT: ${item.stt}\tEmail: ${item.email}\tTên: ${item.name}\tChức danh: ${item.position}`;
                 
-                // Chỉ hiển thị nút thao tác cho cá nhân, không hiển thị cho tổ chức
                 const actionButtons = item.email ? `
                     <button class="action-btn copy-email" data-email="${item.email}">Copy Mail</button>
                     <button class="action-btn copy-row" data-row="${rowText}">Copy Dòng</button>
@@ -931,11 +974,9 @@
 
         document.getElementById('searchInput').addEventListener('input', renderTable);
         
-        // [JS MỚI] Listener cho các nút công cụ
         document.getElementById('printButton').addEventListener('click', () => window.print());
         document.getElementById('exportButton').addEventListener('click', exportToCSV);
 
-        // [JS MỚI] Listener cho các nút copy (sử dụng event delegation)
         document.getElementById('resultsBody').addEventListener('click', (e) => {
             const target = e.target;
             if (target.classList.contains('copy-email')) {
@@ -992,6 +1033,23 @@
                 currentRole = e.target.dataset.role;
                 renderTable();
             });
+        });
+
+        // [JS MỚI] Listener cho nút Ẩn/Hiện bộ lọc
+        document.getElementById('filterToggleBtn').addEventListener('click', function() {
+            const filters = document.getElementById('filterSection');
+            const btn = this; // 'this' là nút được nhấn
+            
+            filters.classList.toggle('active');
+            btn.classList.toggle('active');
+
+            // Thay đổi nội dung text của nút
+            const textSpan = btn.querySelector('span');
+            if (filters.classList.contains('active')) {
+                textSpan.textContent = 'Thu Gọn Bộ Lọc';
+            } else {
+                textSpan.textContent = 'Mở Bộ Lọc Nâng Cao';
+            }
         });
 
         // Load data on page load
