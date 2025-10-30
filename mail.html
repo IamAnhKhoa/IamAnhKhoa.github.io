@@ -130,13 +130,13 @@
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
-        .station-filters, .role-filters { /* [THÊM] Áp dụng style cho .role-filters */
+        .station-filters, .role-filters, .dept-filters {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }
 
-        .station-btn, .role-btn { /* [THÊM] Áp dụng style cho .role-btn */
+        .station-btn, .role-btn, .dept-btn {
             padding: 10px 20px;
             border: 2px solid #e9ecef;
             background: white;
@@ -148,27 +148,40 @@
             transition: all 0.3s;
         }
 
-        .station-btn:hover, .role-btn:hover { /* [THÊM] */
+        /* --- Bộ lọc Trạm (Màu tím) --- */
+        .station-btn:hover {
             border-color: #764ba2;
             color: #764ba2;
             transform: translateY(-1px);
         }
-
         .station-btn.active {
             background: #764ba2;
             color: white;
             border-color: #764ba2;
         }
         
-        /* [CSS MỚI] Tạo style riêng cho nút lọc chức danh khi active */
+        /* --- Bộ lọc Chức danh (Màu xanh) --- */
         .role-btn:hover {
              border-color: #667eea;
              color: #667eea;
+             transform: translateY(-1px);
         }
         .role-btn.active {
             background: #667eea;
             color: white;
             border-color: #667eea;
+        }
+
+        /* --- Bộ lọc Khoa/Phòng (Màu xanh lá) --- */
+        .dept-btn:hover {
+             border-color: #20c997;
+             color: #20c997;
+             transform: translateY(-1px);
+        }
+        .dept-btn.active {
+            background: #20c997;
+            color: white;
+            border-color: #20c997;
         }
 
         .results-section {
@@ -211,6 +224,46 @@
             color: #555;
             font-weight: 500;
         }
+        
+        /* [CSS MỚI] Khu vực công cụ (In, Xuất) */
+        .tools-section {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            max-width: 900px;
+            margin: 0 auto 25px auto;
+        }
+
+        .tool-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        #printButton {
+            background: #f0f0f0;
+            color: #333;
+        }
+        #printButton:hover {
+            background: #e0e0e0;
+        }
+
+        #exportButton {
+            background: #1d6f42; /* Màu xanh Excel */
+            color: white;
+        }
+        #exportButton:hover {
+            background: #165934;
+        }
 
         .results-count {
             text-align: center;
@@ -252,6 +305,36 @@
             text-align: left;
             border-bottom: 1px solid #f1f3f5;
         }
+        
+        /* [CSS MỚI] Cột thao tác và các nút copy */
+        td.action-cell {
+            white-space: nowrap;
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            background: #eee;
+            border-color: #bbb;
+        }
+        .action-btn.copy-email {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .action-btn.copy-email:hover {
+            background: #f4f6ff;
+        }
+
 
         tbody tr {
             transition: all 0.2s;
@@ -329,23 +412,97 @@
             margin-bottom: 10px;
         }
 
+        /* [CSS MỚI] Thông báo Toast */
+        #toastNotification {
+            position: fixed;
+            bottom: -100px; /* Ẩn ban đầu */
+            left: 50%;
+            transform: translateX(-50%);
+            background: #222;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-size: 15px;
+            font-weight: 500;
+            z-index: 1000;
+            transition: bottom 0.5s ease;
+        }
+        #toastNotification.active {
+            bottom: 30px; /* Hiển thị */
+        }
+        
+        /* [CSS MỚI] Cấu hình trang in */
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+            /* Ẩn tất cả các thành phần không cần thiết */
+            .header, .search-section, .stats, .tools-section, .results-count {
+                display: none;
+            }
+            .container {
+                width: 100%;
+                max-width: 100%;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            .results-section {
+                padding: 0;
+                background: #fff;
+            }
+            .table-container {
+                box-shadow: none;
+                border-radius: 0;
+                overflow: visible;
+            }
+            table {
+                font-size: 10pt; /* Cỡ chữ nhỏ hơn cho trang in */
+            }
+            th, td {
+                padding: 8px 10px;
+                border: 1px solid #ccc; /* Thêm viền cho dễ đọc */
+            }
+            thead {
+                background: #eee;
+                color: #000;
+            }
+            /* Ẩn cột thao tác khi in */
+            th:last-child, td:last-child {
+                display: none;
+            }
+            /* Bỏ các huy hiệu */
+            .status-badge, .badge-new {
+                background: none;
+                color: #000;
+                padding: 0;
+                font-weight: normal;
+            }
+            .email-link {
+                color: #000;
+                text-decoration: none;
+                font-weight: normal;
+            }
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 24px;
             }
-            
             .stats {
                 grid-template-columns: 1fr;
             }
-            
-            .filter-tabs, .station-filters, .role-filters { /* [THÊM] */
+            .filter-tabs, .station-filters, .role-filters, .dept-filters {
                 justify-content: center;
             }
-            
+            .tools-section {
+                flex-direction: column;
+                gap: 10px;
+            }
             table {
                 font-size: 14px;
             }
-            
             th, td {
                 padding: 12px 10px;
             }
@@ -378,6 +535,24 @@
                         <button class="tab-btn" data-filter="individual">Cá nhân</button>
                     </div>
                     
+                    <label class="filter-label" style="margin-top: 20px;">🔬 Lọc theo Khoa/Phòng</label>
+                    <div class="dept-filters">
+                        <button class="dept-btn active" data-dept="all">Tất cả</button>
+                        <button class="dept-btn" data-dept="Ban Giám Đốc">Ban Giám Đốc</button>
+                        <button class="dept-btn" data-dept="Phòng Tổ chức - Hành chính">Phòng TCHC</button>
+                        <button class="dept-btn" data-dept="Phòng Kế hoạch - Nghiệp vụ">Phòng KHNV</button>
+                        <button class="dept-btn" data-dept="Phòng Tài chính - Kế toán">Phòng TCKT</button>
+                        <button class="dept-btn" data-dept="Phòng Dân số - Truyền thông và Giáo dục sức khỏe">Phòng DS-TTGDSK</button>
+                        <button class="dept-btn" data-dept="Khoa Khám bệnh">Khoa Khám bệnh</button>
+                        <button class="dept-btn" data-dept="Khoa Kiểm soát bệnh tật">Khoa KSBT</button>
+                        <button class="dept-btn" data-dept="Khoa Y tế công cộng">Khoa YTCC</button>
+                        <button class="dept-btn" data-dept="Khoa An toàn thực phẩm">Khoa ATTP</button>
+                        <button class="dept-btn" data-dept="Khoa Chăm sóc sức khỏe sinh sản">Khoa CSSKSS</button>
+                        <button class="dept-btn" data-dept="Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS">Khoa TV, ĐTNC, HIV</button>
+                        <button class="dept-btn" data-dept="Khoa Xét nghiệm và Chẩn đoán hình ảnh">Khoa XN-CĐHA</button>
+                        <button class="dept-btn" data-dept="Khoa Dược - Trang thiết bị - Vật tư y tế">Khoa Dược-TTB-VTYT</button>
+                    </div>
+
                     <label class="filter-label" style="margin-top: 20px;">🏢 Lọc theo Trạm Y Tế</label>
                     <div class="station-filters">
                         <button class="station-btn active" data-station="all">Tất cả</button>
@@ -394,10 +569,13 @@
                     <div class="role-filters">
                         <button class="role-btn active" data-role="all">Tất cả</button>
                         <button class="role-btn" data-role="director">Ban Giám Đốc</button>
-                        <button class="role-btn" data-role="chief">Trưởng Trạm</button>
-                        <button class="role-btn" data-role="deputy">Phó Trưởng Trạm</button>
+                        <button class="role-btn" data-role="chief_room">Trưởng Phòng</button>
+                        <button class="role-btn" data-role="deputy_room">Phó Trưởng Phòng</button>
+                        <button class="role-btn" data-role="chief_dept">Trưởng Khoa</button>
+                        <button class="role-btn" data-role="deputy_dept">Phó Trưởng Khoa</button>
+                        <button class="role-btn" data-role="chief_station">Trưởng Trạm</button>
+                        <button class="role-btn" data-role="deputy_station">Phó Trưởng Trạm</button>
                     </div>
-                    
                 </div>
             </div>
         </div>
@@ -421,6 +599,11 @@
                     <div class="stat-label">✅ Đang hiển thị</div>
                 </div>
             </div>
+            
+            <div class="tools-section">
+                <button class="tool-btn" id="printButton">🖨️ In Danh sách</button>
+                <button class="tool-btn" id="exportButton">📊 Xuất Excel (CSV)</button>
+            </div>
 
             <div class="results-count" id="resultsCount">Hiển thị 90 kết quả</div>
 
@@ -434,13 +617,15 @@
                             <th>Chức danh</th>
                             <th style="width: 140px;">Tình trạng</th>
                             <th style="width: 100px;">Ghi chú</th>
-                        </tr>
+                            <th style="width: 120px;">Thao tác</th> </tr>
                     </thead>
                     <tbody id="resultsBody"></tbody>
                 </table>
             </div>
         </div>
     </div>
+    
+    <div id="toastNotification">Đã sao chép!</div>
 
     <script>
         const DATA = {
@@ -477,559 +662,162 @@
         {"stt": 30, "email": "tyt.trungan.cc@tphcm.gov.vn", "name": "Điểm Y tế 2 của Trạm Y tế xã Bình Mỹ", "position": "Trạm Y tế", "status": "Đang sử dụng", "note": "", "station": "Bình Mỹ"}
     ],
     "individuals": [
-    {
-        "stt": 31,
-        "email": "tthung.cuchi@tphcm.gov.vn",
-        "name": "Trương Tấn Hùng",
-        "position": "Giám đốc",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 32,
-        "email": "thly.cuchi@tphcm.gov.vn",
-        "name": "Trần Huỳnh Lý",
-        "position": "Phó Giám đốc",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 33,
-        "email": "ntnghia.cuchi@tphcm.gov.vn",
-        "name": "Nguyễn Trọng Nghĩa",
-        "position": "Phó Giám đốc",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 34,
-        "email": "tranntien.cuchi@tphcm.gov.vn",
-        "name": "Trần Ngọc Tiến",
-        "position": "Trưởng Phòng Tổ chức - Hành chính",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 35,
-        "email": "lvphuc.cuchi@tphcm.gov.vn",
-        "name": "Lê Văn Phúc",
-        "position": "Trưởng Phòng Kế hoạch - Nghiệp vụ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 36,
-        "email": "tttthao.cuchi@tphcm.gov.vn",
-        "name": "Trần Thị Thu Thảo",
-        "position": "Phó Trưởng Phòng Tài chính - Kế toán",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 37,
-        "email": "ptnthuy.cuchi@tphcm.gov.vn",
-        "name": "Phạm Thị Ngọc Thủy",
-        "position": "Phó Trưởng Khoa Khám bệnh",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 38,
-        "email": "htphong.cuchi@tphcm.gov.vn",
-        "name": "Hồ Thanh Phong",
-        "position": "Trưởng Khoa Kiểm soát bệnh tật",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 39,
-        "email": "ttdinh.cuchi@tphcm.gov.vn",
-        "name": "Trần Tấn Định",
-        "position": "Trưởng Khoa Y tế công cộng",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 40,
-        "email": "hthphuc.cuchi@tphcm.gov.vn",
-        "name": "Huỳnh Thị Hồng Phúc",
-        "position": "Trưởng Khoa An toàn thực phẩm",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 41,
-        "email": "nthlan.cuchi@tphcm.gov.vn",
-        "name": "Nguyễn Thị Hoa Lan",
-        "position": "Trưởng Khoa Chăm sóc sức khỏe sinh sản",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 42,
-        "email": "htmlan.cuchi@tphcm.gov.vn",
-        "name": "Huỳnh Thị Mỹ Lan",
-        "position": "Phó Trưởng Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 43,
-        "email": "ltkiet.cuchi@tphcm.gov.vn",
-        "name": "Lâm Tuấn Kiệt",
-        "position": "Trưởng Phòng Dân số - Truyền thông và Giáo dục sức khỏe",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 44,
-        "email": "lhthanh.cuchi@tphcm.gov.vn",
-        "name": "Lương Hoài Thanh",
-        "position": "Trưởng Khoa Xét nghiệm và Chẩn đoán hình ảnh",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 45,
-        "email": "mtthu.cuchi@tphcm.gov.vn",
-        "name": "Mai Tuyết Thu",
-        "position": "Trưởng Khoa Dược - Trang thiết bị - Vật tư y tế",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 46,
-        "email": "ttnhuong.cuchi@tphcm.gov.vn",
-        "name": "Trần Thị Ngọc Hương",
-        "position": "Nhân viên Phòng Tổ chức - Hành chính",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 47,
-        "email": "ntkoanh.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Kiều Oanh",
-        "position": "Phó Trưởng Phòng Tổ chức - Hành chính",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 48,
-        "email": "tthlinh.syt@tphcm.gov.vn",
-        "name": "Tạ Thị Hồng Lĩnh",
-        "position": "Phó Trưởng Phòng Tổ chức - Hành chính",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 49,
-        "email": "lvthuong.syt@tphcm.gov.vn",
-        "name": "Lê Văn Thương",
-        "position": "Phó Trưởng Khoa Kiểm soát bệnh tật",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 50,
-        "email": "dtlien.syt@tphcm.gov.vn",
-        "name": "Đặng Thị Liên",
-        "position": "Nhân viên Khoa Kiểm soát bệnh tật",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 51,
-        "email": "nghhanh.syt@tphcm.gov.vn",
-        "name": "Nguyễn Hồng Hạnh",
-        "position": "Nhân viên Khoa Y tế công cộng",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 52,
-        "email": "nghthang.syt@tphcm.gov.vn",
-        "name": "Nguyễn Hoàng Thắng",
-        "position": "Phó Trưởng Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 53,
-        "email": "hthhien.syt@tphcm.gov.vn",
-        "name": "Huỳnh Thị Hiền",
-        "position": "Nhân viên Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 54,
-        "email": "tvthanh.syt@tphcm.gov.vn",
-        "name": "Trần Văn Thành",
-        "position": "Nhân viên Khoa Khám bệnh",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 55,
-        "email": "cttnttxuan.syt@tphcm.gov.vn",
-        "name": "Công Tằng Tôn Nữ Thị Thanh Xuân",
-        "position": "Nhân viên Khoa Khám bệnh",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 56,
-        "email": "ntliem.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thanh Liêm",
-        "position": "Phó Trưởng Trạm Y tế xã An Nhơn Tây",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "An Nhơn Tây"
-    },
-    {
-        "stt": 57,
-        "email": "ttgkieu.syt@tphcm.gov.vn",
-        "name": "Trần Thị Gián Kiều",
-        "position": "Nhân viên Trạm Y tế xã An Nhơn Tây",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "An Nhơn Tây"
-    },
-    {
-        "stt": 58,
-        "email": "ngtngoan.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Ngoan",
-        "position": "Nhân viên Trạm Y tế xã An Nhơn Tây",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "An Nhơn Tây"
-    },
-    {
-        "stt": 59,
-        "email": "tlho.syt@tphcm.gov.vn",
-        "name": "Trần Lâm Hổ",
-        "position": "Trưởng Trạm Y tế xã An Nhơn Tây",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "An Nhơn Tây"
-    },
-    {
-        "stt": 60,
-        "email": "tqchanh.syt@tphcm.gov.vn",
-        "name": "Trần Quang Chánh",
-        "position": "Nhân viên Trạm Y tế xã An Nhơn Tây",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "An Nhơn Tây"
-    },
-    {
-        "stt": 61,
-        "email": "htdua.syt@tphcm.gov.vn",
-        "name": "Hồ Thị Đứa",
-        "position": "Phó Trưởng Trạm Y tế xã Thái Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Thái Mỹ"
-    },
-    {
-        "stt": 62,
-        "email": "ttduy.syt@tphcm.gov.vn",
-        "name": "Trần Thanh Duy",
-        "position": "Phó Trưởng Trạm Y tế xã Bình Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Bình Mỹ"
-    },
-    {
-        "stt": 63,
-        "email": "ngtntram.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Ngọc Trâm",
-        "position": "Phó Trưởng Trạm Y tế xã Nhuận Đức",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Nhuận Đức"
-    },
-    {
-        "stt": 64,
-        "email": "vttthuy.syt@tphcm.gov.vn",
-        "name": "Võ Thị Thanh Thủy",
-        "position": "Nhân viên Trạm Y tế xã Nhuận Đức",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Nhuận Đức"
-    },
-    {
-        "stt": 65,
-        "email": "lvhang.syt@tphcm.gov.vn",
-        "name": "Lý Văn Hạng",
-        "position": "Nhân viên Trạm Y tế xã Nhuận Đức",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Nhuận Đức"
-    },
-    {
-        "stt": 66,
-        "email": "ltcuc.syt@tphcm.gov.vn",
-        "name": "Lê Thị Cúc",
-        "position": "Trưởng Trạm Y tế xã Nhuận Đức",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Nhuận Đức"
-    },
-    {
-        "stt": 67,
-        "email": "nltthu.syt@tphcm.gov.vn",
-        "name": "Nguyễn Lê Thiên Thư",
-        "position": "Phó Trưởng Trạm Y tế xã Củ Chi",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Củ Chi"
-    },
-    {
-        "stt": 68,
-        "email": "lthoai.syt@tphcm.gov.vn",
-        "name": "Lê Thanh Hoài",
-        "position": "Nhân viên Trạm Y tế xã Phú Hòa Đông",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Phú Hòa Đông"
-    },
-    {
-        "stt": 69,
-        "email": "tvnho.syt@tphcm.gov.vn",
-        "name": "Trần Văn Nhỡ",
-        "position": "Phó Trưởng Trạm Y tế xã An Nhơn Tây",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "An Nhơn Tây"
-    },
-    {
-        "stt": 70,
-        "email": "tthhoa.syt@tphcm.gov.vn",
-        "name": "Trần Thị Huyền Hoa",
-        "position": "Trưởng Trạm Y tế xã Tân An Hội",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Tân An Hội"
-    },
-    {
-        "stt": 71,
-        "email": "ntcgiang.syt@tphcm.gov.vn",
-        "name": "Ngô Thị Cẩm Giang",
-        "position": "Phó Trưởng Trạm Y tế xã Thái Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Thái Mỹ"
-    },
-    {
-        "stt": 72,
-        "email": "hdtrang.syt@tphcm.gov.vn",
-        "name": "Hồ Đoan Trang",
-        "position": "Nhân viên Trạm Y tế xã Thái Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Thái Mỹ"
-    },
-    {
-        "stt": 73,
-        "email": "ngthong.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Hồng",
-        "position": "Nhân viên Trạm Y tế xã Thái Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Thái Mỹ"
-    },
-    {
-        "stt": 74,
-        "email": "ntnhan.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thanh Nhân",
-        "position": "Phó Trưởng Phòng Phòng Kế hoạch - Nghiệp vụ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": ""
-    },
-    {
-        "stt": 75,
-        "email": "ngottminh.syt@tphcm.gov.vn",
-        "name": "Ngô Thụy Tuyết Minh",
-        "position": "Trưởng Trạm Y tế xã Bình Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Bình Mỹ"
-    },
-    {
-        "stt": 76,
-        "email": "mtktran.syt@tphcm.gov.vn",
-        "name": "Mai Thị Kim Trân",
-        "position": "Trưởng Trạm Y tế xã Củ Chi",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Củ Chi"
-    },
-    {
-        "stt": 77,
-        "email": "ptathuy.syt@tphcm.gov.vn",
-        "name": "Phạm Thị Ái Thủy",
-        "position": "Phó Trưởng Trạm Y tế xã Củ Chi",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Củ Chi"
-    },
-    {
-        "stt": 78,
-        "email": "ptmthao.syt@tphcm.gov.vn",
-        "name": "Phù Thị Mai Thảo",
-        "position": "Phó Trưởng Trạm Y tế xã Phú Hòa Đông",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Phú Hòa Đông"
-    },
-    {
-        "stt": 79,
-        "email": "phhanh.syt@tphcm.gov.vn",
-        "name": "Phạm Hữu Hạnh",
-        "position": "Nhân viên Trạm Y tế xã Phú Hòa Đông",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Phú Hòa Đông"
-    },
-    {
-        "stt": 80,
-        "email": "ntmlinh.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Mỹ Linh",
-        "position": "Phó Trưởng Trạm Y tế xã Phú Hòa Đông",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Phú Hòa Đông"
-    },
-    {
-        "stt": 81,
-        "email": "nthhai.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Hồng Hải",
-        "position": "Nhân viên Trạm Y tế xã Củ Chi",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Củ Chi"
-    },
-    {
-        "stt": 82,
-        "email": "ngtmlinh.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Mỹ Linh",
-        "position": "Nhân viên Trạm Y tế xã Nhuận Đức",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Nhuận Đức"
-    },
-    {
-        "stt": 83,
-        "email": "ldhung.syt@tphcm.gov.vn",
-        "name": "Lê Đình Hùng",
-        "position": "Trưởng Trạm Y tế xã Thái Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Thái Mỹ"
-    },
-    {
-        "stt": 84,
-        "email": "ntchien.syt@tphcm.gov.vn",
-        "name": "Nguyễn Tấn Chiến",
-        "position": "Phó Trưởng Trạm Y tế xã Bình Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Bình Mỹ"
-    },
-    {
-        "stt": 85,
-        "email": "tkhanh.syt@tphcm.gov.vn",
-        "name": "Trần Khánh",
-        "position": "Trưởng Trạm Y tế xã Phú Hòa Đông",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Phú Hòa Đông"
-    },
-    {
-        "stt": 86,
-        "email": "ngtthuong.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Thùy Hương",
-        "position": "Nhân viên Trạm Y tế xã Thái Mỹ",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Thái Mỹ"
-    },
-    {
-        "stt": 87,
-        "email": "ntdan.syt@tphcm.gov.vn",
-        "name": "Nguyễn Thị Dắn",
-        "position": "Phó Trưởng Trạm Y tế xã Nhuận Đức",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Nhuận Đức"
-    },
-    {
-        "stt": 88,
-        "email": "ptvang.syt@tphcm.gov.vn",
-        "name": "Phạm Thị Vang",
-        "position": "Nhân viên Trạm Y tế xã Nhuận Đức",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Nhuận Đức"
-    },
-    {
-        "stt": 89,
-        "email": "vnltam.syt@tphcm.gov.vn",
-        "name": "Võ Nguyễn Lệ Tâm",
-        "position": "Phó Trưởng Trạm Y tế xã Tân An Hội",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Tân An Hội"
-    },
-    {
-        "stt": 90,
-        "email": "ttmtrang.syt@tphcm.gov.vn",
-        "name": "Tô Thị Mỵ Trang",
-        "position": "Phó Trưởng Trạm Y tế xã Tân An Hội",
-        "status": "Đang sử dụng",
-        "note": "",
-        "station": "Tân An Hội"
-    }
-]
+        { "stt": 31, "email": "tthung.cuchi@tphcm.gov.vn", "name": "Trương Tấn Hùng", "position": "Giám đốc", "status": "Đang sử dụng", "note": "", "station": "", "department": "Ban Giám Đốc" },
+        { "stt": 32, "email": "thly.cuchi@tphcm.gov.vn", "name": "Trần Huỳnh Lý", "position": "Phó Giám đốc", "status": "Đang sử dụng", "note": "", "station": "", "department": "Ban Giám Đốc" },
+        { "stt": 33, "email": "ntnghia.cuchi@tphcm.gov.vn", "name": "Nguyễn Trọng Nghĩa", "position": "Phó Giám đốc", "status": "Đang sử dụng", "note": "", "station": "", "department": "Ban Giám Đốc" },
+        { "stt": 34, "email": "tranntien.cuchi@tphcm.gov.vn", "name": "Trần Ngọc Tiến", "position": "Trưởng Phòng Tổ chức - Hành chính", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Tổ chức - Hành chính" },
+        { "stt": 35, "email": "lvphuc.cuchi@tphcm.gov.vn", "name": "Lê Văn Phúc", "position": "Trưởng Phòng Kế hoạch - Nghiệp vụ", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Kế hoạch - Nghiệp vụ" },
+        { "stt": 36, "email": "tttthao.cuchi@tphcm.gov.vn", "name": "Trần Thị Thu Thảo", "position": "Phó Trưởng Phòng Tài chính - Kế toán", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Tài chính - Kế toán" },
+        { "stt": 37, "email": "ptnthuy.cuchi@tphcm.gov.vn", "name": "Phạm Thị Ngọc Thủy", "position": "Phó Trưởng Khoa Khám bệnh", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Khám bệnh" },
+        { "stt": 38, "email": "htphong.cuchi@tphcm.gov.vn", "name": "Hồ Thanh Phong", "position": "Trưởng Khoa Kiểm soát bệnh tật", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Kiểm soát bệnh tật" },
+        { "stt": 39, "email": "ttdinh.cuchi@tphcm.gov.vn", "name": "Trần Tấn Định", "position": "Trưởng Khoa Y tế công cộng", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Y tế công cộng" },
+        { "stt": 40, "email": "hthphuc.cuchi@tphcm.gov.vn", "name": "Huỳnh Thị Hồng Phúc", "position": "Trưởng Khoa An toàn thực phẩm", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa An toàn thực phẩm" },
+        { "stt": 41, "email": "nthlan.cuchi@tphcm.gov.vn", "name": "Nguyễn Thị Hoa Lan", "position": "Trưởng Khoa Chăm sóc sức khỏe sinh sản", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Chăm sóc sức khỏe sinh sản" },
+        { "stt": 42, "email": "htmlan.cuchi@tphcm.gov.vn", "name": "Huỳnh Thị Mỹ Lan", "position": "Phó Trưởng Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS" },
+        { "stt": 43, "email": "ltkiet.cuchi@tphcm.gov.vn", "name": "Lâm Tuấn Kiệt", "position": "Trưởng Phòng Dân số - Truyền thông và Giáo dục sức khỏe", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Dân số - Truyền thông và Giáo dục sức khỏe" },
+        { "stt": 44, "email": "lhthanh.cuchi@tphcm.gov.vn", "name": "Lương Hoài Thanh", "position": "Trưởng Khoa Xét nghiệm và Chẩn đoán hình ảnh", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Xét nghiệm và Chẩn đoán hình ảnh" },
+        { "stt": 45, "email": "mtthu.cuchi@tphcm.gov.vn", "name": "Mai Tuyết Thu", "position": "Trưởng Khoa Dược - Trang thiết bị - Vật tư y tế", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Dược - Trang thiết bị - Vật tư y tế" },
+        { "stt": 46, "email": "ttnhuong.cuchi@tphcm.gov.vn", "name": "Trần Thị Ngọc Hương", "position": "Nhân viên Phòng Tổ chức - Hành chính", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Tổ chức - Hành chính" },
+        { "stt": 47, "email": "ntkoanh.syt@tphcm.gov.vn", "name": "Nguyễn Thị Kiều Oanh", "position": "Phó Trưởng Phòng Tổ chức - Hành chính", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Tổ chức - Hành chính" },
+        { "stt": 48, "email": "tthlinh.syt@tphcm.gov.vn", "name": "Tạ Thị Hồng Lĩnh", "position": "Phó Trưởng Phòng Tổ chức - Hành chính", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Tổ chức - Hành chính" },
+        { "stt": 49, "email": "lvthuong.syt@tphcm.gov.vn", "name": "Lê Văn Thương", "position": "Phó Trưởng Khoa Kiểm soát bệnh tật", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Kiểm soát bệnh tật" },
+        { "stt": 50, "email": "dtlien.syt@tphcm.gov.vn", "name": "Đặng Thị Liên", "position": "Nhân viên Khoa Kiểm soát bệnh tật", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Kiểm soát bệnh tật" },
+        { "stt": 51, "email": "nghhanh.syt@tphcm.gov.vn", "name": "Nguyễn Hồng Hạnh", "position": "Nhân viên Khoa Y tế công cộng", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Y tế công cộng" },
+        { "stt": 52, "email": "nghthang.syt@tphcm.gov.vn", "name": "Nguyễn Hoàng Thắng", "position": "Phó Trưởng Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS" },
+        { "stt": 53, "email": "hthhien.syt@tphcm.gov.vn", "name": "Huỳnh Thị Hiền", "position": "Nhân viên Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS" },
+        { "stt": 54, "email": "tvthanh.syt@tphcm.gov.vn", "name": "Trần Văn Thành", "position": "Nhân viên Khoa Khám bệnh", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Khám bệnh" },
+        { "stt": 55, "email": "cttnttxuan.syt@tphcm.gov.vn", "name": "Công Tằng Tôn Nữ Thị Thanh Xuân", "position": "Nhân viên Khoa Khám bệnh", "status": "Đang sử dụng", "note": "", "station": "", "department": "Khoa Khám bệnh" },
+        { "stt": 56, "email": "ntliem.syt@tphcm.gov.vn", "name": "Nguyễn Thanh Liêm", "position": "Phó Trưởng Trạm Y tế xã An Nhơn Tây", "status": "Đang sử dụng", "note": "", "station": "An Nhơn Tây", "department": "" },
+        { "stt": 57, "email": "ttgkieu.syt@tphcm.gov.vn", "name": "Trần Thị Gián Kiều", "position": "Nhân viên Trạm Y tế xã An Nhơn Tây", "status": "Đang sử dụng", "note": "", "station": "An Nhơn Tây", "department": "" },
+        { "stt": 58, "email": "ngtngoan.syt@tphcm.gov.vn", "name": "Nguyễn Thị Ngoan", "position": "Nhân viên Trạm Y tế xã An Nhơn Tây", "status": "Đang sử dụng", "note": "", "station": "An Nhơn Tây", "department": "" },
+        { "stt": 59, "email": "tlho.syt@tphcm.gov.vn", "name": "Trần Lâm Hổ", "position": "Trưởng Trạm Y tế xã An Nhơn Tây", "status": "Đang sử dụng", "note": "", "station": "An Nhơn Tây", "department": "" },
+        { "stt": 60, "email": "tqchanh.syt@tphcm.gov.vn", "name": "Trần Quang Chánh", "position": "Nhân viên Trạm Y tế xã An Nhơn Tây", "status": "Đang sử dụng", "note": "", "station": "An Nhơn Tây", "department": "" },
+        { "stt": 61, "email": "htdua.syt@tphcm.gov.vn", "name": "Hồ Thị Đứa", "position": "Phó Trưởng Trạm Y tế xã Thái Mỹ", "status": "Đang sử dụng", "note": "", "station": "Thái Mỹ", "department": "" },
+        { "stt": 62, "email": "ttduy.syt@tphcm.gov.vn", "name": "Trần Thanh Duy", "position": "Phó Trưởng Trạm Y tế xã Bình Mỹ", "status": "Đang sử dụng", "note": "", "station": "Bình Mỹ", "department": "" },
+        { "stt": 63, "email": "ngtntram.syt@tphcm.gov.vn", "name": "Nguyễn Thị Ngọc Trâm", "position": "Phó Trưởng Trạm Y tế xã Nhuận Đức", "status": "Đang sử dụng", "note": "", "station": "Nhuận Đức", "department": "" },
+        { "stt": 64, "email": "vttthuy.syt@tphcm.gov.vn", "name": "Võ Thị Thanh Thủy", "position": "Nhân viên Trạm Y tế xã Nhuận Đức", "status": "Đang sử dụng", "note": "", "station": "Nhuận Đức", "department": "" },
+        { "stt": 65, "email": "lvhang.syt@tphcm.gov.vn", "name": "Lý Văn Hạng", "position": "Nhân viên Trạm Y tế xã Nhuận Đức", "status": "Đang sử dụng", "note": "", "station": "Nhuận Đức", "department": "" },
+        { "stt": 66, "email": "ltcuc.syt@tphcm.gov.vn", "name": "Lê Thị Cúc", "position": "Trưởng Trạm Y tế xã Nhuận Đức", "status": "Đang sử dụng", "note": "", "station": "Nhuận Đức", "department": "" },
+        { "stt": 67, "email": "nltthu.syt@tphcm.gov.vn", "name": "Nguyễn Lê Thiên Thư", "position": "Phó Trưởng Trạm Y tế xã Củ Chi", "status": "Đang sử dụng", "note": "", "station": "Củ Chi", "department": "" },
+        { "stt": 68, "email": "lthoai.syt@tphcm.gov.vn", "name": "Lê Thanh Hoài", "position": "Nhân viên Trạm Y tế xã Phú Hòa Đông", "status": "Đang sử dụng", "note": "", "station": "Phú Hòa Đông", "department": "" },
+        { "stt": 69, "email": "tvnho.syt@tphcm.gov.vn", "name": "Trần Văn Nhỡ", "position": "Phó Trưởng Trạm Y tế xã An Nhơn Tây", "status": "Đang sử dụng", "note": "", "station": "An Nhơn Tây", "department": "" },
+        { "stt": 70, "email": "tthhoa.syt@tphcm.gov.vn", "name": "Trần Thị Huyền Hoa", "position": "Trưởng Trạm Y tế xã Tân An Hội", "status": "Đang sử dụng", "note": "", "station": "Tân An Hội", "department": "" },
+        { "stt": 71, "email": "ntcgiang.syt@tphcm.gov.vn", "name": "Ngô Thị Cẩm Giang", "position": "Phó Trưởng Trạm Y tế xã Thái Mỹ", "status": "Đang sử dụng", "note": "", "station": "Thái Mỹ", "department": "" },
+        { "stt": 72, "email": "hdtrang.syt@tphcm.gov.vn", "name": "Hồ Đoan Trang", "position": "Nhân viên Trạm Y tế xã Thái Mỹ", "status": "Đang sử dụng", "note": "", "station": "Thái Mỹ", "department": "" },
+        { "stt": 73, "email": "ngthong.syt@tphcm.gov.vn", "name": "Nguyễn Thị Hồng", "position": "Nhân viên Trạm Y tế xã Thái Mỹ", "status": "Đang sử dụng", "note": "", "station": "Thái Mỹ", "department": "" },
+        { "stt": 74, "email": "ntnhan.syt@tphcm.gov.vn", "name": "Nguyễn Thanh Nhân", "position": "Phó Trưởng Phòng Phòng Kế hoạch - Nghiệp vụ", "status": "Đang sử dụng", "note": "", "station": "", "department": "Phòng Kế hoạch - Nghiệp vụ" },
+        { "stt": 75, "email": "ngottminh.syt@tphcm.gov.vn", "name": "Ngô Thụy Tuyết Minh", "position": "Trưởng Trạm Y tế xã Bình Mỹ", "status": "Đang sử dụng", "note": "", "station": "Bình Mỹ", "department": "" },
+        { "stt": 76, "email": "mtktran.syt@tphcm.gov.vn", "name": "Mai Thị Kim Trân", "position": "Trưởng Trạm Y tế xã Củ Chi", "status": "Đang sử dụng", "note": "", "station": "Củ Chi", "department": "" },
+        { "stt": 77, "email": "ptathuy.syt@tphcm.gov.vn", "name": "Phạm Thị Ái Thủy", "position": "Phó Trưởng Trạm Y tế xã Củ Chi", "status": "Đang sử dụng", "note": "", "station": "Củ Chi", "department": "" },
+        { "stt": 78, "email": "ptmthao.syt@tphcm.gov.vn", "name": "Phù Thị Mai Thảo", "position": "Phó Trưởng Trạm Y tế xã Phú Hòa Đông", "status": "Đang sử dụng", "note": "", "station": "Phú Hòa Đông", "department": "" },
+        { "stt": 79, "email": "phhanh.syt@tphcm.gov.vn", "name": "Phạm Hữu Hạnh", "position": "Nhân viên Trạm Y tế xã Phú Hòa Đông", "status": "Đang sử dụng", "note": "", "station": "Phú Hòa Đông", "department": "" },
+        { "stt": 80, "email": "ntmlinh.syt@tphcm.gov.vn", "name": "Nguyễn Thị Mỹ Linh", "position": "Phó Trưởng Trạm Y tế xã Phú Hòa Đông", "status": "Đang sử dụng", "note": "", "station": "Phú Hòa Đông", "department": "" },
+        { "stt": 81, "email": "nthhai.syt@tphcm.gov.vn", "name": "Nguyễn Thị Hồng Hải", "position": "Nhân viên Trạm Y tế xã Củ Chi", "status": "Đang sử dụng", "note": "", "station": "Củ Chi", "department": "" },
+        { "stt": 82, "email": "ngtmlinh.syt@tphcm.gov.vn", "name": "Nguyễn Thị Mỹ Linh", "position": "Nhân viên Trạm Y tế xã Nhuận Đức", "status": "Đang sử dụng", "note": "", "station": "Nhuận Đức", "department": "" },
+        { "stt": 83, "email": "ldhung.syt@tphcm.gov.vn", "name": "Lê Đình Hùng", "position": "Trưởng Trạm Y tế xã Thái Mỹ", "status": "Đang sử dụng", "note": "", "station": "Thái Mỹ", "department": "" },
+        { "stt": 84, "email": "ntchien.syt@tphcm.gov.vn", "name": "Nguyễn Tấn Chiến", "position": "Phó Trưởng Trạm Y tế xã Bình Mỹ", "status": "Đang sử dụng", "note": "", "station": "Bình Mỹ", "department": "" },
+        { "stt": 85, "email": "tkhanh.syt@tphcm.gov.vn", "name": "Trần Khánh", "position": "Trưởng Trạm Y tế xã Phú Hòa Đông", "status": "Đang sử dụng", "note": "", "station": "Phú Hòa Đông", "department": "" },
+        { "stt": 86, "email": "ngtthuong.syt@tphcm.gov.vn", "name": "Nguyễn Thị Thùy Hương", "position": "Nhân viên Trạm Y tế xã Thái Mỹ", "status": "Đang sử dụng", "note": "", "station": "Thái Mỹ", "department": "" },
+        { "stt": 87, "email": "ntdan.syt@tphcm.gov.vn", "name": "Nguyễn Thị Dắn", "position": "Phó Trưởng Trạm Y tế xã Nhuận Đức", "status": "Đang sử dụng", "note": "", "station": "Nhuận Đức", "department": "" },
+        { "stt": 88, "email": "ptvang.syt@tphcm.gov.vn", "name": "Phạm Thị Vang", "position": "Nhân viên Trạm Y tế xã Nhuận Đức", "status": "Đang sử dụng", "note": "", "station": "Nhuận Đức", "department": "" },
+        { "stt": 89, "email": "vnltam.syt@tphcm.gov.vn", "name": "Võ Nguyễn Lệ Tâm", "position": "Phó Trưởng Trạm Y tế xã Tân An Hội", "status": "Đang sử dụng", "note": "", "station": "Tân An Hội", "department": "" },
+        { "stt": 90, "email": "ttmtrang.syt@tphcm.gov.vn", "name": "Tô Thị Mỵ Trang", "position": "Phó Trưởng Trạm Y tế xã Tân An Hội", "status": "Đang sử dụng", "note": "", "station": "Tân An Hội", "department": "" }
+    ]
 };
 
         let currentFilter = 'all';
         let currentStation = 'all';
-        let currentRole = 'all'; // [JS MỚI] Biến trạng thái cho chức danh
+        let currentRole = 'all';
+        let currentDepartment = 'all'; // [JS MỚI] Biến trạng thái cho Khoa/Phòng
+        let toastTimer; // [JS MỚI] Biến quản lý thời gian cho toast
+
+        // [JS MỚI] Hàm hiển thị thông báo
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            toast.textContent = message;
+            toast.classList.add('active');
+
+            // Hủy timer cũ nếu có
+            clearTimeout(toastTimer);
+
+            // Tự động ẩn sau 3 giây
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('active');
+            }, 2000);
+        }
+
+        // [JS MỚI] Hàm copy vào clipboard
+        function copyToClipboard(text, message) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(message);
+                }).catch(err => {
+                    console.error('Không thể copy: ', err);
+                    showToast('Lỗi khi copy!');
+                });
+            } else {
+                // Fallback cho trình duyệt cũ
+                showToast('Trình duyệt không hỗ trợ copy!');
+            }
+        }
+        
+        // [JS MỚI] Hàm xuất CSV
+        function exportToCSV() {
+            const data = getFilteredData();
+            if (data.length === 0) {
+                showToast('Không có dữ liệu để xuất!');
+                return;
+            }
+
+            const headers = ["STT", "Email", "Tên/Đơn vị", "Chức danh", "Tình trạng", "Ghi chú"];
+            
+            // Hàm xử lý một ô (thêm dấu ngoặc kép và escape)
+            const escapeCSV = (field) => {
+                const str = String(field || ''); // Đảm bảo là string, xử lý null/undefined
+                return `"${str.replace(/"/g, '""')}"`;
+            };
+
+            // Tạo nội dung CSV
+            let csvContent = headers.join(',') + '\n';
+            data.forEach(item => {
+                const row = [
+                    item.stt,
+                    item.email,
+                    item.name,
+                    item.position,
+                    item.status,
+                    item.note
+                ];
+                csvContent += row.map(escapeCSV).join(',') + '\n';
+            });
+
+            // Thêm BOM (Byte Order Mark) để Excel đọc UTF-8 (Tiếng Việt) chuẩn
+            const bom = '\uFEFF';
+            const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'danh_sach_email.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('Đã bắt đầu tải xuống!');
+        }
+
 
         function updateStats() {
-            const data = getFilteredData();
-            document.getElementById('totalCount').textContent = DATA.organizations.length + DATA.individuals.length;
-            document.getElementById('orgCount').textContent = DATA.organizations.length;
-            document.getElementById('indCount').textContent = DATA.individuals.length;
-            document.getElementById('displayCount').textContent = data.length;
+            const filteredData = getFilteredData();
+            const totalIndividuals = DATA.individuals.length;
+            const totalOrgs = DATA.organizations.length;
+
+            document.getElementById('totalCount').textContent = totalOrgs + totalIndividuals;
+            document.getElementById('orgCount').textContent = totalOrgs;
+            document.getElementById('indCount').textContent = totalIndividuals;
+            document.getElementById('displayCount').textContent = filteredData.length;
         }
 
         function getFilteredData() {
@@ -1043,21 +831,32 @@
             }
 
             // Lọc theo trạm
-            if (currentStation !== 'all') {
+            if (currentStation !== 'all' && currentFilter !== 'organization') {
                 data = data.filter(item => item.station === currentStation);
             }
+            
+            // Lọc theo Khoa/Phòng
+            if (currentDepartment !== 'all' && currentFilter !== 'organization') {
+                data = data.filter(item => item.department === currentDepartment);
+            }
 
-            // [JS MỚI] Lọc theo Chức danh (Áp dụng sau 2 bộ lọc trên)
-            if (currentRole !== 'all') {
+            // Lọc theo Chức danh
+            if (currentRole !== 'all' && currentFilter !== 'organization') {
+                const pos = 'position';
                 if (currentRole === 'director') {
-                    // Dùng === để lọc chính xác "Giám đốc" và "Phó Giám đốc"
-                    data = data.filter(item => item.position === 'Giám đốc' || item.position === 'Phó Giám đốc');
-                } else if (currentRole === 'chief') {
-                    // Dùng includes để lọc "Trưởng Trạm Y tế..."
-                    data = data.filter(item => item.position.includes('Trưởng Trạm'));
-                } else if (currentRole === 'deputy') {
-                    // Dùng includes để lọc "Phó Trưởng Trạm Y tế..."
-                    data = data.filter(item => item.position.includes('Phó Trưởng Trạm'));
+                    data = data.filter(item => item[pos] === 'Giám đốc' || item[pos] === 'Phó Giám đốc');
+                } else if (currentRole === 'chief_dept') {
+                    data = data.filter(item => item[pos].includes('Trưởng Khoa'));
+                } else if (currentRole === 'deputy_dept') {
+                    data = data.filter(item => item[pos].includes('Phó Trưởng Khoa'));
+                } else if (currentRole === 'chief_room') {
+                    data = data.filter(item => item[pos].includes('Trưởng Phòng'));
+                } else if (currentRole === 'deputy_room') {
+                    data = data.filter(item => item[pos].includes('Phó Trưởng Phòng'));
+                } else if (currentRole === 'chief_station') {
+                    data = data.filter(item => item[pos].includes('Trưởng Trạm'));
+                } else if (currentRole === 'deputy_station') {
+                    data = data.filter(item => item[pos].includes('Phó Trưởng Trạm'));
                 }
             }
 
@@ -1083,8 +882,7 @@
             if (data.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="no-results">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <td colspan="7" class="no-results"> <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                             <h3>Không tìm thấy kết quả</h3>
@@ -1096,26 +894,59 @@
                 return;
             }
 
-            tbody.innerHTML = data.map(item => `
-                <tr>
-                    <td style="text-align: center; font-weight: 600; color: #667eea;">${item.stt}</td>
-                    <td><a href="mailto:${item.email}" class="email-link">${item.email}</a></td>
-                    <td style="font-weight: 500;">${item.name}</td>
-                    <td>${item.position}</td>
-                    <td>
-                        <span class="status-badge ${item.status.includes('Đang') ? 'status-active' : 'status-inactive'}">
-                            ${item.status || 'N/A'}
-                        </span>
-                    </td>
-                    <td>${item.note ? '<span class="badge-new">' + item.note + '</span>' : ''}</td>
-                </tr>
-            `).join('');
+            // [JS CẬP NHẬT] Thêm cột Thao tác vào .map()
+            tbody.innerHTML = data.map(item => {
+                // Tạo chuỗi text cho việc copy dòng (dùng \t (tab) để dán vào Excel đẹp)
+                const rowText = `STT: ${item.stt}\tEmail: ${item.email}\tTên: ${item.name}\tChức danh: ${item.position}`;
+                
+                // Chỉ hiển thị nút thao tác cho cá nhân, không hiển thị cho tổ chức
+                const actionButtons = item.email ? `
+                    <button class="action-btn copy-email" data-email="${item.email}">Copy Mail</button>
+                    <button class="action-btn copy-row" data-row="${rowText}">Copy Dòng</button>
+                ` : '';
+
+                return `
+                    <tr>
+                        <td style="text-align: center; font-weight: 600; color: #667eea;">${item.stt}</td>
+                        <td><a href="mailto:${item.email}" class="email-link">${item.email || ''}</a></td>
+                        <td style="font-weight: 500;">${item.name}</td>
+                        <td>${item.position}</td>
+                        <td>
+                            <span class="status-badge ${item.status.includes('Đang') ? 'status-active' : 'status-inactive'}">
+                                ${item.status || 'N/A'}
+                            </span>
+                        </td>
+                        <td>${item.note ? '<span class="badge-new">' + item.note + '</span>' : ''}</td>
+                        <td class="action-cell">
+                            ${actionButtons}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
             
             updateStats();
         }
 
-        // Event listeners
+        // --- Event Listeners ---
+
         document.getElementById('searchInput').addEventListener('input', renderTable);
+        
+        // [JS MỚI] Listener cho các nút công cụ
+        document.getElementById('printButton').addEventListener('click', () => window.print());
+        document.getElementById('exportButton').addEventListener('click', exportToCSV);
+
+        // [JS MỚI] Listener cho các nút copy (sử dụng event delegation)
+        document.getElementById('resultsBody').addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.classList.contains('copy-email')) {
+                const email = target.dataset.email;
+                copyToClipboard(email, 'Đã sao chép email!');
+            }
+            if (target.classList.contains('copy-row')) {
+                const rowText = target.dataset.row;
+                copyToClipboard(rowText, 'Đã sao chép nội dung dòng!');
+            }
+        });
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -1131,11 +962,29 @@
                 document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentStation = e.target.dataset.station;
+                
+                document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.dept-btn[data-dept="all"]').classList.add('active');
+                currentDepartment = 'all';
+
                 renderTable();
             });
         });
         
-        // [JS MỚI] Event listener cho nút lọc chức danh
+        document.querySelectorAll('.dept-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentDepartment = e.target.dataset.dept;
+
+                document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.station-btn[data-station="all"]').classList.add('active');
+                currentStation = 'all';
+
+                renderTable();
+            });
+        });
+
         document.querySelectorAll('.role-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
