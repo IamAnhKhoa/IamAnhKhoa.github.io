@@ -675,14 +675,15 @@
             
             <div class="search-container" style="margin-bottom: 25px;">
                 
-                <div class="search-box">
-                    <input 
-                        type="text" 
-                        class="search-input" 
-                        id="searchInput" 
-                        placeholder="🔍 Tìm kiếm theo email, tên, chức danh..."
-                    >
-                </div>
+              <div class="search-box">
+    <input 
+        type="text" 
+        class="search-input" 
+        id="searchInput" 
+        placeholder="🔍 Tìm kiếm theo email, tên, chức danh..."
+        list="suggestions" >
+    <datalist id="suggestions"></datalist>
+</div>
                 
                 <button class="filter-toggle-btn" id="filterToggleBtn">
                     <span>Mở Bộ Lọc Nâng Cao</span>
@@ -1016,7 +1017,34 @@
 
             return data;
         }
+function populateSuggestions() {
+    const datalist = document.getElementById('suggestions');
+    const suggestionSet = new Set();
+    const allData = [...DATA.organizations, ...DATA.individuals];
 
+    allData.forEach(item => {
+        // Thêm các trường bạn muốn gợi ý vào đây
+        if (item.name) suggestionSet.add(item.name);
+        if (item.email) suggestionSet.add(item.email);
+        if (item.position) suggestionSet.add(item.position);
+    });
+
+    // Xóa các gợi ý cũ (nếu có)
+    datalist.innerHTML = ''; 
+
+    // Thêm các gợi ý mới từ Set (để đảm bảo không trùng lặp)
+    suggestionSet.forEach(suggestion => {
+        if (suggestion) { // Đảm bảo không thêm gợi ý trống
+            const option = document.createElement('option');
+            option.value = suggestion;
+            datalist.appendChild(option);
+        }
+    });
+}
+
+// Load data on page load
+renderTable();
+populateSuggestions();
         function renderTable() {
             const data = getFilteredData();
             const tbody = document.getElementById('resultsBody');
