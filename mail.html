@@ -52,6 +52,18 @@
             border-bottom: 1px solid #e9ecef;
         }
 
+        /* [CSS MỚI] Vùng chứa banner */
+        .banner-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .banner-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
         .search-container {
             max-width: 900px;
             margin: 0 auto;
@@ -60,7 +72,7 @@
         .search-box {
             display: flex;
             gap: 15px;
-            margin-bottom: 15px; /* [THAY ĐỔI] Giảm margin bottom */
+            margin-bottom: 15px;
         }
 
         .search-input {
@@ -81,7 +93,6 @@
             transform: translateY(0);
         }
 
-        /* [CSS MỚI] Nút Ẩn/Hiện bộ lọc */
         .filter-toggle-btn {
             width: 100%;
             padding: 15px 20px;
@@ -113,29 +124,53 @@
             transform: rotate(180deg);
         }
 
-        /* [CSS MỚI] Thùng chứa bộ lọc có thể thu gọn */
+        /* [CSS CẬP NHẬT] Sử dụng CSS Grid để Ẩn/Hiện mượt mà hơn */
         .filter-section {
+            display: grid;
+            grid-template-rows: 0fr; /* Trạng thái đóng: 0 phần */
+            transition: grid-template-rows 0.4s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease-out;
+
             background: white;
             border-radius: 12px;
             box-shadow: none;
-            
-            /* Logic Ẩn/Hiện */
-            max-height: 0;
             overflow: hidden;
-            padding: 0 20px; /* Ẩn padding-top/bottom */
             opacity: 0;
-            transition: max-height 0.5s ease-out, padding 0.5s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease-out;
             border-top: 1px solid transparent;
         }
         
-        /* [CSS MỚI] Trạng thái Kích hoạt cho bộ lọc */
         .filter-section.active {
-            max-height: 1500px; /* Đủ lớn để chứa tất cả bộ lọc */
+            grid-template-rows: 1fr; /* Trạng thái mở: 1 phần (theo nội dung) */
             opacity: 1;
-            padding: 25px 20px; /* Hiện lại padding */
-            border-top: 1px solid #e9ecef; /* Thêm đường kẻ */
-            margin-top: 20px; /* Thêm khoảng cách */
+            border-top: 1px solid #e9ecef;
+            margin-top: 20px;
         }
+        
+        /* [CSS MỚI] Wrapper bên trong để giữ padding */
+        .filter-wrapper {
+            padding: 25px 20px;
+            min-height: 0; /* Quan trọng cho animation */
+            overflow: hidden;
+        }
+
+        /* [CSS MỚI] Bố cục 2 cột cho bộ lọc */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .filter-column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Khoảng cách giữa các mục trong 1 cột */
+        }
+        /* Tách riêng label và box để căn chỉnh */
+        .filter-group {
+             margin-top: 15px;
+        }
+        .filter-group:first-child {
+             margin-top: 0;
+        }
+
 
         .filter-label {
             font-size: 14px;
@@ -149,7 +184,6 @@
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
-            margin-bottom: 15px;
         }
 
         .tab-btn {
@@ -525,39 +559,90 @@
             }
         }
         
-        /* [CSS MỚI] Bố cục Tablet */
         @media (max-width: 992px) {
              .stats {
-                /* Xếp 2 cột trên tablet */
                 grid-template-columns: repeat(2, 1fr);
             }
         }
 
         @media (max-width: 768px) {
             body {
-                padding: 10px; /* Giảm padding body */
+                padding: 10px;
+            }
+            .header {
+                padding: 25px 15px;
             }
             .header h1 {
-                font-size: 24px;
+                font-size: 22px;
             }
             .search-section, .results-section {
-                padding: 15px; /* Giảm padding các section */
+                padding: 20px 15px;
             }
+            
+            .search-input {
+                padding: 15px 20px;
+                font-size: 15px;
+            }
+            
             .stats {
                 grid-template-columns: 1fr;
             }
+            
+            .filter-toggle-btn {
+                padding: 12px 15px;
+                font-size: 15px;
+            }
+            
+            /* [CSS MỚI] Chuyển bộ lọc 2 cột thành 1 cột */
+            .filter-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .filter-wrapper {
+                padding: 20px 10px;
+            }
+
+            .tab-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            .station-btn, .role-btn, .dept-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
             .filter-tabs, .station-filters, .role-filters, .dept-filters {
                 justify-content: center;
+                gap: 8px;
             }
+            
             .tools-section {
                 flex-direction: column;
                 gap: 10px;
+                padding: 15px;
             }
-            table {
+            .tool-btn {
                 font-size: 14px;
+                padding: 12px 20px;
+            }
+
+            table {
+                font-size: 13px;
             }
             th, td {
-                padding: 12px 10px;
+                padding: 10px 8px;
+            }
+            
+            td.action-cell {
+                flex-direction: column;
+                gap: 6px;
+                align-items: flex-start;
+            }
+            .action-btn {
+                width: 100%;
+                text-align: center;
+                padding: 8px 10px;
             }
         }
     </style>
@@ -570,6 +655,11 @@
         </div>
 
         <div class="search-section">
+            
+            <div class="banner-container">
+                <img src="image_6a0945.png" alt="Banner Trung tâm Y tế Huyện Củ Chi">
+            </div>
+            
             <div class="search-container">
                 <div class="search-box">
                     <input 
@@ -588,53 +678,69 @@
                 </button>
                 
                 <div class="filter-section" id="filterSection">
-                    <label class="filter-label">📋 Phân loại</label>
-                    <div class="filter-tabs">
-                        <button class="tab-btn active" data-filter="all">Tất cả</button>
-                        <button class="tab-btn" data-filter="organization">Đơn vị/Tổ chức</button>
-                        <button class="tab-btn" data-filter="individual">Cá nhân</button>
-                    </div>
-                    
-                    <label class="filter-label" style="margin-top: 20px;">🔬 Lọc theo Khoa/Phòng</label>
-                    <div class="dept-filters">
-                        <button class="dept-btn active" data-dept="all">Tất cả</button>
-                        <button class="dept-btn" data-dept="Ban Giám Đốc">Ban Giám Đốc</button>
-                        <button class="dept-btn" data-dept="Phòng Tổ chức - Hành chính">Phòng TCHC</button>
-                        <button class="dept-btn" data-dept="Phòng Kế hoạch - Nghiệp vụ">Phòng KHNV</button>
-                        <button class="dept-btn" data-dept="Phòng Tài chính - Kế toán">Phòng TCKT</button>
-                        <button class="dept-btn" data-dept="Phòng Dân số - Truyền thông và Giáo dục sức khỏe">Phòng DS-TTGDSK</button>
-                        <button class="dept-btn" data-dept="Khoa Khám bệnh">Khoa Khám bệnh</button>
-                        <button class="dept-btn" data-dept="Khoa Kiểm soát bệnh tật">Khoa KSBT</button>
-                        <button class="dept-btn" data-dept="Khoa Y tế công cộng">Khoa YTCC</button>
-                        <button class="dept-btn" data-dept="Khoa An toàn thực phẩm">Khoa ATTP</button>
-                        <button class="dept-btn" data-dept="Khoa Chăm sóc sức khỏe sinh sản">Khoa CSSKSS</button>
-                        <button class="dept-btn" data-dept="Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS">Khoa TV, ĐTNC, HIV</button>
-                        <button class="dept-btn" data-dept="Khoa Xét nghiệm và Chẩn đoán hình ảnh">Khoa XN-CĐHA</button>
-                        <button class="dept-btn" data-dept="Khoa Dược - Trang thiết bị - Vật tư y tế">Khoa Dược-TTB-VTYT</button>
-                    </div>
+                    <div class="filter-wrapper">
+                        <div class="filter-grid">
+                            
+                            <div class="filter-column">
+                                <div class="filter-group">
+                                    <label class="filter-label">📋 Phân loại</label>
+                                    <div class="filter-tabs">
+                                        <button class="tab-btn active" data-filter="all">Tất cả</button>
+                                        <button class="tab-btn" data-filter="organization">Đơn vị/Tổ chức</button>
+                                        <button class="tab-btn" data-filter="individual">Cá nhân</button>
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <label class="filter-label">🧑‍⚕️ Lọc theo Chức danh</label>
+                                    <div class="role-filters">
+                                        <button class="role-btn active" data-role="all">Tất cả</button>
+                                        <button class="role-btn" data-role="director">Ban Giám Đốc</button>
+                                        <button class="role-btn" data-role="chief_room">Trưởng Phòng</button>
+                                        <button class="role-btn" data-role="deputy_room">Phó Trưởng Phòng</button>
+                                        <button class="role-btn" data-role="chief_dept">Trưởng Khoa</button>
+                                        <button class="role-btn" data-role="deputy_dept">Phó Trưởng Khoa</button>
+                                        <button class="role-btn" data-role="chief_station">Trưởng Trạm</button>
+                                        <button class="role-btn" data-role="deputy_station">Phó Trưởng Trạm</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="filter-column">
+                                <div class="filter-group">
+                                    <label class="filter-label">🔬 Lọc theo Khoa/Phòng</label>
+                                    <div class="dept-filters">
+                                        <button class="dept-btn active" data-dept="all">Tất cả</button>
+                                        <button class="dept-btn" data-dept="Ban Giám Đốc">Ban Giám Đốc</button>
+                                        <button class="dept-btn" data-dept="Phòng Tổ chức - Hành chính">Phòng TCHC</button>
+                                        <button class="dept-btn" data-dept="Phòng Kế hoạch - Nghiệp vụ">Phòng KHNV</button>
+                                        <button class="dept-btn" data-dept="Phòng Tài chính - Kế toán">Phòng TCKT</button>
+                                        <button class="dept-btn" data-dept="Phòng Dân số - Truyền thông và Giáo dục sức khỏe">Phòng DS-TTGDSK</button>
+                                        <button class="dept-btn" data-dept="Khoa Khám bệnh">Khoa Khám bệnh</button>
+                                        <button class="dept-btn" data-dept="Khoa Kiểm soát bệnh tật">Khoa KSBT</button>
+                                        <button class="dept-btn" data-dept="Khoa Y tế công cộng">Khoa YTCC</button>
+                                        <button class="dept-btn" data-dept="Khoa An toàn thực phẩm">Khoa ATTP</button>
+                                        <button class="dept-btn" data-dept="Khoa Chăm sóc sức khỏe sinh sản">Khoa CSSKSS</button>
+                                        <button class="dept-btn" data-dept="Khoa Tư vấn, điều trị nghiện chất và HIV/AIDS">Khoa TV, ĐTNC, HIV</button>
+                                        <button class="dept-btn" data-dept="Khoa Xét nghiệm và Chẩn đoán hình ảnh">Khoa XN-CĐHA</button>
+                                        <button class="dept-btn" data-dept="Khoa Dược - Trang thiết bị - Vật tư y tế">Khoa Dược-TTB-VTYT</button>
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <label class="filter-label">🏢 Lọc theo Trạm Y Tế</label>
+                                    <div class="station-filters">
+                                        <button class="station-btn active" data-station="all">Tất cả</button>
+                                        <button class="station-btn" data-station="Tân An Hội">Tân An Hội</button>
+                                        <button class="station-btn" data-station="Củ Chi">Củ Chi</button>
+                                        <button class="station-btn" data-station="Phú Hòa Đông">Phú Hòa Đông</button>
+                                        <button class="station-btn" data-station="Nhuận Đức">Nhuận Đức</button>
+                                        <button class="station-btn" data-station="An Nhơn Tây">An Nhơn Tây</button>
+                                        <button class="station-btn" data-station="Thái Mỹ">Thái Mỹ</button>
+                                        <button class="station-btn" data-station="Bình Mỹ">Bình Mỹ</button>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <label class="filter-label" style="margin-top: 20px;">🏢 Lọc theo Trạm Y Tế</label>
-                    <div class="station-filters">
-                        <button class="station-btn active" data-station="all">Tất cả</button>
-                        <button class="station-btn" data-station="Tân An Hội">Tân An Hội</button>
-                        <button class="station-btn" data-station="Củ Chi">Củ Chi</button>
-                        <button class="station-btn" data-station="Phú Hòa Đông">Phú Hòa Đông</button>
-                        <button class="station-btn" data-station="Nhuận Đức">Nhuận Đức</button>
-                        <button class="station-btn" data-station="An Nhơn Tây">An Nhơn Tây</button>
-                        <button class="station-btn" data-station="Thái Mỹ">Thái Mỹ</button>
-                        <button class="station-btn" data-station="Bình Mỹ">Bình Mỹ</button>
-                    </div>
-                    
-                    <label class="filter-label" style="margin-top: 20px;">🧑‍⚕️ Lọc theo Chức danh</label>
-                    <div class="role-filters">
-                        <button class="role-btn active" data-role="all">Tất cả</button>
-                        <button class="role-btn" data-role="director">Ban Giám Đốc</button>
-                        <button class="role-btn" data-role="chief_room">Trưởng Phòng</button>
-                        <button class="role-btn" data-role="deputy_room">Phó Trưởng Phòng</button>
-                        <button class="role-btn" data-role="chief_dept">Trưởng Khoa</button>
-                        <button class="role-btn" data-role="deputy_dept">Phó Trưởng Khoa</button>
-                        <button class="role-btn" data-role="chief_station">Trưởng Trạm</button>
-                        <button class="role-btn" data-role="deputy_station">Phó Trưởng Trạm</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1035,15 +1141,13 @@
             });
         });
 
-        // [JS MỚI] Listener cho nút Ẩn/Hiện bộ lọc
         document.getElementById('filterToggleBtn').addEventListener('click', function() {
             const filters = document.getElementById('filterSection');
-            const btn = this; // 'this' là nút được nhấn
+            const btn = this; 
             
             filters.classList.toggle('active');
             btn.classList.toggle('active');
 
-            // Thay đổi nội dung text của nút
             const textSpan = btn.querySelector('span');
             if (filters.classList.contains('active')) {
                 textSpan.textContent = 'Thu Gọn Bộ Lọc';
