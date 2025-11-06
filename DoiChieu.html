@@ -1679,7 +1679,16 @@ function findKey(obj, possibleKeys) {
 }
 
 async function performComparison() {
-    showLoading('comparatorLoading');
+    // ===================================
+    // === THÊM MỚI: Xóa tóm tắt cũ ===
+    // ===================================
+    const summaryContainer = document.getElementById('comparatorSummary');
+    if (summaryContainer) {
+        summaryContainer.innerHTML = '';
+    }
+    // ===================================
+
+    showLoading('comparatorLoading'); // Dòng này đã có sẵn
     try {
         const xmlContent = await globalData.xmlFile.text();
         const { records: xmlRecordsRaw } = validateXmlContent(xmlContent);
@@ -1758,7 +1767,49 @@ async function performComparison() {
                 }
                 globalData.comparisonResults.push(result);
             }
-            processAndSendComparisonReport(globalData.comparisonResults);
+         // === 🚀 CHỖ THÊM MỚI 2: TÍNH TOÁN VÀ HIỂN THỊ TÓM TẮT ===
+            // =======================================================
+            const totalXml = globalData.xmlRecords.size;
+            const totalExcel = globalData.excelRecords.size;
+            const matches = globalData.comparisonResults.filter(r => r.status === 'match').length;
+            const mismatches = globalData.comparisonResults.filter(r => r.status === 'mismatch').length;
+            const xmlOnly = globalData.comparisonResults.filter(r => r.status === 'xml-only').length;
+            const excelOnly = globalData.comparisonResults.filter(r => r.status === 'excel-only').length;
+
+            const summaryContainer = document.getElementById('comparatorSummary');
+            if (summaryContainer) {
+                summaryContainer.innerHTML = `
+                    <div class="summary-item">
+                        <strong class="match">${matches}</strong>
+                        <span>✅ Khớp</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="mismatch">${mismatches}</strong>
+                        <span>❌ Không khớp</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="xml-only">${xmlOnly}</strong>
+                        <span>📄 Chỉ có trong XML</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="excel-only">${excelOnly}</strong>
+                        <span>📊 Chỉ có trên Cổng</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="total">${totalXml}</strong>
+                        <span>Tổng HS XML</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="total">${totalExcel}</strong>
+                        <span>Tổng HS Cổng</span>
+                    </div>
+                `;
+            }
+            // =======================================================
+
+
+            // === GỌI HÀM GỬI BÁO CÁO (đã có từ lần trước) ===
+ processAndSendComparisonReport(globalData.comparisonResults);
             hideLoading('comparatorLoading');
             document.getElementById('comparatorResults').style.display = 'block';
             applyComparatorFilters();
@@ -2522,6 +2573,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationPanelHTML = `<div id="notificationPanel"><div class="notification-header"><h3>Thông báo & Cập nhật</h3></div><div class="notification-list"></div></div>`; document.body.insertAdjacentHTML('beforeend', notificationPanelHTML);
     const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
     const updateModalHTML = `<div id="updateNoticeModal" class="modal"><div class="modal-content update-modal-content"><div class="modal-header"><h2 id="updateModalTitle">🔔 Có gì mới trong phiên bản này?</h2><span class="close-button" onclick="closeUpdateModal()">&times;</span></div><div id="updateModalBody" class="update-modal-body"></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeUpdateModal()">Đã hiểu</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', updateModalHTML);
+  // === THÊM MỚI: Tạo DOM cho tóm tắt đối chiếu ===
+    const comparatorInfo = document.getElementById('comparatorResultsInfo');
+    if (comparatorInfo) {
+        const summaryDiv = document.createElement('div');
+        summaryDiv.id = 'comparatorSummary';
+        summaryDiv.className = 'comparator-summary-container';
+        // Chèn vào trước phần "Tìm thấy X kết quả"
+        comparatorInfo.parentNode.insertBefore(summaryDiv, comparatorInfo);
+    }
+    // =============================================
+
     applyAutoTheme(); initializeNotifications(); checkForcedUpdateNotice();
     const bulkZaloButton = document.createElement('button'); bulkZaloButton.id = 'bulkZaloButton'; bulkZaloButton.className = 'icon-action-btn'; bulkZaloButton.title = 'Soạn tóm tắt hàng loạt cho lỗi đã lọc'; bulkZaloButton.innerHTML = '📋'; bulkZaloButton.style.display = 'none'; bulkZaloButton.onclick = () => { const errorType = document.getElementById('errorTypeFilter').value; if (errorType && globalData.filteredRecords.length > 0) { openZaloModal(globalData.filteredRecords, true, errorType); } };
    // MỚI: Gắn sự kiện nhấn Enter cho các ô input
