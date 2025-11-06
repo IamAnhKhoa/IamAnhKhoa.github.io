@@ -1679,7 +1679,16 @@ function findKey(obj, possibleKeys) {
 }
 
 async function performComparison() {
-    showLoading('comparatorLoading');
+    // ===================================
+    // === THÊM MỚI: Xóa tóm tắt cũ ===
+    // ===================================
+    const summaryContainer = document.getElementById('comparatorSummary');
+    if (summaryContainer) {
+        summaryContainer.innerHTML = '';
+    }
+    // ===================================
+
+    showLoading('comparatorLoading'); // Dòng này đã có sẵn
     try {
         const xmlContent = await globalData.xmlFile.text();
         const { records: xmlRecordsRaw } = validateXmlContent(xmlContent);
@@ -1758,7 +1767,49 @@ async function performComparison() {
                 }
                 globalData.comparisonResults.push(result);
             }
-            
+         // === 🚀 CHỖ THÊM MỚI 2: TÍNH TOÁN VÀ HIỂN THỊ TÓM TẮT ===
+            // =======================================================
+            const totalXml = globalData.xmlRecords.size;
+            const totalExcel = globalData.excelRecords.size;
+            const matches = globalData.comparisonResults.filter(r => r.status === 'match').length;
+            const mismatches = globalData.comparisonResults.filter(r => r.status === 'mismatch').length;
+            const xmlOnly = globalData.comparisonResults.filter(r => r.status === 'xml-only').length;
+            const excelOnly = globalData.comparisonResults.filter(r => r.status === 'excel-only').length;
+
+            const summaryContainer = document.getElementById('comparatorSummary');
+            if (summaryContainer) {
+                summaryContainer.innerHTML = `
+                    <div class="summary-item">
+                        <strong class="match">${matches}</strong>
+                        <span>✅ Khớp</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="mismatch">${mismatches}</strong>
+                        <span>❌ Không khớp</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="xml-only">${xmlOnly}</strong>
+                        <span>📄 Chỉ có trong XML</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="excel-only">${excelOnly}</strong>
+                        <span>📊 Chỉ có trên Cổng</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="total">${totalXml}</strong>
+                        <span>Tổng HS XML</span>
+                    </div>
+                    <div class="summary-item">
+                        <strong class="total">${totalExcel}</strong>
+                        <span>Tổng HS Cổng</span>
+                    </div>
+                `;
+            }
+            // =======================================================
+
+
+            // === GỌI HÀM GỬI BÁO CÁO (đã có từ lần trước) ===
+ processAndSendComparisonReport(globalData.comparisonResults);
             hideLoading('comparatorLoading');
             document.getElementById('comparatorResults').style.display = 'block';
             applyComparatorFilters();
@@ -2522,6 +2573,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationPanelHTML = `<div id="notificationPanel"><div class="notification-header"><h3>Thông báo & Cập nhật</h3></div><div class="notification-list"></div></div>`; document.body.insertAdjacentHTML('beforeend', notificationPanelHTML);
     const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
     const updateModalHTML = `<div id="updateNoticeModal" class="modal"><div class="modal-content update-modal-content"><div class="modal-header"><h2 id="updateModalTitle">🔔 Có gì mới trong phiên bản này?</h2><span class="close-button" onclick="closeUpdateModal()">&times;</span></div><div id="updateModalBody" class="update-modal-body"></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeUpdateModal()">Đã hiểu</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', updateModalHTML);
+  // === THÊM MỚI: Tạo DOM cho tóm tắt đối chiếu ===
+    const comparatorInfo = document.getElementById('comparatorResultsInfo');
+    if (comparatorInfo) {
+        const summaryDiv = document.createElement('div');
+        summaryDiv.id = 'comparatorSummary';
+        summaryDiv.className = 'comparator-summary-container';
+        // Chèn vào trước phần "Tìm thấy X kết quả"
+        comparatorInfo.parentNode.insertBefore(summaryDiv, comparatorInfo);
+    }
+    // =============================================
+
     applyAutoTheme(); initializeNotifications(); checkForcedUpdateNotice();
     const bulkZaloButton = document.createElement('button'); bulkZaloButton.id = 'bulkZaloButton'; bulkZaloButton.className = 'icon-action-btn'; bulkZaloButton.title = 'Soạn tóm tắt hàng loạt cho lỗi đã lọc'; bulkZaloButton.innerHTML = '📋'; bulkZaloButton.style.display = 'none'; bulkZaloButton.onclick = () => { const errorType = document.getElementById('errorTypeFilter').value; if (errorType && globalData.filteredRecords.length > 0) { openZaloModal(globalData.filteredRecords, true, errorType); } };
    // MỚI: Gắn sự kiện nhấn Enter cho các ô input
@@ -2594,7 +2656,39 @@ function applyAutoTheme() { if (localStorage.getItem('theme')) { return; } const
 function initializeNotifications() { const bell = document.getElementById('notificationBell'); const panel = document.getElementById('notificationPanel'); if (!bell || !panel) return; const checkUnread = () => { const lastSeenId = parseInt(localStorage.getItem('lastSeenNotificationId') || '0'); const latestId = notifications.length > 0 ? notifications[0].id : 0; if (latestId > lastSeenId) { const indicator = document.createElement('div'); indicator.className = 'unread-indicator'; bell.appendChild(indicator); } }; const renderNotifications = () => { const list = panel.querySelector('.notification-list'); if (!list) return; const iconMap = { feature: '✨', fix: '🔧', announcement: '📢' }; list.innerHTML = notifications.map(n => `<div class="notification-item"><div class="notification-icon">${iconMap[n.type] || '🔔'}</div><div class="notification-content"><h4>${n.title}</h4><p>${n.content}</p><div class="date">${n.date}</div></div></div>`).join(''); }; bell.addEventListener('click', (e) => { e.stopPropagation(); const isVisible = panel.style.display === 'block'; if (!isVisible) { renderNotifications(); panel.style.display = 'block'; const latestId = notifications.length > 0 ? notifications[0].id : 0; localStorage.setItem('lastSeenNotificationId', latestId); const indicator = bell.querySelector('.unread-indicator'); if (indicator) indicator.remove(); } else { panel.style.display = 'none'; } }); document.addEventListener('click', (e) => { if (!panel.contains(e.target) && !bell.contains(e.target)) { panel.style.display = 'none'; } }); checkUnread(); }
 function checkForcedUpdateNotice() { if (notifications.length === 0) return; const latestUpdate = notifications[0]; const lastAcknowledgedId = parseInt(localStorage.getItem('acknowledgedUpdateId') || '0'); if (latestUpdate.id > lastAcknowledgedId) { const modal = document.getElementById('updateNoticeModal'); const modalBody = document.getElementById('updateModalBody'); const iconMap = { feature: '✨', fix: '🔧', announcement: '📢' }; modalBody.innerHTML = `<div class="notification-item"><div class="notification-icon">${iconMap[latestUpdate.type] || '🔔'}</div><div class="notification-content"><h4>${latestUpdate.title}</h4><p>${latestUpdate.content}</p><div class="date">${latestUpdate.date}</div></div></div>`; modal.style.display = 'block'; } }
 function closeUpdateModal() { const latestUpdateId = notifications.length > 0 ? notifications[0].id : 0; localStorage.setItem('acknowledgedUpdateId', latestUpdateId); document.getElementById('updateNoticeModal').style.display = 'none'; }
-function generateBulkZaloMessage(records, errorType) { const errorName = ERROR_TYPES[errorType] || errorType; let message = `*[CSKCB] TÓM TẮT LỖI HÀNG LOẠT*\n--------------------------------\n`; message += `▪️ *Loại lỗi:* ${errorName}\n`; message += `▪️ *Tổng số hồ sơ có lỗi:* ${records.length}\n\n`; message += `*DANH SÁCH CHI TIẾT:*\n`; records.forEach((record, index) => { const relevantError = record.errors.find(e => e.type === errorType); const cost = relevantError && relevantError.cost > 0 ? ` - ${formatCurrency(relevantError.cost)}` : ''; message += `${index + 1}. BN: *${record.hoTen}* (LK: ${record.maLk})${cost}\n`; }); message += `\n--------------------------------\n_Vui lòng kiểm tra và xử lý hàng loạt các hồ sơ trên._`; return message; }
+function generateBulkZaloMessage(records, errorType) {
+    const errorName = ERROR_TYPES[errorType] || errorType;
+    let message = `*[CSKCB] TÓM TẮT LỖI HÀNG LOẠT*\n--------------------------------\n`;
+    message += `▪️ *Loại lỗi:* ${errorName}\n`;
+    message += `▪️ *Tổng số hồ sơ có lỗi:* ${records.length}\n\n`;
+    message += `*DANH SÁCH CHI TIẾT:*\n`;
+
+    records.forEach((record, index) => {
+        // Lấy chi tiết lỗi
+        const relevantError = record.errors.find(e => e.type === errorType);
+        const cost = relevantError && relevantError.cost > 0 ? ` - ${formatCurrency(relevantError.cost)}` : '';
+        
+        // === BỔ SUNG MỚI ===
+        // 1. Lấy ngày vào (chỉ lấy phần ngày cho gọn)
+        const ngayVao = formatDateTimeForDisplay(record.ngayVao).split(' ')[0] || 'N/A';
+        
+        // 2. Lấy Người Thực Hiện và tra cứu tên
+        let nguoiThucHien = 'Không rõ';
+        if (record.nguoi_thuc_hien && record.nguoi_thuc_hien.size > 0) {
+            nguoiThucHien = Array.from(record.nguoi_thuc_hien)
+                                .map(code => staffNameMap.get(code) || code) // Tra cứu tên
+                                .join(', ');
+        }
+        // === KẾT THÚC BỔ SUNG ===
+
+        // Cập nhật dòng tin nhắn
+        message += `${index + 1}. BN: *${record.hoTen}* (LK: ${record.maLk})${cost}\n`;
+        message += `   (Ngày vào: ${ngayVao} - TH: ${nguoiThucHien})\n`;
+    });
+
+    message += `\n--------------------------------\n_Vui lòng kiểm tra và xử lý hàng loạt các hồ sơ trên._`;
+    return message;
+}
 function generateSingleZaloMessage(record) { const cleanMessage = (msg) => msg.replace(/<br>/g, '\n').replace(/<strong>(.*?)<\/strong>/g, '*$1*'); let message = `*[CSKCB] THÔNG BÁO KẾT QUẢ KIỂM TRA HỒ SƠ BHYT*\n--------------------------------\n`; message += `▪️ *Bệnh nhân:* ${record.hoTen}\n`; message += `▪️ *Mã LK:* ${record.maLk}\n`; message += `▪️ *Thời gian ĐT:* ${formatDateTimeForDisplay(record.ngayVao)} - ${formatDateTimeForDisplay(record.ngayRa)}\n`; message += `▪️ *Tổng chi phí:* ${formatCurrency(record.t_bhtt)}\n\n`; const criticalErrors = record.errors.filter(e => e.severity === 'critical'); const warnings = record.errors.filter(e => e.severity === 'warning'); if (criticalErrors.length > 0) { message += `*🔴 LỖI NGHIÊM TRỌNG (Dự kiến xuất toán):*\n`; criticalErrors.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; let costInfo = err.cost > 0 ? ` (${formatCurrency(err.cost)})` : ''; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}${costInfo}\n`; }); message += `\n`; } if (warnings.length > 0) { message += `*🟡 CẢNH BÁO (Kiểm tra lại):*\n`; warnings.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}\n`; }); message += `\n`; } message += `--------------------------------\n_Vui lòng kiểm tra và xử lý theo quy định._`; return message; }
 function openZaloModal(data, isBulk = false, errorType = '') { const message = isBulk ? generateBulkZaloMessage(data, errorType) : generateSingleZaloMessage(data); document.getElementById('zaloMessageTextarea').value = message; document.getElementById('zaloMessageModal').style.display = 'block'; }
 function closeZaloModal() { document.getElementById('zaloMessageModal').style.display = 'none'; }
@@ -2996,4 +3090,155 @@ function logCheckHistoryToGoogleSheet(totalRecords, maCoSo) {
     .catch(error => {
         console.error("Lỗi khi gửi dữ liệu đến Google Sheet:", error);
     });
+}
+/**
+ * ===================================================================
+ * === 🚀 KHỐI HÀM MỚI: GỬI BÁO CÁO ĐỐI CHIẾU LÊN TELEGRAM ===
+ * ===================================================================
+ */
+
+/**
+ * Hàm trung tâm: Xử lý kết quả, tạo cảnh báo, tin nhắn, file Excel và gửi đi.
+ * @param {Array} results - Mảng globalData.comparisonResults
+ */
+async function processAndSendComparisonReport(results) {
+    const mismatches = results.filter(r => r.status === 'mismatch');
+    const xmlOnly = results.filter(r => r.status === 'xml-only');
+    const excelOnly = results.filter(r => r.status === 'excel-only');
+    const totalErrors = mismatches.length + xmlOnly.length + excelOnly.length;
+
+    if (totalErrors === 0) {
+        console.log("Đối chiếu hoàn tất, không có lỗi sai lệch.");
+        return; // Không có lỗi, không làm gì cả
+    }
+
+    // Action 1: Cảnh báo trên trang (index)
+    alert(`PHÁT HIỆN ${totalErrors} HỒ SƠ KHÔNG KHỚP!\n\n- ${mismatches.length} hồ sơ sai lệch.\n- ${xmlOnly.length} hồ sơ chỉ có trong XML.\n- ${excelOnly.length} hồ sơ chỉ có trên Cổng (Excel).\n\nVui lòng kiểm tra thông báo Telegram để xem chi tiết.`);
+
+    // Action 2: Tạo tin nhắn Telegram dựa trên yêu cầu của bạn
+    let message = `<b>⚠️ BÁO CÁO ĐỐI CHIẾU XML & CỔNG ⚠️</b>\n\n`;
+    message += `Phát hiện tổng cộng <b>${totalErrors}</b> hồ sơ có sai lệch:\n\n`;
+    
+    if (mismatches.length > 0) {
+        message += `<b>1️⃣ Không khớp (${mismatches.length} HS):</b>\n`;
+        message += `   👉 <i>Yêu cầu xem lại XML và đẩy thay thế.</i>\n\n`;
+    }
+    if (xmlOnly.length > 0) {
+        message += `<b>2️⃣ Chỉ có trong XML (${xmlOnly.length} HS):</b>\n`;
+        message += `   👉 <i>Hồ sơ chưa nộp lên Cổng hoặc chưa đề nghị thanh toán.</i>\n\n`;
+    }
+    if (excelOnly.length > 0) {
+        message += `<b>3️⃣ Chỉ có trên Cổng (${excelOnly.length} HS):</b>\n`;
+        message += `   👉 <i>Hồ sơ đã bị xóa ở HIS? Đề nghị xóa hồ sơ trên Cổng.</i>\n\n`;
+    }
+    message += `<i>Chi tiết có trong file Excel đính kèm...</i>`;
+
+    // Action 3: Tạo file Excel (dưới dạng Blob)
+    const excelBlob = generateComparisonExcel(mismatches, xmlOnly, excelOnly);
+
+    // Action 4: Gửi tin nhắn và file Excel lên Telegram
+    showLoading('comparatorLoading'); // Hiển thị loading trong khi gửi
+    await sendTelegramComparisonReport(message, excelBlob);
+    hideLoading('comparatorLoading'); // Ẩn loading sau khi gửi xong
+}
+
+/**
+ * Tạo file Excel (Blob) từ các mảng lỗi
+ */
+function generateComparisonExcel(mismatches, xmlOnly, excelOnly) {
+    const wb = XLSX.utils.book_new();
+
+    // Hàm trợ giúp để định dạng dữ liệu cho Excel
+    const formatData = (r) => {
+        // Lấy thông tin từ Excel (file đối chiếu)
+        const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN']) : null;
+        const excelName = excelHoTenKey ? r.excelRec[excelHoTenKey] : 'N/A';
+        const excelBHTTKey = r.excelRec ? findKey(r.excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']) : null;
+        const excel_t_bhtt = excelBHTTKey ? r.excelRec[excelBHTTKey] : 'N/A';
+        const excelNgayVaoKey = r.excelRec ? findKey(r.excelRec, ['NGAY_VAO', 'NGÀY VÀO']) : null;
+        const excel_ngay_vao = excelNgayVaoKey ? flexibleFormatDate(r.excelRec[excelNgayVaoKey]) : 'N/A';
+
+        return {
+            'Mã LK': r.key,
+            'Tên BN (XML)': r.xmlRec?.hoTen || 'N/A',
+            'BHYT TT (XML)': r.xmlRec?.t_bhtt || 'N/A',
+            'Ngày Vào (XML)': r.xmlRec ? flexibleFormatDate(r.xmlRec.ngayVao) : 'N/A',
+            'Tên BN (Cổng/Excel)': excelName,
+            'BHYT TT (Cổng/Excel)': excel_t_bhtt,
+            'Ngày Vào (Cổng/Excel)': excel_ngay_vao,
+            'Chi tiết không khớp': r.details ? r.details.join('; ') : ''
+        };
+    };
+
+    if (mismatches.length > 0) {
+        const data = mismatches.map(formatData);
+        const ws = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, "1. HoSoKhongKhop");
+    }
+    if (xmlOnly.length > 0) {
+        const data = xmlOnly.map(formatData);
+        const ws = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, "2. ChiCoTrongXML");
+    }
+    if (excelOnly.length > 0) {
+        const data = excelOnly.map(formatData);
+        const ws = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, "3. ChiCoTrenCong");
+    }
+
+    // Ghi file Excel ra dưới dạng mảng (ArrayBuffer)
+    const excelData = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    // Chuyển đổi sang Blob để gửi
+    return new Blob([excelData], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+/**
+ * Gửi tin nhắn tóm tắt VÀ file Excel chi tiết lên Telegram
+ * @param {string} message - Tin nhắn văn bản (HTML)
+ * @param {Blob} excelBlob - File Excel đã tạo
+ */
+async function sendTelegramComparisonReport(message, excelBlob) {
+    const BOT_TOKEN = '7653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- Token của bạn
+    const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
+    
+    try {
+        // Phần 1: Gửi tin nhắn văn bản tóm tắt
+        const urlMessage = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+        const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
+        
+        const responseMsg = await fetch(urlMessage, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params)
+        });
+        const dataMsg = await responseMsg.json();
+        if (dataMsg.ok) {
+            console.log('Đã gửi tin nhắn tóm tắt đối chiếu lên Telegram.');
+        } else {
+            console.error('Lỗi gửi tin nhắn Telegram:', dataMsg.description);
+        }
+
+        // Phần 2: Gửi file Excel chi tiết
+        const urlDocument = `https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`;
+        const formData = new FormData();
+        formData.append('chat_id', CHAT_ID);
+        // Đặt tên file cho file Blob
+        formData.append('document', excelBlob, 'BaoCao_DoiChieu_SaiLech.xlsx');
+        formData.append('caption', 'File Excel chi tiết các hồ sơ sai lệch.');
+
+        const responseDoc = await fetch(urlDocument, {
+            method: 'POST',
+            body: formData // Khi dùng FormData, trình duyệt sẽ tự đặt Content-Type
+        });
+        const dataDoc = await responseDoc.json();
+        if (dataDoc.ok) {
+            console.log('Đã gửi file Excel đối chiếu lên Telegram.');
+        } else {
+            console.error('Lỗi gửi file Excel Telegram:', dataDoc.description);
+        }
+
+    } catch (error) {
+        console.error('Lỗi nghiêm trọng khi gửi báo cáo Telegram:', error);
+        alert("Có lỗi xảy ra khi gửi báo cáo lên Telegram. Vui lòng kiểm tra Console (F12).");
+    }
 }
