@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -6,7 +7,7 @@
     <title>Giám sát BHYT Toàn diện</title>
    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966327.png" type="image/png" sizes="32x32"/>
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=DD1LrB9ytXTBJ6h7iTB9a-YtJup_JUw3UJ4q1FkveIwbs0slljLzwC_7EVaAviBq" charset="UTF-8"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   
   
@@ -714,61 +715,9 @@
             background-color: #dc3545;
             color: white;
         }
+    </style>
 
-/* ==================
-   CSS MỚI CHO TÓM TẮT ĐỐI CHIẾU
-   ================== */
-.comparator-summary-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: #f4f6f9;
-    border-radius: 8px;
-    border: 1px solid #e1e8ed;
-}
-body.dark .comparator-summary-container {
-    background-color: #1f2937;
-    border-color: #374151;
-}
-.summary-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px 15px;
-    background: #fff;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    min-width: 120px;
-    text-align: center;
-}
-body.dark .summary-item {
-    background: #2c3a4b;
-}
-.summary-item strong {
-    font-size: 1.8em;
-    font-weight: 700;
-}
-body.dark .summary-item strong {
-    color: #fff;
-}
-.summary-item span {
-    font-size: 0.9em;
-    color: #555;
-    font-weight: 500;
-}
-body.dark .summary-item span {
-    color: #a0aec0;
-}
-/* Màu sắc cho từng loại */
-.summary-item strong.match { color: #28a745; }
-.summary-item strong.mismatch { color: #dc3545; }
-.summary-item strong.xml-only { color: #007bff; }
-.summary-item strong.excel-only { color: #ffc107; }
-.summary-item strong.total { color: #343a40; }
-body.dark .summary-item strong.total { color: #e5e7eb; }
+    <!-- ========== CSS BỔ SUNG (ADD-ON) – không phá CSS cũ ========== -->
     <style>
         /* NÚT LIGHT/DARK trong header – giữ nguyên header cũ */
         .theme-toggle{
@@ -1465,6 +1414,5 @@ body.dark .summary-item strong.total { color: #e5e7eb; }
         window.__updateMoneyIconEffect = updateMoneyIconEffect;
       });
     </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"db0c89750f364ceea3cb03b0503af93a","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
