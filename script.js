@@ -3352,379 +3352,277 @@ async function sendTelegramComparisonReport(message, excelBlob) {
     }
 }
 /**
- * FILE MỚI: support_tab.js
+ * FILE: support_tab.js
  * =============================
- * - Thêm tab "Hỗ trợ & Liên hệ" với menu con.
- * - Bao gồm trang "Thông tin liên hệ" và "Ủng hộ dự án".
- * - Tự động tiêm HTML, CSS và gắn sự kiện cần thiết.
+ * - Phiên bản: Modern UI (Không 3D).
+ * - Chức năng: Thêm tab "Hồ sơ tác giả" vào menu.
+ * - Giao diện: Popup hiện đại, hiệu ứng kính mờ, hoạt hình nhẹ nhàng.
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Support Tab feature loaded.");
+(function() { // Bọc trong hàm ẩn danh để tránh xung đột biến với hệ thống cũ
+    
+    // Kiểm tra nếu đã chạy rồi thì không chạy lại
+    if (window.isPortfolioLoaded) return;
+    window.isPortfolioLoaded = true;
 
-    // ===================================================================
-    // BƯỚC 1: TIÊM CSS CHO TAB MỚI
-    // ===================================================================
-    const supportStyles = `
-        /* Dropdown container for the new tab */
-        .support-dropdown {
-            position: relative;
-            display: inline-block;
-        }
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("Profile Tab Loaded - Safe Mode.");
 
-        /* Dropdown content (hidden by default) */
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #f1f1f1;
-            min-width: 200px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1001;
-            border-radius: 0 0 8px 8px;
-            overflow: hidden;
-            animation: fadeIn 0.3s ease-out;
-        }
-        
-        body.dark .dropdown-content {
-            background-color: #1f2937;
-        }
+        // ===================================================================
+        // 1. CSS (Giao diện đẹp, hiệu ứng mượt)
+        // ===================================================================
+        const styles = `
+            /* Nút trên thanh Menu */
+            .tab-button.profile-btn {
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                color: white !important;
+                font-weight: bold;
+                border: none;
+                display: inline-flex; align-items: center; gap: 5px;
+                transition: all 0.3s ease;
+            }
+            .tab-button.profile-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0, 242, 254, 0.4);
+            }
 
-        /* Links inside the dropdown */
-        .dropdown-content a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            text-align: left;
-            font-size: 0.95em;
-        }
-        
-        body.dark .dropdown-content a {
-            color: #e5e7eb;
-        }
+            /* Màn hình nền (Overlay) */
+            #profile-overlay {
+                display: none;
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(15, 23, 42, 0.8); /* Màu tối mờ */
+                backdrop-filter: blur(8px); /* Hiệu ứng làm mờ nền đằng sau */
+                z-index: 99999;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            #profile-overlay.active {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                opacity: 1;
+            }
 
-        /* Change color of dropdown links on hover */
-        .dropdown-content a:hover {
-            background-color: #ddd;
-        }
-        
-        body.dark .dropdown-content a:hover {
-            background-color: #374151;
-        }
+            /* Thẻ Card chính */
+            .profile-container {
+                background: white;
+                width: 90%; max-width: 900px;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                display: flex;
+                flex-direction: row;
+                animation: slideUp 0.4s ease-out forwards;
+                position: relative;
+            }
+            @media (max-width: 768px) { .profile-container { flex-direction: column; max-height: 90vh; overflow-y: auto; } }
 
-        /* Show the dropdown menu on hover */
-        .support-dropdown:hover .dropdown-content {
-            display: block;
-        }
-        
-        /* --- Styles for Support Tab Content --- */
-        .support-container {
-            max-width: 900px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-        
-        .support-section {
-            display: none; /* Hidden by default */
-        }
-        
-        .support-section.active {
-            display: block; /* Show active section */
-        }
-        
-        /* Contact Card Styles */
-        .contact-card {
-            background: #ffffff;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            padding: 40px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-        
-        body.dark .contact-card {
-             background: #1f2937;
-             box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        }
+            /* Cột trái: Thông tin cá nhân */
+            .profile-sidebar {
+                background: linear-gradient(to bottom right, #f8fafc, #e2e8f0);
+                padding: 40px 30px;
+                text-align: center;
+                border-right: 1px solid #e2e8f0;
+                min-width: 300px;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+            }
+            .profile-avatar {
+                width: 150px; height: 150px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 4px solid white;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+            }
+            .profile-name { font-size: 1.8rem; font-weight: bold; color: #1e293b; margin: 0; }
+            .profile-role { color: #64748b; font-weight: 500; margin-top: 5px; }
+            
+            .social-links { display: flex; gap: 10px; margin-top: 20px; width: 100%; justify-content: center; }
+            .social-btn {
+                flex: 1; padding: 10px; border-radius: 8px; text-decoration: none; 
+                font-weight: bold; font-size: 0.9rem; color: white; transition: 0.2s;
+                display: flex; align-items: center; justify-content: center; gap: 5px;
+            }
+            .btn-zalo { background: #0068ff; } .btn-zalo:hover { background: #0054cc; }
+            .btn-call { background: #10b981; } .btn-call:hover { background: #059669; }
 
-        .contact-card .avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: 4px solid #667eea;
-            object-fit: cover;
-        }
-        
-        .contact-card h2 {
-            font-size: 2em;
-            color: #2c3e50;
-            margin: 0;
-        }
-        
-        body.dark .contact-card h2 {
-            color: #f9fafb;
-        }
-        
-        .contact-card .title {
-            font-size: 1.1em;
-            color: #7f8c8d;
-            margin-top: -15px;
-        }
-        
-        body.dark .contact-card .title {
-            color: #9ca3af;
-        }
+            /* Cột phải: Nội dung chi tiết */
+            .profile-content {
+                padding: 40px;
+                flex: 1;
+                background: #ffffff;
+            }
+            .section-title {
+                font-size: 1.1rem; color: #3b82f6; font-weight: bold; text-transform: uppercase;
+                margin-bottom: 15px; letter-spacing: 1px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;
+            }
+            .profile-bio { color: #475569; line-height: 1.6; margin-bottom: 30px; }
 
-        .contact-links {
-            display: flex;
-            gap: 15px;
-            margin-top: 10px;
-        }
+            /* Grid Dự án */
+            .project-grid {
+                display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            }
+            .project-card {
+                background: #f8fafc; border: 1px solid #e2e8f0;
+                padding: 15px; border-radius: 10px;
+                transition: all 0.3s ease;
+            }
+            .project-card:hover {
+                transform: translateY(-3px);
+                border-color: #3b82f6;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            }
+            .project-card h4 { margin: 0 0 5px 0; color: #1e293b; font-size: 1rem; }
+            .project-card p { margin: 0; font-size: 0.85rem; color: #64748b; }
 
-        .contact-links a {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
+            /* Donate Section nhỏ gọn */
+            .donate-box {
+                margin-top: 30px; background: #fffbeb; border: 1px solid #fcd34d;
+                padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px;
+            }
+            .donate-qr-thumb { width: 50px; height: 50px; border-radius: 5px; cursor: zoom-in; }
+            
+            /* Nút đóng */
+            .close-overlay {
+                position: absolute; top: 15px; right: 20px;
+                font-size: 1.5rem; color: #94a3b8; cursor: pointer; transition: 0.2s;
+                background: none; border: none;
+            }
+            .close-overlay:hover { color: #ef4444; transform: rotate(90deg); }
 
-        .contact-links .zalo { background-color: #0068ff; color: white; }
-        .contact-links .phone { background-color: #28a745; color: white; }
-        .contact-links .email { background-color: #dc3545; color: white; }
-        
-        .contact-links a:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        
-        /* Donate Section Styles */
-        .donate-section {
-            text-align: center;
-        }
-        
-        .donate-section h2 {
-            font-size: 2.2em;
-            color: #c0392b;
-            margin-bottom: 20px;
-        }
-        
-        body.dark .donate-section h2 {
-            color: #e74c3c;
-        }
+            /* Animation */
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(30px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        `;
 
-        .donate-section .thank-you-text {
-            max-width: 800px;
-            margin: 0 auto 30px auto;
-            text-align: left;
-            line-height: 1.8;
-            font-size: 1.1em;
-        }
-        
-        .donate-section .thank-you-text p {
-            margin-bottom: 15px;
-        }
-        
-        .donate-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .donate-button {
-            background: white;
-            border: 2px solid #e1e8ed;
-            border-radius: 12px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 180px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        
-        body.dark .donate-button {
-            background: #1f2937;
-            border-color: #374151;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        
-        .donate-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        
-        .donate-button img {
-            height: 40px;
-            margin-bottom: 10px;
-        }
-        
-        .donate-button span {
-            display: block;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        
-        body.dark .donate-button span {
-            color: #e5e7eb;
-        }
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = styles;
+        document.head.appendChild(styleSheet);
 
-        /* QR Code Modal */
-        #qrModal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            justify-content: center;
-            align-items: center;
-        }
-        #qrModal.show { display: flex; }
-        #qrModal img {
-            max-width: 90%;
-            max-height: 90%;
-            width: 350px;
-            height: auto;
-            border-radius: 15px;
-            border: 5px solid white;
-        }
-    `;
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = supportStyles;
-    document.head.appendChild(styleSheet);
-
-    // ===================================================================
-    // BƯỚC 2: TIÊM HTML
-    // ===================================================================
-    // 1. Tạo Tab Button với Dropdown
-    const supportDropdown = document.createElement('div');
-    supportDropdown.className = 'tab-button support-dropdown';
-    supportDropdown.innerHTML = `
-        <span>📞 Hỗ trợ</span>
-        <div class="dropdown-content">
-            <a href="#" data-target="contactPage">Thông tin liên hệ</a>
-            <a href="#" data-target="donatePage">Ủng hộ dự án</a>
-        </div>
-    `;
-
-    // 2. Tạo Tab Content
-    const supportTabContent = document.createElement('div');
-    supportTabContent.id = 'supportTab';
-    supportTabContent.className = 'tab-content';
-    supportTabContent.innerHTML = `
-        <div class="support-container">
-            <!-- Contact Section -->
-            <div id="contactPage" class="support-section active">
-                <div class="contact-card">
-                    <img src="https://raw.githubusercontent.com/lqthai97/lqthai97.github.io/refs/heads/main/anhkhoa.jpg" alt="Avatar" class="avatar">
-                    <div>
-                        <h2>Trần Anh Khoa</h2>
-                        <p class="title">Admin & Developer</p>
+        // ===================================================================
+        // 2. HTML STRUCUTRE (Nội dung giới thiệu)
+        // ===================================================================
+        const overlayHTML = `
+            <div class="profile-container">
+                <button class="close-overlay" id="close-profile">✕</button>
+                
+                <div class="profile-sidebar">
+                    <img src="https://raw.githubusercontent.com/lqthai97/lqthai97.github.io/refs/heads/main/anhkhoa.jpg" alt="Avatar" class="profile-avatar">
+                    <h2 class="profile-name">Trần Anh Khoa</h2>
+                    <p class="profile-role">IT Admin & Developer</p>
+                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Trung tâm Y tế Củ Chi</p>
+                    
+                    <div class="social-links">
+                        <a href="https://zalo.me/0332185388" target="_blank" class="social-btn btn-zalo">Zalo</a>
+                        <a href="tel:0332185388" class="social-btn btn-call">Gọi điện</a>
                     </div>
-                    <div class="contact-links">
-                        <a href="https://zalo.me/0332185388" target="_blank" class="zalo">Zalo</a>
-                        <a href="tel:0332185388" class="phone">Gọi điện</a>
-                        <a href="mailto:khoaanh181920@gmail.com" class="email">Email</a>
+                </div>
+
+                <div class="profile-content">
+                    <div class="section-title">Giới thiệu</div>
+                    <p class="profile-bio">
+                        Chào bạn, tôi chuyên phát triển các giải pháp <strong>Tự động hóa quy trình Y tế</strong>, giúp tối ưu hóa thời gian và giảm thiểu sai sót. Mục tiêu của tôi là mang công nghệ dữ liệu áp dụng thực tiễn vào công việc quản lý KCB BHYT.
+                    </p>
+
+                    <div class="section-title">Dự án nổi bật</div>
+                    <div class="project-grid">
+                        <div class="project-card">
+                            <h4>🛡️ Giám sát BHYT</h4>
+                            <p>Phát hiện lỗi XML, cảnh báo xuất toán trước khi gửi giám định.</p>
+                        </div>
+                        <div class="project-card">
+                            <h4>📊 Dashboard NCT</h4>
+                            <p>Hệ thống báo cáo, quản lý lịch khám sức khỏe người cao tuổi.</p>
+                        </div>
+                        <div class="project-card">
+                            <h4>⚡ Auto Utilities</h4>
+                            <p>Script xử lý dữ liệu, chuẩn hóa danh sách tự động.</p>
+                        </div>
+                        <div class="project-card">
+                            <h4>📂 File Manager 2.0</h4>
+                            <p>Số hóa văn bản, quản lý hồ sơ tập trung.</p>
+                        </div>
+                    </div>
+
+                    <div class="donate-box">
+                        <img src="https://i.ibb.co/Gv1p5BQj/bank.png" class="donate-qr-thumb" id="qr-thumb" title="Click để phóng to">
+                        <div>
+                            <strong style="color:#d97706">Ủng hộ tác giả</strong>
+                            <p style="margin:0; font-size:0.85rem; color:#78350f">Mọi sự đóng góp là động lực để duy trì Server và phát triển tính năng mới.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Donate Section -->
-            <div id="donatePage" class="support-section">
-                <div class="donate-section">
-                    <h2>Lời Cảm Ơn Trân Trọng Đến Những Người Ủng Hộ Dự Án</h2>
-                    <div class="thank-you-text">
-                        <p>• Tôi, Trần Anh Khoa, gửi lời cảm ơn sâu sắc đến bạn vì đã quyên góp và ủng hộ dự án.</p>
-                        <p>• Dự án của tôi được xây dựng với mục tiêu mang đến giá trị hoàn toàn miễn phí cho cộng đồng, và chính những sự hỗ trợ quý báu như của bạn đã giúp chúng tôi tiếp tục duy trì và phát triển.</p>
-                        <p>• Sự đóng góp của bạn không chỉ là nguồn động viên lớn về tinh thần, mà còn giúp tôi có thêm nguồn lực để cải thiện chất lượng, mở rộng phạm vi hoạt động và đem đến trải nghiệm tốt nhất cho mọi người.</p>
-                        <p>• Dù lớn hay nhỏ, mọi sự đóng góp đều được trân trọng và đánh giá cao.</p>
-                        <p>• Một lần nữa, tôi xin gửi lời cảm ơn chân thành và mong rằng bạn sẽ tiếp tục đồng hành cùng dự án trong thời gian tới.</p>
-                        <p>• Trân trọng cảm ơn!</p>
-                    </div>
-                    <div class="donate-buttons">
-                        <button class="donate-button" data-qr-src="https://i.ibb.co/Gv1p5BQj/bank.png"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Vietcombank_logo_fixed.svg/1200px-Vietcombank_logo_fixed.svg.png">
-                        
-                            <span>Chuyển khoản Ngân hàng</span>
-                        </button>
-                        
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // 3. Tạo QR Code Modal
-    const qrModal = document.createElement('div');
-    qrModal.id = 'qrModal';
-    qrModal.innerHTML = `<img id="qrImage" src="https://i.ibb.co/Gv1p5BQj/bank.png" alt="VietComBank" alt="QR Code">`;
+        `;
 
-    // 4. Chèn các element vào trang
-    const nav = document.querySelector('.tab-nav');
-    const container = document.querySelector('.container');
-    if (nav && container) {
-        nav.appendChild(supportDropdown);
-        container.appendChild(supportTabContent);
-        document.body.appendChild(qrModal);
-    }
+        // Tạo Overlay Element
+        const overlay = document.createElement('div');
+        overlay.id = 'profile-overlay';
+        overlay.innerHTML = overlayHTML;
+        document.body.appendChild(overlay);
 
-    // ===================================================================
-    // BƯỚC 3: GẮN SỰ KIỆN (EVENT LISTENERS)
-    // ===================================================================
-    // Sự kiện cho tab chính
-    supportDropdown.addEventListener('click', (event) => {
-        // Chỉ xử lý khi click vào chính tab, không phải link con
-        if (event.target.tagName === 'SPAN') {
-            openTab({ currentTarget: supportDropdown }, 'supportTab');
+        // ===================================================================
+        // 3. TÌM MENU VÀ CHÈN NÚT
+        // ===================================================================
+        // Tìm thanh menu dựa trên class phổ biến (dựa trên ảnh bạn gửi)
+        const navBar = document.querySelector('.tab-nav') || 
+                       document.querySelector('.nav-tabs') || 
+                       document.querySelector('#nav') ||
+                       document.body;
+
+        const btn = document.createElement('div');
+        btn.className = 'tab-button profile-btn';
+        // Icon User và Text
+        btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>Tác giả</span>
+        `;
+
+        // Xử lý vị trí chèn
+        if(document.querySelector('.tab-nav') || document.querySelector('.nav-tabs')) {
+            navBar.appendChild(btn);
+        } else {
+            // Nếu không tìm thấy menu, hiện nút nổi góc phải dưới
+            btn.style.position = 'fixed';
+            btn.style.bottom = '20px';
+            btn.style.right = '20px';
+            btn.style.zIndex = '1000';
+            btn.style.padding = '10px 20px';
+            btn.style.borderRadius = '30px';
+            btn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+            document.body.appendChild(btn);
         }
-    });
 
-    // Sự kiện cho các link trong dropdown
-    const dropdownLinks = supportDropdown.querySelectorAll('.dropdown-content a');
-    dropdownLinks.forEach(link => {
-        link.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            // Mở tab Hỗ trợ nếu nó chưa được mở
-            if (!supportTabContent.classList.contains('active')) {
-                openTab({ currentTarget: supportDropdown }, 'supportTab');
-            }
-            
-            // Ẩn tất cả các section con
-            supportTabContent.querySelectorAll('.support-section').forEach(sec => sec.classList.remove('active'));
-            
-            // Hiện section được chọn
-            const targetId = event.currentTarget.getAttribute('data-target');
-            const targetSection = document.getElementById(targetId);
-            if (targetSection) {
-                targetSection.classList.add('active');
+        // ===================================================================
+        // 4. XỬ LÝ SỰ KIỆN (BẬT/TẮT)
+        // ===================================================================
+        
+        // Mở Popup
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+            overlay.classList.add('active');
+        });
+
+        // Đóng Popup khi bấm nút X
+        document.getElementById('close-profile').addEventListener('click', () => {
+            overlay.classList.remove('active');
+        });
+
+        // Đóng Popup khi bấm ra ngoài vùng trắng
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('active');
             }
         });
-    });
-    
-    // Sự kiện cho các nút ủng hộ
-    const donateButtons = document.querySelectorAll('.donate-button');
-    donateButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const qrSrc = button.getAttribute('data-qr-src');
-            const qrImage = document.getElementById('qrImage');
-            if (qrSrc && qrImage) {
-                qrImage.src = qrSrc;
-                qrModal.classList.add('show');
-            }
+
+        // Phóng to QR Code khi bấm vào ảnh nhỏ
+        document.getElementById('qr-thumb').addEventListener('click', () => {
+            const win = window.open("", "QR Code", "width=500,height=600");
+            win.document.write(`<img src="https://i.ibb.co/Gv1p5BQj/bank.png" style="width:100%">`);
         });
+
     });
-    
-    // Sự kiện đóng QR Modal
-    qrModal.addEventListener('click', () => {
-        qrModal.classList.remove('show');
-    });
-});
+})();
