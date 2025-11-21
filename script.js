@@ -3315,8 +3315,7 @@ async function sendTelegramComparisonReport(message, excelBlob) {
         } else {
             console.error('Lỗi gửi file Excel Telegram:', dataDoc.description);
         }
-
-    } catch (error) {
+    } catch (error) {
         console.error('Lỗi nghiêm trọng khi gửi báo cáo Telegram:', error);
         alert("Có lỗi xảy ra khi gửi báo cáo lên Telegram. Vui lòng kiểm tra Console (F12).");
     }
