@@ -2760,8 +2760,6 @@ function formatCurrencyAbbreviated(num) { if (isNaN(num)) return '0 đ'; if (num
 function formatCurrencyWithDecimals(num) { if (isNaN(num)) return '0,00 ₫'; return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num); }
 function applyAutoTheme() { if (localStorage.getItem('theme')) { return; } const currentHour = new Date().getHours(); if (currentHour >= 6 && currentHour < 18) { document.body.classList.remove('dark'); } else { document.body.classList.add('dark'); } }
 
-
-function applyAutoTheme() { if (localStorage.getItem('theme')) { return; } const currentHour = new Date().getHours(); if (currentHour >= 6 && currentHour < 18) { document.body.classList.remove('dark'); } else { document.body.classList.add('dark'); } }
 function initializeNotifications() { const bell = document.getElementById('notificationBell'); const panel = document.getElementById('notificationPanel'); if (!bell || !panel) return; const checkUnread = () => { const lastSeenId = parseInt(localStorage.getItem('lastSeenNotificationId') || '0'); const latestId = notifications.length > 0 ? notifications[0].id : 0; if (latestId > lastSeenId) { const indicator = document.createElement('div'); indicator.className = 'unread-indicator'; bell.appendChild(indicator); } }; const renderNotifications = () => { const list = panel.querySelector('.notification-list'); if (!list) return; const iconMap = { feature: '✨', fix: '🔧', announcement: '📢' }; list.innerHTML = notifications.map(n => `<div class="notification-item"><div class="notification-icon">${iconMap[n.type] || '🔔'}</div><div class="notification-content"><h4>${n.title}</h4><p>${n.content}</p><div class="date">${n.date}</div></div></div>`).join(''); }; bell.addEventListener('click', (e) => { e.stopPropagation(); const isVisible = panel.style.display === 'block'; if (!isVisible) { renderNotifications(); panel.style.display = 'block'; const latestId = notifications.length > 0 ? notifications[0].id : 0; localStorage.setItem('lastSeenNotificationId', latestId); const indicator = bell.querySelector('.unread-indicator'); if (indicator) indicator.remove(); } else { panel.style.display = 'none'; } }); document.addEventListener('click', (e) => { if (!panel.contains(e.target) && !bell.contains(e.target)) { panel.style.display = 'none'; } }); checkUnread(); }
 function checkForcedUpdateNotice() { if (notifications.length === 0) return; const latestUpdate = notifications[0]; const lastAcknowledgedId = parseInt(localStorage.getItem('acknowledgedUpdateId') || '0'); if (latestUpdate.id > lastAcknowledgedId) { const modal = document.getElementById('updateNoticeModal'); const modalBody = document.getElementById('updateModalBody'); const iconMap = { feature: '✨', fix: '🔧', announcement: '📢' }; modalBody.innerHTML = `<div class="notification-item"><div class="notification-icon">${iconMap[latestUpdate.type] || '🔔'}</div><div class="notification-content"><h4>${latestUpdate.title}</h4><p>${latestUpdate.content}</p><div class="date">${latestUpdate.date}</div></div></div>`; modal.style.display = 'block'; } }
 function closeUpdateModal() { const latestUpdateId = notifications.length > 0 ? notifications[0].id : 0; localStorage.setItem('acknowledgedUpdateId', latestUpdateId); document.getElementById('updateNoticeModal').style.display = 'none'; }
@@ -3052,34 +3050,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeScheduler();
 });
 
-/**
- * Gửi tin nhắn thông báo BẮT ĐẦU kiểm tra file về Telegram.
- */
-function sendTelegramStartLog(file) {
-    const BOT_TOKEN = '653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- THAY TOKEN CỦA BẠN
-    const CHAT_ID = '1734114014';    // <-- THAY ID KÊNH CỦA BẠN
-
-    const now = new Date();
-    const timestamp = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
-    const fileSizeKB = (file.size / 1024).toFixed(2);
-
-    let message = `<b>🚀 BẮT ĐẦU KIỂM TRA</b>\n\n`;
-    message += `📄 <b>Tên file:</b> ${file.name}\n`;
-    message += `💾 <b>Kích thước:</b> ${fileSizeKB} KB\n\n`;
-    message += `⏰ <b>Thời gian bắt đầu:</b> ${timestamp}`;
-
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
-
-    fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-    }).then(response => response.json()).then(data => {
-        if (data.ok) console.log('Thông báo bắt đầu đã được gửi!');
-        else console.error('Lỗi gửi thông báo bắt đầu:', data.description);
-    }).catch(error => console.error('Lỗi mạng:', error));
-}
 
 /**
  * Gửi tin nhắn "Bắt đầu" và trả về ID của tin nhắn đó để cập nhật sau.
