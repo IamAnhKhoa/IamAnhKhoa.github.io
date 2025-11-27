@@ -383,6 +383,84 @@
     /* Darkmode tương thích */
     body.dark { background: linear-gradient(135deg, #1e272e 0%, #000000 100%) !important; }
     body.dark .container { background: #000; border-color: #555; }
+    /* ========== CSS MỚI: ĐOÀN XE NOEL ĐỒ HỌA ========== */
+
+/* Container chính chứa cả đoàn xe */
+.santa-graphic-container {
+    position: fixed;
+    top: 80px; /* Điều chỉnh độ cao bay ở đây */
+    left: -600px; /* Bắt đầu từ ngoài màn hình bên trái */
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    z-index: 9998; /* Nổi trên nền nhưng dưới menu nếu cần */
+    pointer-events: none; /* Không che nút bấm */
+    /* Áp dụng hiệu ứng bay */
+    animation: santaGraphicFlyAcross 30s linear infinite;
+}
+
+/* Hiệu ứng bay ngang (chậm hơn emoji cũ một chút cho mượt) */
+@keyframes santaGraphicFlyAcross {
+    0% {
+        left: -600px;
+        transform: translateY(0) rotate(-2deg);
+    }
+    50% {
+        transform: translateY(-30px) rotate(2deg); /* Bay lượn sóng nhẹ */
+    }
+    100% {
+        left: 110%; /* Bay ra khỏi màn hình bên phải */
+        transform: translateY(0) rotate(-2deg);
+    }
+}
+
+/* Định dạng ảnh xe trượt */
+.santa-sleigh-img {
+    height: 100px; /* Điều chỉnh kích thước xe */
+    width: auto;
+    filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3)); /* Tạo bóng đổ nhẹ */
+}
+
+/* Định dạng ảnh đội tuần lộc */
+.reindeer-team-img {
+    height: 110px; /* Điều chỉnh kích thước tuần lộc */
+    width: auto;
+    margin-left: 10px;
+    filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
+}
+
+/* Dây nối mờ giữa xe và tuần lộc */
+.reindeer-rope {
+    height: 2px;
+    width: 30px;
+    background: rgba(255, 255, 255, 0.6);
+    margin-top: 20px;
+}
+
+/* --- Phần các con số trên xe --- */
+.santa-numbers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Định dạng chung cho các số */
+.santa-numbers span {
+    position: absolute;
+    color: #fff; /* Chữ màu trắng */
+    font-weight: bold;
+    font-size: 14px;
+    font-family: sans-serif;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8); /* Viền đen để dễ đọc */
+    background: rgba(139, 0, 0, 0.5); /* Nền đỏ mờ nhẹ giúp số nổi bật */
+    padding: 2px 4px;
+    border-radius: 4px;
+    transform: rotate(-5deg); /* Nghiêng nhẹ theo dáng bay */
+}
+
+/* Tùy chỉnh riêng nếu cần */
+.num-sleigh { font-size: 15px; }
 </style>
 </head>
 <body>
@@ -395,7 +473,20 @@
         <div class="snowflake">❅</div><div class="snowflake">❆</div>
     </div>
 
-    <div class="santa-sleigh-container">🎅🛷🦌💨</div>
+    <div class="santa-graphic-container">
+    <div class="santa-numbers">
+        <span class="num-sleigh" style="left: 40px; top: 45px;">3176</span>
+        <span class="num-deer" style="left: 150px; top: 30px;">4750</span>
+        <span class="num-deer" style="left: 240px; top: 20px;">130</span>
+        <span class="num-deer" style="left: 330px; top: 10px;">4210</span>
+    </div>
+
+    <img src="https://cdn-icons-png.flaticon.com/512/744/744546.png" class="santa-sleigh-img" alt="Santa Sleigh">
+    
+    <div class="reindeer-rope"></div>
+    
+
+</div>
 
     <div style="position: fixed; bottom: 10px; width: 100%; text-align: center; pointer-events: none; z-index: 5; font-size: 1.5em; opacity: 0.7;">
         ⛄🎄☃️ Chúc Mừng Giáng Sinh & Năm Mới 2025 ☃️🎄⛄
