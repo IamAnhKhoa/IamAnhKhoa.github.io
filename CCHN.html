@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -5,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ Thống Quản Lý Nhân Sự Y Tế (Smart Input)</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=wRFOpZTRCFjGE50La4Ed-VNI8lKcaGTxM0dlU4Zj84GWLKzbWR5mVHCsptCCXPJM" charset="UTF-8"></script><script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -434,20 +435,21 @@
         // MAPPING CHỨC DANH (Giữ nguyên)
         const JOB_TITLES = { '1': 'Bác sỹ', '2': 'Y sỹ', '3': 'Điều dưỡng', '4': 'Hộ sinh', '5': 'Kỹ thuật viên', '6': 'Cử nhân', '7': 'Lương y', '8': 'Dược sỹ', '9': 'Kỹ sư' };
 
-        class UIManager {
+      class UIManager {
             constructor() {
                 this.listContainer = document.getElementById('dataList');
                 this.countTotal = document.getElementById('totalCount');
             }
             
-            // --- UPDATE 1: Render Main List according to Image 1 ---
+            // --- UPDATE 1: Render Main List (ĐÃ SỬA LỖI SEARCH) ---
             renderMainList(data) {
                 this.listContainer.innerHTML = '';
-                data.forEach((item, idx) => {
+                data.forEach((item) => { // Bỏ tham số idx ở đây vì không dùng nữa
                     // Xử lý đơn vị công tác (lấy dòng đầu tiên nếu có nhiều dòng)
                     let currentWork = item.Don_Vi_Cong_Tac.split('\r\n')[0];
                     if (currentWork.length > 60) currentWork = currentWork.substring(0, 60) + '...';
 
+                    // SỬA Ở DÒNG NÀY: Thay app.showDetail(${idx}) bằng app.showDetail('${item.STT}')
                     const html = `
                     <tr class="hover:bg-blue-50 border-b border-gray-100 transition group">
                         <td class="p-4 text-center"><input type="checkbox" class="custom-checkbox"></td>
@@ -471,7 +473,7 @@
                         </td>
 
                         <td class="p-4 align-middle text-center">
-                            <button onclick="app.showDetail(${idx})" class="w-8 h-8 rounded-full border border-blue-200 text-blue-500 hover:bg-blue-600 hover:text-white transition flex items-center justify-center mx-auto">
+                            <button onclick="app.showDetail('${item.STT}')" class="w-8 h-8 rounded-full border border-blue-200 text-blue-500 hover:bg-blue-600 hover:text-white transition flex items-center justify-center mx-auto">
                                 <i class="fa-regular fa-eye"></i>
                             </button>
                         </td>
@@ -503,7 +505,8 @@
                 });
             }
 
-            // --- GIỮ NGUYÊN CODE LOGIC CŨ (DATALIST & SMART INPUT) ---
+            // ... (GIỮ NGUYÊN CÁC HÀM: initDatalists, handleNameInput, handleCodeChange, openImportManager, addImportRow, openNvupManager, addNvupRow, exportBasicExcel, exportExcel) ...
+            
             initDatalists() {
                 const listNS = document.getElementById('list_nhansu');
                 this.data.forEach(u => {
@@ -528,7 +531,7 @@
                         if(type === 'import') setVal("THOIGIAN_LV", "07h30 đến 16h30 thứ 2,3,4,5,6");
                     }
                     if (type === 'nvup') {
-                        setVal("TEN_KHOA", user.Don_Vi_Cong_Tac.split('\r\n')[0]); // Lấy dòng đầu tiên làm tên khoa
+                        setVal("TEN_KHOA", user.Don_Vi_Cong_Tac.split('\r\n')[0]); 
                         if(user.Ngay_Cap) { const p = user.Ngay_Cap.split('/'); if(p.length === 3) setVal("NGAYCAP_CCHN", `${p[2]}${p[1]}${p[0]}`); }
                         setVal("NOICAP_CCHN", user.Noi_Cap);
                     }
@@ -567,18 +570,21 @@
                 const tbody = document.getElementById(type === 'import' ? 'importBody' : 'nvupBody'); const rows = Array.from(tbody.querySelectorAll('tr')); if (rows.length === 0) return alert("Không có dữ liệu để xuất!");
                 const data = rows.map((tr, index) => {
                     const obj = { "STT": index + 1 }; const inputs = Array.from(tr.querySelectorAll('input, select'));
-                    const keys = type === 'import' ? ["MA_CSKCB", "HO_TEN", "MACCHN", "TEN_PHAMVI_CM", "MA_PHAMVI_CM", "CHUCDANH_NN", "TEN_VI_TRI", "MA_VI_TRI", "DVKT_KHAC", "THOIGIAN_LV", "THOIGIAN_DK", "THOIGIAN_NGAY", "THOIGIAN_TUAN", "TU_NGAY"] 
-                                                   : ["MA_LOAI_KCB", "MA_KHOA", "TEN_KHOA", "MA_BHXH", "HO_TEN", "GIOI_TINH", "CHUCDANH_NN", "VI_TRI", "MACCHN", "NGAYCAP_CCHN", "NOICAP_CCHN", "PHAMVI_CM", "PHAMVI_CMBS", "DVKT_KHAC", "VB_PHANCONG", "THOIGIAN_DK", "THOIGIAN_NGAY", "THOIGIAN_TUAN", "CSKCB_KHAC", "CSKCB_CGKT", "QD_CGKT", "TUNGAY"];
+                    const keys = type === 'import' ? ["MA_CSKCB", "HO_TEN", "MACCHN", "TEN_PHAMVI_CM", "MA_PHAMVI_CM", "CHUCDANH_NN", "TEN_VI_TRI", "MA_VI_TRI", "DVKT_KHAC", "THOIGIAN_LV", "THOIGIAN_DK", "THOIGIAN_NGAY", "THOIGIAN_TUAN", "TU_NGAY"]
+                                                    : ["MA_LOAI_KCB", "MA_KHOA", "TEN_KHOA", "MA_BHXH", "HO_TEN", "GIOI_TINH", "CHUCDANH_NN", "VI_TRI", "MACCHN", "NGAYCAP_CCHN", "NOICAP_CCHN", "PHAMVI_CM", "PHAMVI_CMBS", "DVKT_KHAC", "VB_PHANCONG", "THOIGIAN_DK", "THOIGIAN_NGAY", "THOIGIAN_TUAN", "CSKCB_KHAC", "CSKCB_CGKT", "QD_CGKT", "TUNGAY"];
                     keys.forEach(key => { const input = inputs.find(i => i.name === key); obj[key] = input ? input.value : ""; });
                     return obj;
                 });
                 const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(data); XLSX.utils.book_append_sheet(wb, ws, "Sheet1"); XLSX.writeFile(wb, type === 'import' ? `IMPORT_PKDK_${new Date().getTime()}.xlsx` : `NVUP_PKDK_${new Date().getTime()}.xlsx`);
             }
 
-            // --- UPDATE 2: Show Detail Logic (Matching Image 2) ---
-            showDetail(idx) {
-                const user = this.data[idx];
+            // --- UPDATE 2: Show Detail (ĐÃ SỬA LỖI SEARCH) ---
+            showDetail(sttId) { // Nhận tham số là STT (chuỗi)
+                // SỬA Ở DÒNG NÀY: Tìm người dùng trong data gốc bằng STT thay vì dùng index mảng
+                const user = this.data.find(u => u.STT === sttId);
                 
+                if (!user) return alert('Không tìm thấy dữ liệu!');
+
                 // Fill Basic Info
                 document.getElementById('d_HoTen').innerText = user.Ho_Ten;
                 document.getElementById('d_CCHN').innerText = user.So_CCHN;
@@ -630,5 +636,3 @@
         const app = new App(RAW_DB);
         const ui = app.ui;
     </script>
-</body>
-</html>
