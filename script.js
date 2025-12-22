@@ -3056,7 +3056,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Gửi tin nhắn thông báo BẮT ĐẦU kiểm tra file về Telegram.
  */
 function sendTelegramStartLog(file) {
-    const BOT_TOKEN = '653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- THAY TOKEN CỦA BẠN
+    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- THAY TOKEN CỦA BẠN
     const CHAT_ID = '1734114014';    // <-- THAY ID KÊNH CỦA BẠN
 
     const now = new Date();
@@ -3129,7 +3129,7 @@ async function sendTelegramStartLog(file) {
 function updateTelegramLog(messageId, stats) {
     if (!messageId) return; // Không làm gì nếu không có messageId
 
-    const BOT_TOKEN = '7653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- Token của bạn
+    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- Token của bạn
     const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
 
     // Nội dung tin nhắn cập nhật
@@ -3307,7 +3307,7 @@ function generateComparisonExcel(mismatches, xmlOnly, excelOnly) {
  * @param {Blob} excelBlob - File Excel đã tạo
  */
 async function sendTelegramComparisonReport(message, excelBlob) {
-    const BOT_TOKEN = '7653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- Token của bạn
+    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- Token của bạn
     const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
     
     try {
