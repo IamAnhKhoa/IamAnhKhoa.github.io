@@ -3087,7 +3087,7 @@ function sendTelegramStartLog(file) {
  * @returns {Promise<number|null>} - Promise chứa message_id hoặc null nếu có lỗi.
  */
 async function sendTelegramStartLog(file) {
-    const BOT_TOKEN = '7653011165:AAGp9LKx0m18ioi__FxRlznrL38NL1fioqs'; // <-- Token của bạn
+    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- Token của bạn
     const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
 
     const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
