@@ -10,9 +10,13 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
+    <script type="text/javascript"
+        src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=-pPa_OFvx_acnCQ20xfwmsezUEw9h0AE8j8A2DmewmnfuBGVUjLdi537WBp4FyEp"
+        charset="UTF-8"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
         rel="stylesheet">
 
 
@@ -98,6 +102,57 @@
             opacity: 0.9;
             position: relative;
             z-index: 1;
+        }
+
+        /* LUXURY TET FRAME */
+        .luxury-tet-frame {
+            display: inline-block;
+            border: 3px solid transparent;
+            border-image: linear-gradient(to right, #FFD700, #FDB931, #FFD700, #FDB931, #FFD700) 1;
+            padding: 20px 60px;
+            position: relative;
+            background: rgba(139, 0, 0, 0.4);
+            /* Dark translucent red */
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.1);
+            backdrop-filter: blur(2px);
+            margin-bottom: 20px;
+        }
+
+        /* Decorative Corners */
+        .luxury-tet-frame::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border: 2px solid #FFD700;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .tet-title-lux {
+            font-family: 'NVN Morning Calm', 'Playfair Display', serif;
+            /* Font requested: NVN Morning Calm */
+            font-size: 3.8em !important;
+            margin-bottom: 5px !important;
+            background: linear-gradient(to bottom, #FFD700, #FDB931, #fffacd, #FDB931, #FFD700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(2px 2px 0px rgba(139, 0, 0, 0.8));
+            letter-spacing: 1px;
+            font-weight: normal !important;
+        }
+
+        .tet-subtitle-lux {
+            font-family: 'NVN Morning Calm', 'Playfair Display', serif;
+            font-size: 1.8em !important;
+            color: #FFD700 !important;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            opacity: 1 !important;
+            margin-top: 5px;
+            font-weight: bold;
         }
 
         /* Tab Navigation */
@@ -1065,32 +1120,43 @@
             filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5));
         }
 
-        /* Chữ Tết */
+        /* Chữ Tết chạy qua lại */
         .tet-text {
             position: fixed;
-            top: 10px;
+            top: 5px;
+            /* Sát mép trên */
             left: 0;
             width: 100%;
-            transform: translateX(-50%);
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
-            font-family: 'Dancing Script', 'Pacifico', cursive, serif;
-            color: #FFD700;
-            text-shadow: 2px 2px 4px gold, 0 0 10px rgba(255, 215, 0, 0.8);
+            font-family: 'NVN Morning Calm', 'Playfair Display', serif;
+            /* Font xịn */
+            color: #FFFF00;
+            /* Vàng chanh sáng */
+            text-shadow: 2px 2px 4px #FF0000;
             z-index: 9996;
             pointer-events: none;
-            animation: marquee-text 12s linear infinite;
-            white-space: nowrap;
+            will-change: transform;
+            /* Animation: Trái -> Phải -> Trái */
+            animation: tet-bounce 20s linear infinite;
         }
 
-        @keyframes marquee-text {
+        @keyframes tet-bounce {
             0% {
+                transform: translateX(-100%);
+            }
+
+            /* Bắt đầu từ bên trái */
+            50% {
                 transform: translateX(100%);
             }
 
+            /* Chạy sang phải */
             100% {
                 transform: translateX(-100%);
             }
+
+            /* Quay về trái */
         }
 
         /* Pháo đỏ */
@@ -1152,14 +1218,80 @@
             width: auto;
             filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
         }
+
+        /* Khung Tiêu Đề Xịn */
+        .luxury-tet-frame {
+            display: inline-block;
+            border: 4px double #FFD700;
+            /* Viền đôi vàng như ảnh */
+            padding: 20px 80px;
+            /* Rộng rãi */
+            position: relative;
+            background: rgba(100, 0, 0, 0.6);
+            /* Nền đỏ tối trong suốt */
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
+            border-radius: 4px;
+            /* Góc vuông nhẹ */
+            margin-top: 40px;
+            /* Để chỗ cho chữ chạy */
+            margin-bottom: 30px;
+        }
+
+        /* Góc trang trí 4 góc */
+        .luxury-tet-frame::before,
+        .luxury-tet-frame::after {
+            content: '✥';
+            /* Họa tiết góc */
+            position: absolute;
+            color: #FFD700;
+            font-size: 24px;
+        }
+
+        .luxury-tet-frame::before {
+            top: 5px;
+            left: 5px;
+        }
+
+        .luxury-tet-frame::after {
+            bottom: 5px;
+            right: 5px;
+        }
+
+        .tet-title-lux {
+            font-family: 'NVN Morning Calm', 'Great Vibes', 'Dancing Script', cursive;
+            /* Fallback to luxury cursive */
+            font-size: 3.5em !important;
+            margin: 0 !important;
+            color: #FFD700 !important;
+            text-shadow: 3px 3px 0 #8B0000;
+            /* Bóng đổ cứng tạo khối */
+            font-weight: bold !important;
+            letter-spacing: 1px;
+            background: none;
+            -webkit-text-fill-color: initial;
+        }
+
+        .tet-subtitle-lux {
+            font-family: 'NVN Morning Calm', 'Dancing Script', cursive;
+            /* Fallback to readable cursive */
+            font-size: 1.6em !important;
+            color: #FFFACD !important;
+            /* Vàng kem */
+            text-shadow: 1px 1px 0 #800000;
+            margin-top: 10px;
+            font-weight: normal;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <header class="header">
-            <h1>🏥 Giám sát BHYT Toàn diện</h1>
-            <p>Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - 79764 - IT Anh Khoa</p>
+            <div class="luxury-tet-frame">
+                <h1 class="tet-title-lux">🏥 Giám sát BHYT Toàn diện</h1>
+                <p class="tet-subtitle-lux">Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - 79764
+                    - IT Anh Khoa</p>
+            </div>
 
             <!-- Nút chuyển Light/Dark (mới) -->
             <button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark">
@@ -2316,6 +2448,11 @@
             }
         }
     </style>
+    <script defer
+        src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015"
+        integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ=="
+        data-cf-beacon='{"version":"2024.11.0","token":"db0c89750f364ceea3cb03b0503af93a","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}'
+        crossorigin="anonymous"></script>
 </body>
 
 </html>
