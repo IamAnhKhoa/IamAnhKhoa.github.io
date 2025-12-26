@@ -31,7 +31,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             /* TET 2026 BACKGROUND */
             background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-                url('https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEijFImc8JW0zwzCoEIqRT5XdNrwHLfA-XznLi_hTG9SigfMh0Moh-9xglqOYSUIRyBrEDwFGTMAfXfozIrr9EVo0eutn5VPZezX-xhfwW7a4ljvAUIs5V5EvksDaSRiVJ4K1EF_uxgNfEzln2X1OzbO7sL7LgY6JM3cC1t46ZalRJauXwW0geuWlVvSjiI/s1600/hinh-nen-tet-2026.jpg');
+                url('https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEijFImc8JW0zwzCoEIqRT5XdNrwHLfA-XznLi_hTG9SigfMh0Moh-9xglqOYSUIRyBrEDwFGTMAfXfozIrr9EVo0eutn5VPZezX-xhfwW7a4ljvAUIs5V5EvksDaSRiVJ4K1EF_uxgNfEzln2X1OzbO7sL7LgY6JM3cC1t46ZalRJauXwW0geuWlVvSjiI/s1600/hinh-nen-tet-2026.jpg?auto=format&fit=crop');
             /* Note: URL above is placeholder-ish, searching for "Tet 2026" specifically is hard for exact year hotlink, 
                but this is a generic high quality Red Tet background. User asked for "Google Image". */
             background-size: cover;
@@ -40,6 +40,9 @@
             min-height: 100vh;
             padding: 20px;
             line-height: 1.6;
+
+            /* Custom Cursor: Golden Horse 🐎 (32px for better usability) */
+            cursor: url('https://cdn-icons-png.flaticon.com/32/18239/18239549.png'), auto;
         }
 
         .container {
@@ -1116,15 +1119,17 @@
         .homenest-tet-left {
             position: fixed;
             left: 0;
-            top: 100px;
-            z-index: 50;
+            top: 0;
+            /* Lên trên cùng */
+            z-index: 9997;
             pointer-events: none;
             animation: swing 4s ease-in-out infinite;
 
         }
 
         .homenest-tet-left img {
-            height: 250px;
+            height: 180px;
+            /* Nhỏ lại */
             width: auto;
             filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
         }
@@ -1132,8 +1137,9 @@
         .homenest-tet-right {
             position: fixed;
             right: 0;
-            top: 100px;
-            z-index: 50;
+            top: 0;
+            /* Lên trên cùng */
+            z-index: 9997;
             pointer-events: none;
             animation: swing 4s ease-in-out infinite;
             animation-delay: 0.5s;
@@ -1141,7 +1147,8 @@
         }
 
         .homenest-tet-right img {
-            height: 250px;
+            height: 180px;
+            /* Nhỏ lại */
             width: auto;
             filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
         }
@@ -1835,6 +1842,12 @@
                 document.body.appendChild(tetText);
             }
 
+            // Tạo ÔNG THẦN TÀI (Góc trái)
+            const thanTai = document.createElement('div');
+            thanTai.className = 'than-tai-icon';
+            thanTai.innerHTML = '<img src="https://png.pngtree.com/png-clipart/20190617/original/pngtree-god-of-wealth-god-of-wealth-cartoon-god-of-wealth-golden-png-image_3892232.jpg" alt="Thần Tài" />';
+            document.body.appendChild(thanTai);
+
             // Tạo câu đối Tết bên trái
             const tetLeft1 = document.createElement('a');
             tetLeft1.className = 'homenest-tet-left';
@@ -1933,16 +1946,60 @@
             }
 
             // Khởi động hiệu ứng
-            setInterval(createFallingFlower, 1500);
-            setInterval(createLiXi, 3000);
-            setInterval(showTetWish, 5000);
+            // Khởi động hiệu ứng
+            // setInterval(createFallingFlower, 1500); // Tắt hoa
+            setInterval(createLiXi, 2000); // Chỉ rớt Lì Xì (nhanh hơn xíu)
+            // setInterval(showTetWish, 5000); // Tắt chữ nếu muốn "chỉ rớt lì xì"
 
             // Tạo ban đầu
-            for (let i = 0; i < 5; i++) {
+            /* for (let i = 0; i < 5; i++) {
                 setTimeout(createFallingFlower, i * 500);
-            }
+            } */
             setTimeout(createLiXi, 1000);
-            setTimeout(showTetWish, 2000);
+            // setTimeout(showTetWish, 2000);
+
+            // SỰ KIỆN CLICK HOẶC CHỌN FILE -> NỔ CÂU CHÚC (Đỡ bị che bởi dialog)
+            const fileInput = document.getElementById('validatorFileInput');
+
+            function showLuckyWish() {
+                const wishes = [
+                    "🐎 Năm Bính Ngọ - Mã Đáo Thành Công!",
+                    "💰 Tiền vào như nước sông Đà!",
+                    "🌸 Tấn Tài Tấn Lộc - Vạn Sự Như Ý!",
+                    "🧧 Sức Khỏe Dồi Dào - An Khang Thịnh Vượng!",
+                    "🏆 Sự Nghiệp Thăng Tiến - Phi Mã Đằng Vân!",
+                    "🍀 Cung Chúc Tân Xuân - Vạn Sự Bình An!",
+                    "🥂 Đa Lộc, Đa Tài, Đa Phú Quý!",
+                    "🏮 Đắc Thời, Đắc Lợi, Đắc Nhân Tâm!"
+                ];
+                const wishText = wishes[Math.floor(Math.random() * wishes.length)];
+
+                // Xóa câu chúc cũ nếu có
+                const oldWish = document.querySelector('.tet-wish-banner');
+                if (oldWish) oldWish.remove();
+
+                const wishEl = document.createElement('div');
+                wishEl.className = 'tet-wish-banner';
+                wishEl.innerHTML = `<span>${wishText}</span>`;
+
+                // Style trực tiếp hoặc class (đã định nghĩa bên dưới)
+                document.body.appendChild(wishEl);
+
+                // Âm thanh nhẹ (nếu muốn, nhưng thôi giữ silent cho web)
+
+                setTimeout(() => {
+                    wishEl.style.opacity = '0';
+                    wishEl.style.transform = 'translate(-50%, -20px) scale(0.9)';
+                    setTimeout(() => wishEl.remove(), 500);
+                }, 4000);
+            }
+
+            if (fileInput) {
+                // Click thì hiện ngay (có thể bị che 1 chút)
+                fileInput.addEventListener('click', showLuckyWish);
+                // Chọn xong file (đóng dialog) thì hiện tiếp (chắc chắn thấy)
+                fileInput.addEventListener('change', showLuckyWish);
+            }
         })();
     </script>
 
@@ -2058,6 +2115,86 @@
             100% {
                 transform: scale(0.8);
                 opacity: 0;
+            }
+        }
+
+        .tet-wish-banner {
+            position: fixed;
+            top: 15%;
+            /* Cao hẳn lên trên để không bị che */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200000;
+            /* Cao hơn cả dialog trình duyệt nếu có thể (ảo giác) */
+
+            background: linear-gradient(to right, #b91c1c, #dc2626, #b91c1c);
+            padding: 15px 40px;
+            border-radius: 50px;
+            border: 3px solid #FCD34D;
+            /* Viền vàng */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.6);
+
+            font-family: 'Dancing Script', cursive;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #FEF3C7;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+
+            animation: bannerPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.5s ease;
+        }
+
+        @keyframes bannerPop {
+            0% {
+                transform: translate(-50%, 50px) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translate(-50%, 0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .than-tai-icon {
+            position: fixed;
+            top: auto;
+            /* Bỏ top */
+            bottom: 10px;
+            /* Xuống góc dưới */
+            left: 10px;
+            /* Góc trái */
+            z-index: 9999;
+            /* On top of everything */
+            width: 100px;
+            /* To hơn xíu cho đẹp */
+            animation: floatThanTai 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6));
+            cursor: pointer;
+            transition: transform 0.3s;
+            mix-blend-mode: multiply;
+            /* Fix for JPG white background */
+        }
+
+        .than-tai-icon:hover {
+            transform: scale(1.1) rotate(10deg);
+        }
+
+        .than-tai-icon img {
+            width: 100%;
+            height: auto;
+        }
+
+        @keyframes floatThanTai {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
             }
         }
     </style>
