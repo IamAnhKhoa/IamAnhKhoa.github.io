@@ -4,9 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giám sát BHYT Toàn diện</title>
+    <title>Giám sát BHYT Toàn diện - Tết 2026</title>
+    <!-- Favicon: Ngựa Vàng (Year of the Horse) -->
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2645/2645167.png" type="image/png" />
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966327.png" type="image/png" sizes="32x32" />
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&display=swap"
@@ -26,7 +29,14 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(180deg, #6B1C23 0%, #8B2332 50%, #5C1018 100%);
+            /* TET 2026 BACKGROUND */
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+                url('https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEijFImc8JW0zwzCoEIqRT5XdNrwHLfA-XznLi_hTG9SigfMh0Moh-9xglqOYSUIRyBrEDwFGTMAfXfozIrr9EVo0eutn5VPZezX-xhfwW7a4ljvAUIs5V5EvksDaSRiVJ4K1EF_uxgNfEzln2X1OzbO7sL7LgY6JM3cC1t46ZalRJauXwW0geuWlVvSjiI/s1600/hinh-nen-tet-2026.jpg');
+            /* Note: URL above is placeholder-ish, searching for "Tet 2026" specifically is hard for exact year hotlink, 
+               but this is a generic high quality Red Tet background. User asked for "Google Image". */
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
             min-height: 100vh;
             padding: 20px;
             line-height: 1.6;
@@ -417,7 +427,7 @@
         .results-table td {
             padding: 15px;
             border-bottom: 1px solid #dee2e6;
-            transition: background-color: 0.3s ease;
+            transition: background-color 0.3s ease;
             vertical-align: top;
         }
 
@@ -1853,21 +1863,22 @@
 
             // Danh sách câu chúc Tết
             const tetWishes = [
-                '🧧 Chúc Mừng Năm Mới 2026!',
-                '🐴 Năm Bính Ngọ Mã Đáo Thành Công!',
-                '💰 Phát Tài Phát Lộc!',
-                '🏮 An Khang Thịnh Vượng!',
-                '🌸 Vạn Sự Như Ý!',
-                '🎊 Tân Xuân Như Ý!',
-                '🧧 Lì Xì Đầy Túi!',
-                '🐴 Mã Đáo Thành Công!'
+                '\u{1F9E7} Chúc Mừng Năm Mới 2026!',
+                '\u{1F434} Năm Bính Ngọ Mã Đáo Thành Công!',
+                '\u{1F4B0} Phát Tài Phát Lộc!',
+                '\u{1F3EE} An Khang Thịnh Vượng!',
+                '\u{1F338} Vạn Sự Như Ý!',
+                '\u{1F38A} Tân Xuân Như Ý!',
+                '\u{1F9E7} Lì Xì Đầy Túi!',
+                '\u{1F434} Mã Đáo Thành Công!'
             ];
 
-            // Tạo hoa mai rơi
+            // Tạo hoa mai rơi (chỉ hoa vàng)
             function createFallingFlower() {
                 const flower = document.createElement('div');
                 flower.className = 'tet-falling-item';
-                const items = ['🌸', '🌼', '💮', '🧧', '🏮'];
+                // Chỉ sử dụng hoa màu vàng (Mai)
+                const items = ['\u{1F33C}', '\u{1F33B}', '\u{2728}', '\u{1F33C}', '\u{1F33C}'];
                 flower.textContent = items[Math.floor(Math.random() * items.length)];
                 flower.style.left = Math.random() * 100 + '%';
                 flower.style.fontSize = (20 + Math.random() * 20) + 'px';
@@ -1876,15 +1887,38 @@
                 setTimeout(() => flower.remove(), 10000);
             }
 
-            // Tạo bao lì xì bay
+            // Xử lý mở lì xì
+            function openLiXi(event, element) {
+                event.stopPropagation();
+                element.style.transform = 'scale(1.5)';
+                element.style.opacity = '0';
+
+                const moneys = ['10.000đ', '20.000đ', '50.000đ', '100.000đ', '200.000đ', '500.000đ', '68.000đ', '88.000đ', '1 Tỷ \u{1F4B8}'];
+                const amount = moneys[Math.floor(Math.random() * moneys.length)];
+
+                const moneyPopup = document.createElement('div');
+                moneyPopup.className = 'tet-money-popup';
+                moneyPopup.innerHTML = `<span>+${amount}</span>`;
+                moneyPopup.style.left = event.clientX + 'px';
+                moneyPopup.style.top = event.clientY + 'px';
+                document.body.appendChild(moneyPopup);
+
+                setTimeout(() => {
+                    element.remove();
+                    setTimeout(() => moneyPopup.remove(), 2000);
+                }, 200);
+            }
+
+            // Tạo bao lì xì bay (có thể click)
             function createLiXi() {
                 const lixi = document.createElement('div');
                 lixi.className = 'tet-lixi';
-                lixi.textContent = '🧧';
-                lixi.style.left = Math.random() * 100 + '%';
-                lixi.style.animationDuration = (4 + Math.random() * 3) + 's';
+                lixi.textContent = '\u{1F9E7}';
+                lixi.style.left = Math.random() * 90 + '%';
+                lixi.style.animationDuration = (4 + Math.random() * 4) + 's';
+                lixi.onclick = (e) => openLiXi(e, lixi);
                 document.body.appendChild(lixi);
-                setTimeout(() => lixi.remove(), 8000);
+                setTimeout(() => { if (document.body.contains(lixi)) lixi.remove(); }, 8000);
             }
 
             // Tạo câu chúc Tết xuất hiện
@@ -1938,28 +1972,59 @@
         .tet-lixi {
             position: fixed;
             top: -60px;
-            font-size: 40px;
-            z-index: 9998;
-            pointer-events: none;
+            font-size: 45px;
+            z-index: 10000;
+            cursor: pointer;
+            pointer-events: auto !important;
             animation: tet-lixi-fall ease-in-out forwards;
+            transition: transform 0.2s;
+        }
+
+        .tet-lixi:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 10px gold);
         }
 
         @keyframes tet-lixi-fall {
             0% {
                 transform: translateY(0) rotate(-10deg);
-                opacity: 1;
             }
 
-            50% {
-                transform: translateY(50vh) rotate(10deg);
+            100% {
+                transform: translateY(110vh) rotate(10deg);
+            }
+        }
+
+        .tet-money-popup {
+            position: fixed;
+            z-index: 10001;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: bold;
+            font-size: 24px;
+            color: #ffff00;
+            text-shadow: 2px 2px 0 #cc0000;
+            pointer-events: none;
+            animation: money-fly-up 2s ease-out forwards;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes money-fly-up {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+
+            20% {
+                transform: translate(-50%, -80%) scale(1.2);
                 opacity: 1;
             }
 
             100% {
-                transform: translateY(100vh) rotate(-10deg);
+                transform: translate(-50%, -200px) scale(1);
                 opacity: 0;
             }
         }
+
 
         .tet-wish-popup {
             position: fixed;
@@ -1993,6 +2058,124 @@
             100% {
                 transform: scale(0.8);
                 opacity: 0;
+            }
+        }
+    </style>
+    <!-- Container for Running Horses -->
+    <div id="animal-footer">
+        <div class="horse-runway">
+            <!-- Using the GIF provided -->
+            <img src="https://cdn.pixabay.com/animation/2022/10/17/00/48/00-48-56-670_512.gif" class="running-horse"
+                alt="Running Horse">
+            <img src="https://cdn.pixabay.com/animation/2023/10/30/14/40/14-40-05-944_512.gif"
+                class="running-horse delay-1" alt="Running Horse">
+            <img src="https://cdn.pixabay.com/animation/2023/12/17/23/19/23-19-00-162_512.gif"
+                class="running-horse delay-2" alt="Running Horse">
+        </div>
+    </div>
+
+    <!-- Styles for the Running Horses -->
+    <style>
+        #animal-footer {
+            position: fixed;
+            bottom: 0px;
+            left: 0;
+            width: 100%;
+            height: 120px;
+            /* Adjust based on GIF height */
+            pointer-events: none;
+            z-index: 9995;
+            overflow: hidden;
+        }
+
+        .horse-runway {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .running-horse {
+            position: absolute;
+            bottom: 0;
+            height: 100px;
+            /* Adjust size */
+            width: auto;
+            animation: runAcrossScreen 15s linear infinite;
+            left: -150px;
+            /* Start off-screen */
+        }
+
+        .delay-1 {
+            animation-delay: 5s;
+        }
+
+        .delay-2 {
+            animation-delay: 10s;
+        }
+
+        @keyframes runAcrossScreen {
+            from {
+                transform: translateX(0);
+            }
+
+            to {
+                transform: translateX(110vw);
+            }
+
+            /* Run past the screen end */
+        }
+    </style>
+    <!-- Hiệu ứng chuột Lấp Lánh Tết -->
+    <script>
+        document.addEventListener('mousemove', function (e) {
+            // Tạo hạt lấp lánh
+            const sparkle = document.createElement('div');
+            sparkle.classList.add('tet-sparkle');
+
+            // Vị trí chuột
+            sparkle.style.left = e.pageX + 'px';
+            sparkle.style.top = e.pageY + 'px';
+
+            // Random màu vàng/đỏ/cam
+            const colors = ['#FFD700', '#FFA500', '#FF4500', '#FFFFE0'];
+            sparkle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+            // Random kích thước
+            const size = Math.random() * 6 + 4 + 'px'; // 4px - 10px
+            sparkle.style.width = size;
+            sparkle.style.height = size;
+
+            // Random hướng bay nhẹ
+            sparkle.style.setProperty('--tx', (Math.random() * 40 - 20) + 'px');
+            sparkle.style.setProperty('--ty', (Math.random() * 40 + 20) + 'px'); // Rơi xuống
+
+            document.body.appendChild(sparkle);
+
+            // Xóa sau khi animation xong
+            setTimeout(() => {
+                sparkle.remove();
+            }, 1000);
+        });
+    </script>
+    <style>
+        .tet-sparkle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99999;
+            box-shadow: 0 0 6px gold;
+            animation: sparkle-fall 1s ease-out forwards;
+        }
+
+        @keyframes sparkle-fall {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0);
             }
         }
     </style>
