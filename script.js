@@ -845,6 +845,7 @@ function validateSingleHoso(hoso) {
         ngayTtoan: getText(tongHopNode,'NGAY_TTOAN'), 
         maBn: getText(tongHopNode,'MA_BN'), 
         maThe: getText(tongHopNode,'MA_THE_BHYT'),
+      soCccd: getText(tongHopNode,'SO_CCCD'),
         t_tongchi: parseFloat(getText(tongHopNode, 'T_TONGCHI') || '0'),
         t_bhtt: parseFloat(getText(tongHopNode, 'T_BHTT') || '0'),
         t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'),
@@ -1534,12 +1535,20 @@ function exportToExcel(errorsOnly = false) {
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Tong_Quan');
 
     const data = recordsToExport.map((r, i) => ({
-        'STT': i + 1, 'Họ Tên': r.hoTen, 'Mã LK': r.maLk, 'Mã BN': r.maBn,
-        'Ngày Vào': formatDateTimeForDisplay(r.ngayVao), 'Ngày Ra': formatDateTimeForDisplay(r.ngayRa),
-        'BHYT TT': r.t_bhtt, 'BN CCT': r.t_bncct, 'Tổng Chi': r.t_tongchi,
-        'Trạng Thái': r.errors.length > 0 ? (r.errors.some(e => e.severity === 'critical') ? 'Lỗi nghiêm trọng' : 'Cảnh báo') : 'Hợp lệ',
-        'Chi Tiết Lỗi': r.errors.map(e => `${ERROR_TYPES[e.type] || e.type}: ${e.message}`).join('\n')
-    }));
+    'STT': i + 1, 
+    'Họ Tên': r.hoTen, 
+    'Mã LK': r.maLk, 
+    'Mã BN': r.maBn,
+    'Mã Thẻ BHYT': r.maThe || '',
+    'Số CCCD': r.soCccd || '',
+    'Ngày Vào': formatDateTimeForDisplay(r.ngayVao), 
+    'Ngày Ra': formatDateTimeForDisplay(r.ngayRa),
+    'BHYT TT': r.t_bhtt, 
+    'BN CCT': r.t_bncct, 
+    'Tổng Chi': r.t_tongchi,
+    'Trạng Thái': r.errors.length > 0 ? (r.errors.some(e => e.severity === 'critical') ? 'Lỗi nghiêm trọng' : 'Cảnh báo') : 'Hợp lệ',
+    'Chi Tiết Lỗi': r.errors.map(e => `${ERROR_TYPES[e.type] || e.type}: ${e.message}`).join('\n')
+}));
     const wsData = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, wsData, 'Chi_Tiet');
 
