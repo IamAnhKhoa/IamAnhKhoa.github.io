@@ -124,7 +124,10 @@ const staffNameMap = new Map([
     ['0019929/HCM-CCHN', 'Phan Thị Trường An'],
     ['0019312/HCM-CCHN', 'Trần Thị Diễm'],
     ['0032357/HCM-CCHN', 'Trần Huỳnh Lý'],
-    ['0028516/HCM-CCHN', 'Trần Văn Thành'],
+    ['0032379/HCM-CCHN', 'Công Tằng Tôn Nữ Thị Thanh Xuân'],
+    ['0028445/HCM-CCHNN', 'Hồ Thị Thùy Linh'],
+    ['0028516/HCM-CCHN', 'Trần Văn Thành']
+]);
 
 // Utility functions
 const formatDateTimeForDisplay = (dateString) => {
@@ -2946,6 +2949,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+    {
+        id: 17,
+        date: '24-02-2026',
+        type: 'feature',
+        title: 'Nâng cấp Giao diện & Tính năng',
+        content: 'Nâng cấp giao diện CRM hiện đại, tự động thay đổi theo 4 mùa, hỗ trợ tải lên nhiều file XML cùng lúc và tối ưu giải mã dữ liệu Base64.'
+    },
     {
         id: 16,
         date: '07-11-2025',
