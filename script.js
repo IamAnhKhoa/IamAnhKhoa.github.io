@@ -20,41 +20,42 @@ let globalData = {
 
 const indicationMap = new Map([
     // Ví dụ: Kê thuốc Mizho (05C.11) thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30
-    ['05C.11', { 
-        drugName: 'Mizho', 
-        requiredIcdCodes: ['K21', 'R10', 'K30','U50.101'], 
-        diseaseName: 'Kê thuốc Mizho thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30' 
+    ['05C.11', {
+        drugName: 'Mizho',
+        requiredIcdCodes: ['K21', 'R10', 'K30', 'U50.101'],
+        diseaseName: 'Kê thuốc Mizho thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30'
     }],
-    
-     ['40.734', { 
-         drugName: 'Dopolys - S',
-         requiredIcdCodes: ['I83'], 
-         diseaseName: 'Kê thuốc Dopolys - S thì BẮT BUỘC phải có chẩn đoán I83' }],
-    
- ['40.677', {
+
+    ['40.734', {
+        drugName: 'Dopolys - S',
+        requiredIcdCodes: ['I83'],
+        diseaseName: 'Kê thuốc Dopolys - S thì BẮT BUỘC phải có chẩn đoán I83'
+    }],
+
+    ['40.677', {
         drugName: 'Omeprazol 20mg',
-       requiredIcdCodes: ['K21','K25','K30'], 
+        requiredIcdCodes: ['K21', 'K25', 'K30'],
         diseaseName: 'Kê thuốc Omeprazol 20mg thì BẮT BUỘC phải có chẩn đoán K21, K25 hoặc K30'
     }],
-    
+
     // Bạn có thể thêm các quy tắc khác cho các thuốc khác ở đây
     // Ví dụ: ['MÃ_THUỐC', { requiredIcdCodes: ['ICD1', 'ICD2'], diseaseName: 'TÊN NHÓM BỆNH' }],
 ]);
 const contraindicationMap = new Map([
-   // --- Sheet: Hoastex, Hometex, Mizho ---
+    // --- Sheet: Hoastex, Hometex, Mizho ---
     ['05C.150', { drugName: 'Hoastex 45g; 11,25g; 83,7mg', icdCodes: ['E10', 'E11', 'E12', 'E13', 'E14'], diseaseName: 'Đái tháo đường' }],
 
     // --- Sheet: Acetylcystein (CẬP NHẬT MỚI) ---
     ['40.998', { drugName: 'Acetylcystein 200mg', icdCodes: ['J02', 'J45'], diseaseName: 'Viêm họng cấp' }],
-    
+
 
     // --- Sheet: Katrypsin Fort, Dopolys - S ---
     ['40.67', { drugName: 'Katrypsin Fort', icdCodes: ['J02', 'J00', 'J45'], diseaseName: 'Viêm họng' }],
-  
+
 
     // --- Sheet: Nhóm ức chế bơm proton ---
     ['01.01.01.12', { drugName: 'Lansoprazol 30mg', icdCodes: ['K29'], diseaseName: 'Viêm dạ dày' }],
-   ['40.677', { drugName: 'Omeprazol 20mg', icdCodes: ['K29', 'J02', 'H81'], diseaseName: 'Viêm dạ dày' }],
+    ['40.677', { drugName: 'Omeprazol 20mg', icdCodes: ['K29', 'J02', 'H81'], diseaseName: 'Viêm dạ dày' }],
     ['40.678', { drugName: 'Esomeprazol 40mg', icdCodes: ['K29'], diseaseName: 'Viêm dạ dày' }],
 
     // --- Sheet: Hoạt huyết dưỡng não, Midatan ---
@@ -64,11 +65,11 @@ const contraindicationMap = new Map([
 
 
 const ERROR_TYPES = {
-  
+
     'NGAY_YL_THUOC_SAU_RA_VIEN': 'YL Thuốc - sau ra viện',
     'NGAY_YL_DVKT_SAU_RA_VIEN': 'YL DVKT - sau ra viện',
     'NGAY_TTOAN_SAU_RA_VIEN': 'Ngày TT sau ngày ra viện',
-  'NGAY_TTOAN_TRUOC_VAO_VIEN': 'Ngày TT trước ngày vào viện',
+    'NGAY_TTOAN_TRUOC_VAO_VIEN': 'Ngày TT trước ngày vào viện',
     'NGAY_TTOAN_TRUOC_YL': 'Ngày TT trước Y Lệnh (Thuốc/DVKT)',
     'NGAY_VAO_SAU_NGAY_RA': 'Ngày vào sau ngày ra',
     'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
@@ -86,16 +87,16 @@ const ERROR_TYPES = {
     'THUOC_THYL_NGOAI_GIO_HC': 'Thuốc - Thực hiện YL ngoài giờ HC',
     'DVKT_YL_NGOAI_GIO_HC': 'DVKT - Y lệnh ngoài giờ HC',
     'DVKT_THYL_NGOAI_GIO_HC': 'DVKT - Thực hiện YL ngoài giờ HC',
-  'XML4_MISSING_NGAY_KQ': 'XML4 - Thiếu ngày trả kết quả trong HIS (NGAY_KQ)',
+    'XML4_MISSING_NGAY_KQ': 'XML4 - Thiếu ngày trả kết quả trong HIS (NGAY_KQ)',
     'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
-  'KQ_DVKT_SAU_YL_THUOC': 'XML3. NGÀY TH Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
-    'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT', 
-  'THUOC_DVKT_THYL_TRUNG_GIO': 'XML3. NGÀY TH Y lệnh DVKT bằng hoặc sau NGÀY TH Y lệnh THUỐC', // <-- SỬA DÒNG NÀY
+    'KQ_DVKT_SAU_YL_THUOC': 'XML3. NGÀY TH Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
+    'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT',
+    'THUOC_DVKT_THYL_TRUNG_GIO': 'XML3. NGÀY TH Y lệnh DVKT bằng hoặc sau NGÀY TH Y lệnh THUỐC', // <-- SỬA DÒNG NÀY
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)',
-  
-  'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
+
+    'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
     'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp' // <-- THÊM DÒNG NÀY
-    
+
 };
 
 let validationSettings = {};
@@ -123,9 +124,7 @@ const staffNameMap = new Map([
     ['0019929/HCM-CCHN', 'Phan Thị Trường An'],
     ['0019312/HCM-CCHN', 'Trần Thị Diễm'],
     ['0032357/HCM-CCHN', 'Trần Huỳnh Lý'],
-    ['0032379/HCM-CCHN', 'Công Tằng Tôn Nữ Thị Thanh Xuân'],
-    ['0028445/HCM-CCHNN', 'Hồ Thị Thùy Linh']
-]);
+    ['0028516/HCM-CCHN', 'Trần Văn Thành'],
 
 // Utility functions
 const formatDateTimeForDisplay = (dateString) => {
@@ -160,7 +159,7 @@ const flexibleFormatDate = (dateInput) => {
         }
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
-    
+
     if (typeof dateInput === 'string' && /^\d{8,}/.test(dateInput)) {
         return formatDateTimeForDisplay(dateInput);
     }
@@ -220,7 +219,7 @@ const isOutsideWorkingHours = (dateTimeString) => {
         return false;
     }
     const timePart = parseInt(dateTimeString.substring(8, 12)); // HHmm
-    
+
     const morningStart = 730;
     const morningEnd = 1130;
     const afternoonStart = 1330;
@@ -234,7 +233,7 @@ const isOutsideWorkingHours = (dateTimeString) => {
 
 // NEW: helper—only assign cost when rule is set to critical
 const costIfCritical = (ruleKey, base) =>
-  (validationSettings[ruleKey]?.severity === 'critical' ? (Number(base) || 0) : 0);
+    (validationSettings[ruleKey]?.severity === 'critical' ? (Number(base) || 0) : 0);
 /**
  * Lấy nội dung text của một phần tử XML một cách an toàn.
  * Hàm sẽ thử lần lượt các selector được cung cấp cho đến khi tìm thấy một giá trị.
@@ -262,10 +261,10 @@ function getText(element, ...selectors) {
 function openTab(evt, tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    
+
     document.getElementById(tabName).classList.add('active');
     evt.currentTarget.classList.add('active');
-    
+
     if (tabName === 'dashboardTab' && globalData.allRecords.length > 0) {
         updateDashboard();
     } else if (tabName === 'denialTab' && globalData.allRecords.length > 0) {
@@ -280,13 +279,13 @@ function toggleFilterVisibility(filterContainerId) {
     const toggleButton = document.querySelector(`#${filterContainerId} .filter-toggle`);
     if (filterContent.style.display === 'none' || !filterContent.style.display) {
         filterContent.style.display = 'grid';
-        if(document.querySelector(`#${filterContainerId} .filter-actions`)) {
+        if (document.querySelector(`#${filterContainerId} .filter-actions`)) {
             document.querySelector(`#${filterContainerId} .filter-actions`).style.display = 'flex';
         }
         toggleButton.textContent = 'Thu gọn';
     } else {
         filterContent.style.display = 'none';
-        if(document.querySelector(`#${filterContainerId} .filter-actions`)) {
+        if (document.querySelector(`#${filterContainerId} .filter-actions`)) {
             document.querySelector(`#${filterContainerId} .filter-actions`).style.display = 'none';
         }
         toggleButton.textContent = 'Mở rộng';
@@ -298,12 +297,12 @@ function updateDashboard() {
     if (globalData.allRecords.length === 0) return;
 
     const stats = calculateGlobalStats(globalData.allRecords);
-    
+
     document.getElementById('totalBncct').textContent = formatCurrency(stats.totalBncct);
     document.getElementById('totalRecords').textContent = stats.totalRecords.toLocaleString('vi-VN');
     document.getElementById('errorCount').textContent = stats.errorRecordsCount.toLocaleString('vi-VN');
     document.getElementById('totalAmount').textContent = formatCurrency(stats.totalAmount);
-    
+
     updateChart('errorTypesChart', 'doughnut', {
         labels: Object.keys(stats.errorTypes).map(key => ERROR_TYPES[key] || key),
         datasets: [{ data: Object.values(stats.errorTypes), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
@@ -311,19 +310,19 @@ function updateDashboard() {
 
     const sortedTimeline = Object.entries(stats.timeline).sort(([a], [b]) => a.localeCompare(b));
     updateChart('timelineChart', 'line', {
-        labels: sortedTimeline.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
+        labels: sortedTimeline.map(([day]) => `${day.substring(6, 8)}/${day.substring(4, 6)}`),
         datasets: [{ label: 'Số hồ sơ', data: sortedTimeline.map(([, count]) => count), borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)', fill: true, tension: 0.4 }]
     }, 'Xu hướng theo ngày');
 
-    const sortedDepartments = Object.entries(stats.departments).sort(([,a], [,b]) => b - a).slice(0, 10);
+    const sortedDepartments = Object.entries(stats.departments).sort(([, a], [, b]) => b - a).slice(0, 10);
     updateChart('departmentChart', 'bar', {
         labels: sortedDepartments.map(([name]) => name || 'Không xác định'),
         datasets: [{ label: 'Số hồ sơ', data: sortedDepartments.map(([, count]) => count), backgroundColor: 'rgba(75, 192, 192, 0.8)' }]
     }, 'Top 10 Khoa có nhiều hồ sơ nhất');
-    
+
     updateChart('amountChart', 'bar', {
         labels: Object.keys(stats.amounts),
-        datasets: [{ label: 'Số hồ sơ', data: Object.values(stats.amounts), backgroundColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545', '#6f42c1']}]
+        datasets: [{ label: 'Số hồ sơ', data: Object.values(stats.amounts), backgroundColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545', '#6f42c1'] }]
     }, 'Phân bố chi phí BHYT TT');
 
     renderDrugAndServiceDashboard();
@@ -335,10 +334,10 @@ function renderDrugAndServiceDashboard() {
         const key = `${drug.ten_thuoc} (${drug.ma_thuoc})`;
         drugCosts[key] = (drugCosts[key] || 0) + drug.thanh_tien_bh;
     });
-    const topDrugs = Object.entries(drugCosts).sort(([,a],[,b]) => b-a).slice(0, 10);
+    const topDrugs = Object.entries(drugCosts).sort(([, a], [, b]) => b - a).slice(0, 10);
     updateChart('topDrugsChart', 'bar', {
         labels: topDrugs.map(([name]) => name),
-        datasets: [{ label: 'Tổng chi phí BHYT', data: topDrugs.map(([,cost])=>cost), backgroundColor: 'rgba(255, 99, 132, 0.8)' }]
+        datasets: [{ label: 'Tổng chi phí BHYT', data: topDrugs.map(([, cost]) => cost), backgroundColor: 'rgba(255, 99, 132, 0.8)' }]
     }, 'Top 10 Thuốc có chi phí BHYT cao nhất');
 
     const serviceCosts = {};
@@ -346,10 +345,10 @@ function renderDrugAndServiceDashboard() {
         const key = `${service.ten_dich_vu} (${service.ma_dich_vu})`;
         serviceCosts[key] = (serviceCosts[key] || 0) + service.thanh_tien_bh;
     });
-    const topServices = Object.entries(serviceCosts).sort(([,a],[,b]) => b-a).slice(0, 10);
+    const topServices = Object.entries(serviceCosts).sort(([, a], [, b]) => b - a).slice(0, 10);
     updateChart('topServicesChart', 'bar', {
         labels: topServices.map(([name]) => name),
-        datasets: [{ label: 'Tổng chi phí BHYT', data: topServices.map(([,cost])=>cost), backgroundColor: 'rgba(54, 162, 235, 0.8)' }]
+        datasets: [{ label: 'Tổng chi phí BHYT', data: topServices.map(([, cost]) => cost), backgroundColor: 'rgba(54, 162, 235, 0.8)' }]
     }, 'Top 10 DVKT có chi phí BHYT cao nhất');
 }
 
@@ -361,7 +360,7 @@ function calculateGlobalStats(records) {
 
     const errorRecordsCount = records.filter(r => r.errors && r.errors.length > 0).length;
     const errorRate = (errorRecordsCount / totalRecords) * 100;
-    
+
     const stats = {
         totalRecords,
         errorRecordsCount,
@@ -382,7 +381,7 @@ function calculateGlobalStats(records) {
             const day = String(r.ngayVao).substring(0, 8);
             stats.timeline[day] = (stats.timeline[day] || 0) + 1;
         }
-        if(r.maKhoa) stats.departments[r.maKhoa] = (stats.departments[r.maKhoa] || 0) + 1;
+        if (r.maKhoa) stats.departments[r.maKhoa] = (stats.departments[r.maKhoa] || 0) + 1;
 
         const cost = r.t_bhtt || 0;
         if (cost < 1000000) stats.amounts['< 1tr']++;
@@ -391,7 +390,7 @@ function calculateGlobalStats(records) {
         else if (cost <= 50000000) stats.amounts['10-50tr']++;
         else stats.amounts['> 50tr']++;
     });
-    
+
     return stats;
 }
 
@@ -399,7 +398,7 @@ function updateChart(canvasId, type, data, titleText) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
     if (globalData.charts[canvasId]) globalData.charts[canvasId].destroy();
-    
+
     globalData.charts[canvasId] = new Chart(ctx, {
         type: type,
         data: data,
@@ -408,7 +407,7 @@ function updateChart(canvasId, type, data, titleText) {
             maintainAspectRatio: false,
             indexAxis: type === 'bar' && data.labels.length > 5 ? 'y' : 'x',
             plugins: {
-                title: { display: true, text: titleText, font: {size: 16} },
+                title: { display: true, text: titleText, font: { size: 16 } },
                 legend: { display: (data.datasets[0].label && type !== 'doughnut' && type !== 'pie') }
             },
             scales: (type === 'bar' || type === 'line') ? { y: { beginAtZero: true } } : {}
@@ -420,10 +419,10 @@ function updateChart(canvasId, type, data, titleText) {
 function initializeValidator() {
     const fileInput = document.getElementById('validatorFileInput');
     const uploadArea = document.getElementById('validatorUploadArea');
-    
+
     fileInput.addEventListener('change', (e) => handleFileUpload(e, 'validator'));
     document.getElementById('validatorProcessButton').addEventListener('click', processXmlFile);
-    
+
     ['dragover', 'dragleave', 'drop'].forEach(eventName => {
         uploadArea.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -439,28 +438,36 @@ function initializeValidator() {
 }
 
 function handleFileUpload(event, type) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
     if (type === 'validator' || type === 'xml') {
-        if (!file.name.toLowerCase().endsWith('.xml')) {
-            alert('Vui lòng chọn file có định dạng .xml!');
-            event.target.value = '';
-            return;
+        for (const file of files) {
+            if (!file.name.toLowerCase().endsWith('.xml')) {
+                alert('Vui lòng chọn file có định dạng .xml!');
+                event.target.value = '';
+                return;
+            }
         }
     }
 
     const fileInfoDiv = document.getElementById(type === 'validator' ? 'validatorFileInfo' : (type === 'xml' ? 'xmlStatus' : 'excelStatus'));
     const processButton = document.getElementById(type === 'validator' ? 'validatorProcessButton' : 'compareButton');
-    
-    fileInfoDiv.innerHTML = `<strong>File:</strong> ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+
+    if (type === 'validator' && files.length > 1) {
+        const totalSize = Array.from(files).reduce((sum, f) => sum + f.size, 0);
+        const fileNames = Array.from(files).map(f => f.name).join(', ');
+        fileInfoDiv.innerHTML = `<strong>${files.length} file:</strong> ${fileNames} (Tổng: ${(totalSize / 1024).toFixed(2)} KB)`;
+    } else {
+        fileInfoDiv.innerHTML = `<strong>File:</strong> ${files[0].name} (${(files[0].size / 1024).toFixed(2)} KB)`;
+    }
     fileInfoDiv.style.display = 'block';
 
     if (type === 'validator') {
         processButton.disabled = false;
     } else {
-        if (type === 'xml') globalData.xmlFile = file;
-        if (type === 'excel') globalData.excelFile = file;
+        if (type === 'xml') globalData.xmlFile = files[0];
+        if (type === 'excel') globalData.excelFile = files[0];
         document.getElementById('compareButton').disabled = !(globalData.xmlFile && globalData.excelFile);
     }
 }
@@ -473,24 +480,24 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     globalData.allServices = services;
     globalData.allXml4Details = xml4Details;
     globalData.filteredRecords = records;
-    
+
     displayValidatorResults();
     hideLoading('validatorLoading');
-    
+
     document.getElementById('validatorFilters').style.display = 'block';
     document.getElementById('validatorResults').style.display = 'block';
-    
+
     updateDashboard();
     updateDenialProjectionTab();
 
     // === TÍNH TOÁN KẾT QUẢ VÀ HIỂN THỊ POPUP ===
     const total = globalData.allRecords.length;
     // **SỬA LỖI 1**: Chỉ khai báo totalErrorRecords một lần ở đây
-   const totalErrorRecords = globalData.allRecords.filter(r => r.errors.length > 0).length;
+    const totalErrorRecords = globalData.allRecords.filter(r => r.errors.length > 0).length;
     const validRecords = total - totalErrorRecords;
     let criticalErrorRecords = 0;
     let totalDenialAmount = 0;
-     globalData.allRecords.forEach(r => {
+    globalData.allRecords.forEach(r => {
         if (r.errors.length > 0) {
             if (r.errors.some(e => e.severity === 'critical')) criticalErrorRecords++;
             r.errors.forEach(e => {
@@ -499,8 +506,27 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
         }
     });
 
+    // === ĐỌC THÔNG TIN TỪ XML ROOT ===
+    const xmlRootDoc = new DOMParser().parseFromString(xmlContent, 'text/xml');
+    const maCskcb = getText(xmlRootDoc, 'MACSKCB', 'MA_CSKCB');
+
+    // Đọc thẻ CHUKYDONVI và lấy inner XML (dùng XMLSerializer để giữ tags)
+    const chukyNode = xmlRootDoc.querySelector('CHUKYDONVI');
+    let chukyValue = '';
+    if (chukyNode) {
+        // Lấy nội dung con đầu tiên dạng XML (giữ nguyên tags như <Signature...>)
+        const firstChild = chukyNode.firstElementChild;
+        if (firstChild) {
+            chukyValue = new XMLSerializer().serializeToString(firstChild);
+        } else {
+            // Không có element con → lấy text thuần (có thể là Base64)
+            chukyValue = (chukyNode.textContent || '').trim();
+        }
+    }
+    const hasChuky = chukyValue.length > 0;
+
     const summaryStats = {
-        maCskcb: getText(new DOMParser().parseFromString(xmlContent, 'text/xml'), 'MACSKCB', 'MA_CSKCB'),
+        maCskcb: maCskcb,
         total: total,
         totalError: totalErrorRecords,
         valid: validRecords,
@@ -510,12 +536,15 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     };
 
     showSummaryPopup(summaryStats);
+
+    // === HIỂN THỊ THÔNG TIN CHỮ KÝ SỐ (sau 400ms để không che popup kết quả) ===
+    setTimeout(() => showChukyPopup({ exists: hasChuky, value: chukyValue }), 400);
     // =======================================================
     // 👉👉 CODE MỚI CẦN THÊM VÀO ĐÂY ĐỂ GHI LỊCH SỬ SHEET
     // =======================================================
     const finalMaCoSo = summaryStats.maCskcb; // Lấy Mã cơ sở đã trích xuất
     const finalTotalRecords = summaryStats.total; // Lấy Tổng hồ sơ đã tính
-    logCheckHistoryToGoogleSheet(finalTotalRecords, finalMaCoSo); 
+    logCheckHistoryToGoogleSheet(finalTotalRecords, finalMaCoSo);
     // =======================================================
 
     console.log("Đã tính toán xong stats, chuẩn bị cập nhật Telegram..."); // <-- DÒNG THEO DÕI SỐ 2
@@ -526,30 +555,84 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
 }
 
 // HÀM BẮT ĐẦU QUÁ TRÌNH
-async function processXmlFile() { // Thêm "async" ở đây
-    const file = document.getElementById('validatorFileInput').files[0];
-    if (!file) {
+async function processXmlFile() {
+    const files = document.getElementById('validatorFileInput').files;
+    if (!files || files.length === 0) {
         alert('Vui lòng chọn file XML!');
         return;
     }
-    
+
     showLoading('validatorLoading');
 
-    // Gửi log "Bắt đầu" và chờ để lấy message_id
-    const messageId = await sendTelegramStartLog(file);
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            globalData.xmlDataContent = e.target.result;
-            // Truyền messageId vào hàm xử lý nội dung
-            setTimeout(() => processXmlContent(globalData.xmlDataContent, messageId), 100);
-        } catch (error) {
-            hideLoading('validatorLoading');
-            alert('Lỗi đọc file: ' + error.message);
+    // Gửi log "Bắt đầu" và chờ để lấy message_id (dùng file đầu tiên)
+    const messageId = await sendTelegramStartLog(files[0]);
+
+    try {
+        // Đọc tất cả file song song
+        const fileContents = await Promise.all(
+            Array.from(files).map(file => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error(`Lỗi đọc file: ${file.name}`));
+                    reader.readAsText(file, 'UTF-8');
+                });
+            })
+        );
+
+        let combinedXml;
+        if (fileContents.length === 1) {
+            // Chỉ 1 file → giữ nguyên logic cũ
+            combinedXml = fileContents[0];
+        } else {
+            // Nhiều file → gộp tất cả HOSO vào 1 document
+            combinedXml = mergeXmlFiles(fileContents);
         }
-    };
-    reader.readAsText(file, 'UTF-8');
+
+        globalData.xmlDataContent = combinedXml;
+        setTimeout(() => processXmlContent(globalData.xmlDataContent, messageId), 100);
+    } catch (error) {
+        hideLoading('validatorLoading');
+        alert('Lỗi đọc file: ' + error.message);
+    }
+}
+
+/**
+ * Gộp nhiều file XML thành 1 document duy nhất.
+ * Lấy cấu trúc gốc từ file đầu tiên, gom tất cả <HOSO> từ mọi file.
+ */
+function mergeXmlFiles(fileContents) {
+    const parser = new DOMParser();
+    const serializer = new XMLSerializer();
+
+    // Parse file đầu tiên làm cơ sở
+    const baseDoc = parser.parseFromString(fileContents[0], 'text/xml');
+    const baseDanhSach = baseDoc.getElementsByTagName('DANHSACHHOSO')[0];
+
+    if (!baseDanhSach) {
+        // Nếu file đầu không có DANHSACHHOSO, trả về nối đơn giản
+        return fileContents[0];
+    }
+
+    // Gom HOSO từ các file còn lại
+    for (let i = 1; i < fileContents.length; i++) {
+        const doc = parser.parseFromString(fileContents[i], 'text/xml');
+        const hosoElements = doc.getElementsByTagName('HOSO');
+        for (const hoso of hosoElements) {
+            // Import node vào document gốc rồi append
+            const imported = baseDoc.importNode(hoso, true);
+            baseDanhSach.appendChild(imported);
+        }
+    }
+
+    // Cập nhật SOLUONGHOSO
+    const soLuongNode = baseDoc.getElementsByTagName('SOLUONGHOSO')[0];
+    if (soLuongNode) {
+        const totalHoso = baseDoc.getElementsByTagName('HOSO').length;
+        soLuongNode.textContent = totalHoso;
+    }
+
+    return serializer.serializeToString(baseDoc);
 }
 
 
@@ -586,7 +669,7 @@ function performCrossRecordValidation(records) {
                         maLk: record.maLk,
                         tenDv: service.ten_dich_vu,
                         cost: service.thanh_tien_bh,
-                        ngay_th_yl: service.ngay_th_yl 
+                        ngay_th_yl: service.ngay_th_yl
                     });
                 }
             });
@@ -606,7 +689,7 @@ function performCrossRecordValidation(records) {
     // ===================================================================
     // XỬ LÝ CÁC LỖI KHÁC (Giữ nguyên)
     // ===================================================================
-    
+
     // Xử lý lỗi trùng máy...
     machineTimeMap.forEach((conflicts, key) => {
         const uniqueMaLks = new Set(conflicts.map(c => c.maLk));
@@ -623,7 +706,7 @@ function performCrossRecordValidation(records) {
                         }).join(', ');
                     const ruleKey = 'MA_MAY_TRUNG_THOI_GIAN';
                     if (validationSettings[ruleKey]?.enabled) {
-                         recordToUpdate.errors.push({
+                        recordToUpdate.errors.push({
                             type: ruleKey,
                             severity: validationSettings[ruleKey].severity,
                             message: `DV "${conflictDetails.tenDv}" (Máy: ${maMay}) trùng thời điểm [${formatDateTimeForDisplay(ngayThYl)}] với các ca: ${otherMaLks}`,
@@ -665,7 +748,7 @@ function performCrossRecordValidation(records) {
             });
         }
     });
-    
+
     // Xử lý lỗi khám chồng lấn...
     const doctorXml3Windows = new Map();
     const take12 = s => (typeof s === 'string' && s.length >= 12 ? s.substring(0, 12) : null);
@@ -735,9 +818,9 @@ function performCrossRecordValidation(records) {
                 };
                 const khamCost = sumKhamCost(recordB);
                 const msg = `BS ${tenBacSi} khám chồng (XML 3 công khám): Khoảng thời gian của "${recordB.hoTen}" (${idB}) ` +
-                            `[TH_YL: ${B_TH} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
-                            `<br><strong>Chi tiết CÔNG KHÁM (XML 3):</strong><br>` +
-                            `${AInfo.map(a => a.detailLine).join('<br>')}`;
+                    `[TH_YL: ${B_TH} → KQ: ${B_KQ}] nằm TRONG ${AInfo.length} ca khác: ${headerAs}.` +
+                    `<br><strong>Chi tiết CÔNG KHÁM (XML 3):</strong><br>` +
+                    `${AInfo.map(a => a.detailLine).join('<br>')}`;
                 recordB.errors.push({ type: ruleKey, severity: validationSettings[ruleKey].severity, message: msg, cost: costIfCritical(ruleKey, khamCost), itemName: 'Công khám' });
             });
         }
@@ -753,7 +836,7 @@ function performCrossRecordValidation(records) {
             if (value.count > 65) {
                 const [maBS, datePart] = key.split('_');
                 const tenBS = staffNameMap.get(maBS) || maBS;
-                
+
                 // **SỬA ĐỔI 2**: Sắp xếp các ca khám theo thời gian
                 const sortedRecords = value.records.sort((a, b) =>
                     (a.ngay_th_yl || '').localeCompare(b.ngay_th_yl || '')
@@ -788,8 +871,8 @@ function validateXmlContent(xmlString) {
     if (xmlDoc.querySelector('parsererror')) throw new Error('File XML không hợp lệ.');
 
     const records = [];
-    let allDrugs = []; 
-    let allServices = []; 
+    let allDrugs = [];
+    let allServices = [];
     const xml4Details = new Map();
 
     const hosoElements = xmlDoc.getElementsByTagName('HOSO');
@@ -799,7 +882,7 @@ function validateXmlContent(xmlString) {
             records.push(result.record);
             allDrugs.push(...result.drugs);
             allServices.push(...result.record.services);
-            if(result.xml4Data.length > 0) {
+            if (result.xml4Data.length > 0) {
                 xml4Details.set(result.record.maLk, result.xml4Data);
             }
         }
@@ -812,13 +895,51 @@ function validateXmlContent(xmlString) {
 }
 
 function validateSingleHoso(hoso) {
-  
+
     const findFileContent = (type) => {
         for (const fileNode of hoso.children) {
             if (fileNode.nodeName === 'FILEHOSO') {
                 const loaiHoso = getText(fileNode, 'LOAIHOSO');
                 if (loaiHoso === type) {
-                    return fileNode.querySelector('NOIDUNGFILE');
+                    const noidungNode = fileNode.querySelector('NOIDUNGFILE');
+                    if (!noidungNode) return null;
+
+                    // Nếu NOIDUNGFILE có phần tử con (XML thuần) → trả về trực tiếp
+                    if (noidungNode.firstElementChild) {
+                        return noidungNode;
+                    }
+
+                    // Không có phần tử con → nội dung là text (có thể là Base64)
+                    const rawText = (noidungNode.textContent || '').trim();
+                    if (!rawText) return null;
+
+                    // Thử giải mã Base64
+                    try {
+                        // Xóa khoảng trắng / xuống dòng trong chuỗi Base64
+                        const cleanBase64 = rawText.replace(/\s/g, '');
+                        // Decode Base64 → binary string
+                        const binaryString = atob(cleanBase64);
+                        // Chuyển binary string → Uint8Array để decode UTF-8 đúng cách
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        const decodedXml = new TextDecoder('utf-8').decode(bytes);
+
+                        // Bọc trong thẻ WRAPPER để querySelector tìm được root element
+                        // (vì querySelector chỉ tìm con cháu, không tìm chính nó)
+                        const wrappedXml = `<WRAPPER>${decodedXml}</WRAPPER>`;
+                        const decodedDoc = new DOMParser().parseFromString(wrappedXml, 'text/xml');
+                        if (decodedDoc.querySelector('parsererror')) {
+                            console.warn(`[${type}] Giải mã Base64 thành công nhưng XML không hợp lệ.`);
+                            return null;
+                        }
+                        // Trả về WRAPPER element — querySelector downstream sẽ tìm đúng
+                        return decodedDoc.documentElement;
+                    } catch (e) {
+                        console.warn(`[${type}] Không thể giải mã Base64 NOIDUNGFILE:`, e.message);
+                        return null;
+                    }
                 }
             }
         }
@@ -833,19 +954,19 @@ function validateSingleHoso(hoso) {
     const chiTietThuocNode = findFileContent('XML2');
     const chiTietDvktNode = findFileContent('XML3');
     const chiTietCLSNode = findFileContent('XML4');
-    const giayHenNode = findFileContent('XML14'); 
+    const giayHenNode = findFileContent('XML14');
 
     const maLk = getText(tongHopNode, 'MA_LK');
-    
+
     const record = {
-        maLk: maLk, 
-        hoTen: getText(tongHopNode,'HO_TEN'), 
-        ngayVao: getText(tongHopNode,'NGAY_VAO'),
-        ngayRa: getText(tongHopNode,'NGAY_RA'),
-        ngayTtoan: getText(tongHopNode,'NGAY_TTOAN'), 
-        maBn: getText(tongHopNode,'MA_BN'), 
-        maThe: getText(tongHopNode,'MA_THE_BHYT'),
-      soCccd: getText(tongHopNode,'SO_CCCD'),
+        maLk: maLk,
+        hoTen: getText(tongHopNode, 'HO_TEN'),
+        ngayVao: getText(tongHopNode, 'NGAY_VAO'),
+        ngayRa: getText(tongHopNode, 'NGAY_RA'),
+        ngayTtoan: getText(tongHopNode, 'NGAY_TTOAN'),
+        maBn: getText(tongHopNode, 'MA_BN'),
+        maThe: getText(tongHopNode, 'MA_THE_BHYT'),
+        soCccd: getText(tongHopNode, 'SO_CCCD'),
         t_tongchi: parseFloat(getText(tongHopNode, 'T_TONGCHI') || '0'),
         t_bhtt: parseFloat(getText(tongHopNode, 'T_BHTT') || '0'),
         t_bncct: parseFloat(getText(tongHopNode, 'T_BNCCT') || '0'),
@@ -858,17 +979,17 @@ function validateSingleHoso(hoso) {
         t_mau: parseFloat(getText(tongHopNode, 'T_MAU') || '0'),
         t_pttt: parseFloat(getText(tongHopNode, 'T_PTTT') || '0'),
         t_vanchuyen: parseFloat(getText(tongHopNode, 'T_VANCHUYEN') || '0'),
-        gioiTinh: getText(tongHopNode,'GIOI_TINH'),
-        ngaySinh: getText(tongHopNode,'NGAY_SINH'), 
-      chanDoan: getText(tongHopNode, 'MA_BENH_CHINH'), // Chỉ lấy mã bệnh chính
-      maBenhKemTheo: getText(tongHopNode, 'MA_BENH_KT'), 
-    maBenhYHCT: getText(tongHopNode, 'MA_BENH_YHCT'), 
-        maKhoa: getText(tongHopNode,'MA_KHOA'),
+        gioiTinh: getText(tongHopNode, 'GIOI_TINH'),
+        ngaySinh: getText(tongHopNode, 'NGAY_SINH'),
+        chanDoan: getText(tongHopNode, 'MA_BENH_CHINH'), // Chỉ lấy mã bệnh chính
+        maBenhKemTheo: getText(tongHopNode, 'MA_BENH_KT'),
+        maBenhYHCT: getText(tongHopNode, 'MA_BENH_YHCT'),
+        maKhoa: getText(tongHopNode, 'MA_KHOA'),
         isSimpleCase: false,
         mainDoctor: null,
         has_kham_and_dvkt: false,
         has_xml4: !!chiTietCLSNode && !!chiTietCLSNode.querySelector('CHI_TIET_CLS'),
-        has_xml14: !!giayHenNode && !!giayHenNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI'), 
+        has_xml14: !!giayHenNode && !!giayHenNode.querySelector('CHI_TIEU_GIAYHEN_KHAMLAI'),
         bac_si_chi_dinh: new Set(),
         nguoi_thuc_hien: new Set(),
         errors: [],
@@ -884,33 +1005,33 @@ function validateSingleHoso(hoso) {
             const thanhTienBH = parseFloat(getText(item, 'THANH_TIEN_BH') || '0');
             const maBacSiStr = getText(item, 'MA_BAC_SI');
             const ngayYl = getText(item, 'NGAY_YL');
-           const ngayThYl = getText(item, 'NGAY_TH_YL');
-        const maThuoc = getText(item, 'MA_THUOC'); // Lấy mã thuốc
-        const maBenhChinh = record.chanDoan; // Lấy mã bệnh chính của bệnh nhân
+            const ngayThYl = getText(item, 'NGAY_TH_YL');
+            const maThuoc = getText(item, 'MA_THUOC'); // Lấy mã thuốc
+            const maBenhChinh = record.chanDoan; // Lấy mã bệnh chính của bệnh nhân
             drugsForGlobalList.push({
                 ma_lk: maLk, ma_thuoc: getText(item, 'MA_THUOC'), ten_thuoc: tenThuoc,
                 so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                 thanh_tien_bh: thanhTienBH
             });
-            if(maBacSiStr && ngayYl) {
-            // Lấy người thực hiện, nếu không có thì lấy BS chỉ định đầu tiên
-            const performer = getText(item, 'NGUOI_THUC_HIEN') || maBacSiStr.split(/[,;]/)[0].trim();
-            
-            record.drugs.push({
-                ma_bac_si: maBacSiStr,
-                ngay_yl: ngayYl,
-                ten_thuoc: tenThuoc,
-                thanh_tien_bh: thanhTienBH,
-                ngay_th_yl: ngayThYl, // <-- Thêm thuộc tính này
-                performer: performer   // <-- Thêm thuộc tính này
-            });
+            if (maBacSiStr && ngayYl) {
+                // Lấy người thực hiện, nếu không có thì lấy BS chỉ định đầu tiên
+                const performer = getText(item, 'NGUOI_THUC_HIEN') || maBacSiStr.split(/[,;]/)[0].trim();
+
+                record.drugs.push({
+                    ma_bac_si: maBacSiStr,
+                    ngay_yl: ngayYl,
+                    ten_thuoc: tenThuoc,
+                    thanh_tien_bh: thanhTienBH,
+                    ngay_th_yl: ngayThYl, // <-- Thêm thuộc tính này
+                    performer: performer   // <-- Thêm thuộc tính này
+                });
                 if (!record.mainDoctor) {
                     record.mainDoctor = maBacSiStr.split(/[,;]/)[0].trim();
                 }
             }
 
-         if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
-            
+            if (ngayYl && ngayYl > record.ngayRa) record.errors.push({ type: 'NGAY_YL_THUOC_SAU_RA_VIEN', severity: 'critical', message: `Thuốc "${tenThuoc}": YL [${formatDateTimeForDisplay(ngayYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenThuoc });
+
             // Gom tất cả các mã bệnh của bệnh nhân vào một mảng để tái sử dụng
             const patientDiagnoses = [
                 record.chanDoan,
@@ -945,42 +1066,42 @@ function validateSingleHoso(hoso) {
             // ===============================================================
             // KHỐI 2: KIỂM TRA CHỈ ĐỊNH BẮT BUỘC (LOGIC MỚI THÊM VÀO)
             // ===============================================================
-           // ===============================================================
-// BẮT ĐẦU: LOGIC KIỂM TRA CHỈ ĐỊNH BẮT BUỘC (ĐÃ CẬP NHẬT LẠI)
-// ===============================================================
-if (indicationMap.has(maThuoc)) {
-    const rule = indicationMap.get(maThuoc);
+            // ===============================================================
+            // BẮT ĐẦU: LOGIC KIỂM TRA CHỈ ĐỊNH BẮT BUỘC (ĐÃ CẬP NHẬT LẠI)
+            // ===============================================================
+            if (indicationMap.has(maThuoc)) {
+                const rule = indicationMap.get(maThuoc);
 
-    // Dùng lại mảng chẩn đoán đã được tách ở phần kiểm tra chống chỉ định
-    const patientDiagnoses = [
-        record.chanDoan,
-        ...(record.maBenhKemTheo || '').split(/[;,]/),
-        ...(record.maBenhYHCT || '').split(/[;,]/)
-    ].map(d => d.trim()).filter(Boolean);
+                // Dùng lại mảng chẩn đoán đã được tách ở phần kiểm tra chống chỉ định
+                const patientDiagnoses = [
+                    record.chanDoan,
+                    ...(record.maBenhKemTheo || '').split(/[;,]/),
+                    ...(record.maBenhYHCT || '').split(/[;,]/)
+                ].map(d => d.trim()).filter(Boolean);
 
-    // Kiểm tra xem bệnh nhân có ÍT NHẤT MỘT chẩn đoán phù hợp không
-    const hasRequiredDiagnosis = patientDiagnoses.some(patientIcd => 
-        rule.requiredIcdCodes.some(requiredPrefix => patientIcd.startsWith(requiredPrefix))
-    );
+                // Kiểm tra xem bệnh nhân có ÍT NHẤT MỘT chẩn đoán phù hợp không
+                const hasRequiredDiagnosis = patientDiagnoses.some(patientIcd =>
+                    rule.requiredIcdCodes.some(requiredPrefix => patientIcd.startsWith(requiredPrefix))
+                );
 
-    // Nếu không tìm thấy bất kỳ chẩn đoán phù hợp nào, tạo lỗi
-    if (!hasRequiredDiagnosis) {
-        // Lấy chuỗi các chẩn đoán thực tế của bệnh nhân
-        const actualDiagnoses = patientDiagnoses.join(', ');
-        
-        record.errors.push({
-            type: 'THUOC_KHONG_PHU_HOP_ICD',
-            severity: 'critical', 
-            // CẬP NHẬT LẠI THÔNG BÁO LỖI ĐỂ RÕ RÀNG HƠN
-            message: `Thuốc "${tenThuoc}" yêu cầu chẩn đoán (${rule.diseaseName}: ${rule.requiredIcdCodes.join(', ')}), nhưng chẩn đoán của bệnh nhân là [${actualDiagnoses}].`,
-            cost: thanhTienBH,
-            itemName: tenThuoc
-        });
-    }
-}
-// ===============================================================
-// KẾT THÚC: LOGIC KIỂM TRA CHỈ ĐỊNH BẮT BUỘC
-// ===============================================================
+                // Nếu không tìm thấy bất kỳ chẩn đoán phù hợp nào, tạo lỗi
+                if (!hasRequiredDiagnosis) {
+                    // Lấy chuỗi các chẩn đoán thực tế của bệnh nhân
+                    const actualDiagnoses = patientDiagnoses.join(', ');
+
+                    record.errors.push({
+                        type: 'THUOC_KHONG_PHU_HOP_ICD',
+                        severity: 'critical',
+                        // CẬP NHẬT LẠI THÔNG BÁO LỖI ĐỂ RÕ RÀNG HƠN
+                        message: `Thuốc "${tenThuoc}" yêu cầu chẩn đoán (${rule.diseaseName}: ${rule.requiredIcdCodes.join(', ')}), nhưng chẩn đoán của bệnh nhân là [${actualDiagnoses}].`,
+                        cost: thanhTienBH,
+                        itemName: tenThuoc
+                    });
+                }
+            }
+            // ===============================================================
+            // KẾT THÚC: LOGIC KIỂM TRA CHỈ ĐỊNH BẮT BUỘC
+            // ===============================================================
 
 
             if (ngayThYl) {
@@ -990,26 +1111,26 @@ if (indicationMap.has(maThuoc)) {
 
             const ruleKeyYlThuoc = 'THUOC_YL_NGOAI_GIO_HC';
             if (validationSettings[ruleKeyYlThuoc]?.enabled && isOutsideWorkingHours(ngayYl)) {
-                 record.errors.push({ 
-                    type: ruleKeyYlThuoc, 
-                    severity: validationSettings[ruleKeyYlThuoc].severity, 
-                    message: `Thuốc "${tenThuoc}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
-                    cost: 0, 
-                    itemName: tenThuoc 
+                record.errors.push({
+                    type: ruleKeyYlThuoc,
+                    severity: validationSettings[ruleKeyYlThuoc].severity,
+                    message: `Thuốc "${tenThuoc}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`,
+                    cost: 0,
+                    itemName: tenThuoc
                 });
             }
             const ruleKeyThylThuoc = 'THUOC_THYL_NGOAI_GIO_HC';
             if (validationSettings[ruleKeyThylThuoc]?.enabled && isOutsideWorkingHours(ngayThYl)) {
-                 record.errors.push({ 
-                    type: ruleKeyThylThuoc, 
-                    severity: validationSettings[ruleKeyThylThuoc].severity, 
-                    message: `Thuốc "${tenThuoc}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
-                    cost: 0, 
-                    itemName: tenThuoc 
+                record.errors.push({
+                    type: ruleKeyThylThuoc,
+                    severity: validationSettings[ruleKeyThylThuoc].severity,
+                    message: `Thuốc "${tenThuoc}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`,
+                    cost: 0,
+                    itemName: tenThuoc
                 });
             }
 
-            if(maBacSiStr) {
+            if (maBacSiStr) {
                 maBacSiStr.split(/[,;]/).map(c => c.trim()).filter(Boolean).forEach(code => record.bac_si_chi_dinh.add(code));
             }
         });
@@ -1053,7 +1174,7 @@ if (indicationMap.has(maThuoc)) {
                 if (ngayThYl < record.ngayVao) record.errors.push({ type: 'NGAY_THYL_TRUOC_VAOVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`, cost: thanhTienBH, itemName: tenDV });
                 if (ngayThYl > record.ngayRa) record.errors.push({ type: 'NGAY_THYL_SAU_RAVIEN', severity: 'critical', message: `DVKT "${tenDV}": Ngày THYL [${formatDateTimeForDisplay(ngayThYl)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]`, cost: thanhTienBH, itemName: tenDV });
             }
-            
+
             if (!tenDV.toLowerCase().includes('khám')) {
                 if (ngayYl && ngayYl === record.ngayVao) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_VAO', severity: 'warning', message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày vào viện.`, cost: 0, itemName: tenDV });
                 if (ngayYl && ngayYl === record.ngayRa) record.errors.push({ type: 'DVKT_YL_TRUNG_NGAY_RA', severity: 'warning', message: `DVKT "${tenDV}" có ngày y lệnh [${formatDateTimeForDisplay(ngayYl)}] trùng với ngày ra viện.`, cost: 0, itemName: tenDV });
@@ -1062,37 +1183,37 @@ if (indicationMap.has(maThuoc)) {
 
                 const ruleKeyYlDvkt = 'DVKT_YL_NGOAI_GIO_HC';
                 if (validationSettings[ruleKeyYlDvkt]?.enabled && isOutsideWorkingHours(ngayYl)) {
-                    record.errors.push({ 
-                        type: ruleKeyYlDvkt, 
-                        severity: validationSettings[ruleKeyYlDvkt].severity, 
-                        message: `DVKT "${tenDV}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`, 
-                        cost: 0, 
-                        itemName: tenDV 
+                    record.errors.push({
+                        type: ruleKeyYlDvkt,
+                        severity: validationSettings[ruleKeyYlDvkt].severity,
+                        message: `DVKT "${tenDV}" có YL ngoài giờ HC [${formatDateTimeForDisplay(ngayYl)}]`,
+                        cost: 0,
+                        itemName: tenDV
                     });
                 }
                 const ruleKeyThylDvkt = 'DVKT_THYL_NGOAI_GIO_HC';
                 if (validationSettings[ruleKeyThylDvkt]?.enabled && isOutsideWorkingHours(ngayThYl)) {
-                    record.errors.push({ 
-                        type: ruleKeyThylDvkt, 
-                        severity: validationSettings[ruleKeyThylDvkt].severity, 
-                        message: `DVKT "${tenDV}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`, 
-                        cost: 0, 
-                        itemName: tenDV 
+                    record.errors.push({
+                        type: ruleKeyThylDvkt,
+                        severity: validationSettings[ruleKeyThylDvkt].severity,
+                        message: `DVKT "${tenDV}" có THYL ngoài giờ HC [${formatDateTimeForDisplay(ngayThYl)}]`,
+                        cost: 0,
+                        itemName: tenDV
                     });
                 }
             }
 
-            if(maBacSiStr) {
-                 maBacSiStr.split(/[,;]/).map(c => c.trim()).filter(Boolean).forEach(code => record.bac_si_chi_dinh.add(code));
+            if (maBacSiStr) {
+                maBacSiStr.split(/[,;]/).map(c => c.trim()).filter(Boolean).forEach(code => record.bac_si_chi_dinh.add(code));
             }
-            if(nguoiThucHienStr) {
+            if (nguoiThucHienStr) {
                 nguoiThucHienStr.split(/[,;]/).map(c => c.trim()).filter(Boolean).forEach(code => record.nguoi_thuc_hien.add(code));
             }
         });
     }
     record.has_kham_and_dvkt = hasKham && hasOtherDvkt;
 
- const xml4Data = [];
+    const xml4Data = [];
     if (record.has_xml4) {
         chiTietCLSNode.querySelectorAll('CHI_TIET_CLS').forEach(cls => {
             const maDichVu = getText(cls, 'MA_DICH_VU');
@@ -1145,75 +1266,75 @@ if (indicationMap.has(maThuoc)) {
             // --- KẾT THÚC KHỐI KIỂM TRA XML4 ---
         });
     }
-    
+
     if (record.ngayVao > record.ngayRa) record.errors.push({ type: 'NGAY_VAO_SAU_NGAY_RA', severity: 'critical', message: `Ngày vào [${formatDateTimeForDisplay(record.ngayVao)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
-    
+
     const ruleNgayTToan = 'NGAY_TTOAN_SAU_RA_VIEN';
     if (validationSettings[ruleNgayTToan]?.enabled && record.ngayTtoan && record.ngayTtoan.substring(0, 8) > record.ngayRa.substring(0, 8)) {
         record.errors.push({ type: ruleNgayTToan, severity: validationSettings[ruleNgayTToan].severity, message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] sau ngày ra [${formatDateTimeForDisplay(record.ngayRa)}]` });
     }
-// BẮT ĐẦU: THÊM KHỐI MÃ MỚI TẠI ĐÂY
+    // BẮT ĐẦU: THÊM KHỐI MÃ MỚI TẠI ĐÂY
     // =================================================================
-   // 2. Kiểm tra NGAY_TTOAN so với NGAY_VAO (So sánh toàn bộ ngày-giờ)
-        const ruleNgayTToanTruocVao = 'NGAY_TTOAN_TRUOC_VAO_VIEN';
-        
-        // === THAY ĐỔI LOGIC TẠI ĐÂY ===
-        // So sánh trực tiếp 2 chuỗi (YYYYMMDDHHmm)
-        if (validationSettings[ruleNgayTToanTruocVao]?.enabled && record.ngayTtoan < record.ngayVao) {
-            record.errors.push({ 
-                type: ruleNgayTToanTruocVao, 
-                severity: validationSettings[ruleNgayTToanTruocVao].severity, 
-                message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]` 
-            });
-        }
-  
+    // 2. Kiểm tra NGAY_TTOAN so với NGAY_VAO (So sánh toàn bộ ngày-giờ)
+    const ruleNgayTToanTruocVao = 'NGAY_TTOAN_TRUOC_VAO_VIEN';
+
+    // === THAY ĐỔI LOGIC TẠI ĐÂY ===
+    // So sánh trực tiếp 2 chuỗi (YYYYMMDDHHmm)
+    if (validationSettings[ruleNgayTToanTruocVao]?.enabled && record.ngayTtoan < record.ngayVao) {
+        record.errors.push({
+            type: ruleNgayTToanTruocVao,
+            severity: validationSettings[ruleNgayTToanTruocVao].severity,
+            message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] trước ngày vào [${formatDateTimeForDisplay(record.ngayVao)}]`
+        });
+    }
+
     // KẾT THÚC: KHỐI MÃ MỚI
     // =================================================================
-  // 3. Kiểm tra NGAY_TTOAN so với Y Lệnh sớm nhất (LOGIC MỚI)
-        const ruleNgayTToanTruocYl = 'NGAY_TTOAN_TRUOC_YL';
-        if (validationSettings[ruleNgayTToanTruocYl]?.enabled) {
-            
-            // Tìm Y Lệnh (NGAY_YL) sớm nhất từ cả thuốc (XML2) và DVKT (XML3)
-            // Logic này chỉ chạy 1 lần sau khi record.drugs và record.services đã được nạp đầy đủ
-            const allYlDates = [
-                ...record.drugs.map(d => d.ngay_yl),
-                ...record.services.map(s => s.ngay_yl)
-            ].filter(Boolean); // Lọc bỏ các giá trị rỗng hoặc null
+    // 3. Kiểm tra NGAY_TTOAN so với Y Lệnh sớm nhất (LOGIC MỚI)
+    const ruleNgayTToanTruocYl = 'NGAY_TTOAN_TRUOC_YL';
+    if (validationSettings[ruleNgayTToanTruocYl]?.enabled) {
 
-            if (allYlDates.length > 0) {
-                // Tìm ngày YL nhỏ nhất (sớm nhất)
-                const earliestYl = allYlDates.reduce((min, current) => (current < min ? current : min), allYlDates[0]);
-                
-                // So sánh NGAY_TTOAN (string) với earliestYl (string)
-                if (record.ngayTtoan < earliestYl) {
-                     record.errors.push({ 
-                        type: ruleNgayTToanTruocYl, 
-                        severity: validationSettings[ruleNgayTToanTruocYl].severity, 
-                        message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] trước Y Lệnh đầu tiên [${formatDateTimeForDisplay(earliestYl)}]` 
-                    });
-                }
+        // Tìm Y Lệnh (NGAY_YL) sớm nhất từ cả thuốc (XML2) và DVKT (XML3)
+        // Logic này chỉ chạy 1 lần sau khi record.drugs và record.services đã được nạp đầy đủ
+        const allYlDates = [
+            ...record.drugs.map(d => d.ngay_yl),
+            ...record.services.map(s => s.ngay_yl)
+        ].filter(Boolean); // Lọc bỏ các giá trị rỗng hoặc null
+
+        if (allYlDates.length > 0) {
+            // Tìm ngày YL nhỏ nhất (sớm nhất)
+            const earliestYl = allYlDates.reduce((min, current) => (current < min ? current : min), allYlDates[0]);
+
+            // So sánh NGAY_TTOAN (string) với earliestYl (string)
+            if (record.ngayTtoan < earliestYl) {
+                record.errors.push({
+                    type: ruleNgayTToanTruocYl,
+                    severity: validationSettings[ruleNgayTToanTruocYl].severity,
+                    message: `Ngày TT [${formatDateTimeForDisplay(record.ngayTtoan)}] trước Y Lệnh đầu tiên [${formatDateTimeForDisplay(earliestYl)}]`
+                });
             }
         }
-    
+    }
+
     // =================================================================
     // KẾT THÚC: KHỐI KIỂM TRA NGAY_TTOAN
     // =================================================================
     const ruleKhamNgan = 'KHAM_DUOI_5_PHUT';
     if (validationSettings[ruleKhamNgan]?.enabled && record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
         const dateVao = new Date(
-            record.ngayVao.substring(0,4), record.ngayVao.substring(4,6)-1, record.ngayVao.substring(6,8),
-            record.ngayVao.substring(8,10), record.ngayVao.substring(10,12)
+            record.ngayVao.substring(0, 4), record.ngayVao.substring(4, 6) - 1, record.ngayVao.substring(6, 8),
+            record.ngayVao.substring(8, 10), record.ngayVao.substring(10, 12)
         );
         const dateRa = new Date(
-            record.ngayRa.substring(0,4), record.ngayRa.substring(4,6)-1, record.ngayRa.substring(6,8),
-            record.ngayRa.substring(8,10), record.ngayRa.substring(10,12)
+            record.ngayRa.substring(0, 4), record.ngayRa.substring(4, 6) - 1, record.ngayRa.substring(6, 8),
+            record.ngayRa.substring(8, 10), record.ngayRa.substring(10, 12)
         );
         const diffInMinutes = (dateRa - dateVao) / 60000;
-        if(diffInMinutes >= 0 && diffInMinutes < 5) {
+        if (diffInMinutes >= 0 && diffInMinutes < 5) {
             record.errors.push({ type: ruleKhamNgan, severity: validationSettings[ruleKhamNgan].severity, message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
         }
     }
-    
+
     const ngayTaiKham = getText(tongHopNode, 'NGAY_TAI_KHAM');
     const ruleKeyTaiKham = 'NGAY_TAI_KHAM_NO_XML14';
     if (validationSettings[ruleKeyTaiKham]?.enabled && ngayTaiKham && !record.has_xml14) {
@@ -1226,51 +1347,51 @@ if (indicationMap.has(maThuoc)) {
         });
     }
 
- // =================================================================
-   // BẮT ĐẦU: KIỂM TRA NGÀY KẾT QUẢ DVKT SAU NGÀY Y LỆNH THUỐC
-// =================================================================
-const ruleKeyKqDvktSauThuoc = 'KQ_DVKT_SAU_YL_THUOC';
-if (validationSettings[ruleKeyKqDvktSauThuoc]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
-    
-    // 1. Tìm thời gian Y LỆNH (NGAY_YL) của thuốc sớm nhất
-    const drugYlTimes = record.drugs.map(d => d.ngay_yl).filter(Boolean);
-    if (drugYlTimes.length > 0) {
-        const earliestDrugYl = drugYlTimes.reduce((min, current) => current < min ? current : min, drugYlTimes[0]);
+    // =================================================================
+    // BẮT ĐẦU: KIỂM TRA NGÀY KẾT QUẢ DVKT SAU NGÀY Y LỆNH THUỐC
+    // =================================================================
+    const ruleKeyKqDvktSauThuoc = 'KQ_DVKT_SAU_YL_THUOC';
+    if (validationSettings[ruleKeyKqDvktSauThuoc]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
 
-        // 2. Lặp qua các dịch vụ để so sánh NGAY_KQ
-        record.services.forEach(service => {
-            const serviceNameLower = (service.ten_dich_vu || '').toLowerCase();
-            
-            // 3. Loại trừ các dịch vụ đặc biệt (khám, tải lượng, cd4)
-            const isExcludedService = serviceNameLower.includes('khám') ||
-                                      serviceNameLower.includes('cd4') ||
-                                      serviceNameLower.includes('tải lượng');
+        // 1. Tìm thời gian Y LỆNH (NGAY_YL) của thuốc sớm nhất
+        const drugYlTimes = record.drugs.map(d => d.ngay_yl).filter(Boolean);
+        if (drugYlTimes.length > 0) {
+            const earliestDrugYl = drugYlTimes.reduce((min, current) => current < min ? current : min, drugYlTimes[0]);
 
-            // 4. Áp dụng điều kiện: NGAY_KQ của DVKT > NGAY_YL của thuốc sớm nhất
-            if (!isExcludedService && service.ngay_kq && service.ngay_kq > earliestDrugYl) {
-                record.errors.push({
-                    type: ruleKeyKqDvktSauThuoc,
-                    severity: validationSettings[ruleKeyKqDvktSauThuoc].severity,
-                    // Cập nhật thông báo lỗi cho chính xác
-                    message: `DVKT "${service.ten_dich_vu}" có Ngày KQ [${formatDateTimeForDisplay(service.ngay_kq)}] sau Y lệnh thuốc đầu tiên [${formatDateTimeForDisplay(earliestDrugYl)}].`,
-                    cost: costIfCritical(ruleKeyKqDvktSauThuoc, service.thanh_tien_bh),
-                    itemName: service.ten_dich_vu
-                });
-            }
-        });
+            // 2. Lặp qua các dịch vụ để so sánh NGAY_KQ
+            record.services.forEach(service => {
+                const serviceNameLower = (service.ten_dich_vu || '').toLowerCase();
+
+                // 3. Loại trừ các dịch vụ đặc biệt (khám, tải lượng, cd4)
+                const isExcludedService = serviceNameLower.includes('khám') ||
+                    serviceNameLower.includes('cd4') ||
+                    serviceNameLower.includes('tải lượng');
+
+                // 4. Áp dụng điều kiện: NGAY_KQ của DVKT > NGAY_YL của thuốc sớm nhất
+                if (!isExcludedService && service.ngay_kq && service.ngay_kq > earliestDrugYl) {
+                    record.errors.push({
+                        type: ruleKeyKqDvktSauThuoc,
+                        severity: validationSettings[ruleKeyKqDvktSauThuoc].severity,
+                        // Cập nhật thông báo lỗi cho chính xác
+                        message: `DVKT "${service.ten_dich_vu}" có Ngày KQ [${formatDateTimeForDisplay(service.ngay_kq)}] sau Y lệnh thuốc đầu tiên [${formatDateTimeForDisplay(earliestDrugYl)}].`,
+                        cost: costIfCritical(ruleKeyKqDvktSauThuoc, service.thanh_tien_bh),
+                        itemName: service.ten_dich_vu
+                    });
+                }
+            });
+        }
     }
-}
-// =================================================================
-// KẾT THÚC
-// ==================================================================================================================================
-     // BẮT ĐẦU: KIỂM TRA BÁC SĨ KHÁM TRONG NGÀY NGHỈ
+    // =================================================================
+    // KẾT THÚC
+    // ==================================================================================================================================
+    // BẮT ĐẦU: KIỂM TRA BÁC SĨ KHÁM TRONG NGÀY NGHỈ
     // =================================================================
     const ruleKeyBsNghi = 'BS_KHAM_TRONG_NGAY_NGHI';
     const hasSchedules = typeof doctorSchedules !== 'undefined' && Object.keys(doctorSchedules).length > 0;
 
     if (validationSettings[ruleKeyBsNghi]?.enabled && hasSchedules && record.bac_si_chi_dinh.size > 0) {
         const ngayKhamStr = record.ngayVao.substring(0, 8);
-        const ngayKhamFormatted = `${ngayKhamStr.substring(0,4)}-${ngayKhamStr.substring(4,6)}-${ngayKhamStr.substring(6,8)}`;
+        const ngayKhamFormatted = `${ngayKhamStr.substring(0, 4)}-${ngayKhamStr.substring(4, 6)}-${ngayKhamStr.substring(6, 8)}`;
 
         record.bac_si_chi_dinh.forEach(maBS => {
             const doctorSchedule = doctorSchedules[maBS];
@@ -1289,43 +1410,43 @@ if (validationSettings[ruleKeyKqDvktSauThuoc]?.enabled && record.drugs.length > 
     // =================================================================
     // KẾT THÚC: KIỂM TRA BÁC SĨ KHÁM TRONG NGÀY NGHỈ
     // =================================================================
-  // =================================================================
-// BẮT ĐẦU: KIỂM TRA THYL DVKT (KHÁC KHÁM) TRÙNG VỚI THYL THUỐC
-// =================================================================
-const ruleKeyThylConflict = 'THUOC_DVKT_THYL_TRUNG_GIO';
-// Giả định rằng ruleKeyThylConflict đã được định nghĩa là 'DVKT_THYL_SAU_THUOC_THYL'
-// hoặc một mã lỗi tương ứng cho quy tắc này.
-if (validationSettings[ruleKeyThylConflict]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
-    
-    // 1. Lấy tất cả các mốc thời gian THYL của thuốc và lọc ra các giá trị hợp lệ
-    const drugThylTimes = record.drugs.map(d => d.ngay_th_yl).filter(Boolean);
+    // =================================================================
+    // BẮT ĐẦU: KIỂM TRA THYL DVKT (KHÁC KHÁM) TRÙNG VỚI THYL THUỐC
+    // =================================================================
+    const ruleKeyThylConflict = 'THUOC_DVKT_THYL_TRUNG_GIO';
+    // Giả định rằng ruleKeyThylConflict đã được định nghĩa là 'DVKT_THYL_SAU_THUOC_THYL'
+    // hoặc một mã lỗi tương ứng cho quy tắc này.
+    if (validationSettings[ruleKeyThylConflict]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
 
-    if (drugThylTimes.length > 0) {
-        // 2. Tìm ra thời gian THYL của thuốc sớm nhất để làm mốc so sánh
-        const earliestDrugThyl = drugThylTimes.reduce((min, current) => current < min ? current : min, drugThylTimes[0]);
+        // 1. Lấy tất cả các mốc thời gian THYL của thuốc và lọc ra các giá trị hợp lệ
+        const drugThylTimes = record.drugs.map(d => d.ngay_th_yl).filter(Boolean);
 
-        // 3. Lặp qua các dịch vụ trong cùng hồ sơ
-        record.services.forEach(service => {
-            const isKham = (service.ten_dich_vu || '').toLowerCase().includes('khám');
-            
-            // 4. ĐIỀU KIỆN ĐÃ SỬA: Kiểm tra nếu THYL của dịch vụ BẰNG HOẶC SAU THYL của thuốc sớm nhất
-            if (!isKham && service.ngay_th_yl && service.ngay_th_yl >= earliestDrugThyl) {
-                
-                record.errors.push({
-                    type: ruleKeyThylConflict,
-                    severity: validationSettings[ruleKeyThylConflict].severity,
-                    // 5. Cập nhật thông báo lỗi để phản ánh đúng logic "bằng hoặc sau"
-                    message: `DVKT "${service.ten_dich_vu}" có THYL [${formatDateTimeForDisplay(service.ngay_th_yl)}] bằng hoặc sau THYL của thuốc đầu tiên [${formatDateTimeForDisplay(earliestDrugThyl)}].`,
-                    cost: costIfCritical(ruleKeyThylConflict, service.thanh_tien_bh),
-                    itemName: service.ten_dich_vu
-                });
-            }
-        });
+        if (drugThylTimes.length > 0) {
+            // 2. Tìm ra thời gian THYL của thuốc sớm nhất để làm mốc so sánh
+            const earliestDrugThyl = drugThylTimes.reduce((min, current) => current < min ? current : min, drugThylTimes[0]);
+
+            // 3. Lặp qua các dịch vụ trong cùng hồ sơ
+            record.services.forEach(service => {
+                const isKham = (service.ten_dich_vu || '').toLowerCase().includes('khám');
+
+                // 4. ĐIỀU KIỆN ĐÃ SỬA: Kiểm tra nếu THYL của dịch vụ BẰNG HOẶC SAU THYL của thuốc sớm nhất
+                if (!isKham && service.ngay_th_yl && service.ngay_th_yl >= earliestDrugThyl) {
+
+                    record.errors.push({
+                        type: ruleKeyThylConflict,
+                        severity: validationSettings[ruleKeyThylConflict].severity,
+                        // 5. Cập nhật thông báo lỗi để phản ánh đúng logic "bằng hoặc sau"
+                        message: `DVKT "${service.ten_dich_vu}" có THYL [${formatDateTimeForDisplay(service.ngay_th_yl)}] bằng hoặc sau THYL của thuốc đầu tiên [${formatDateTimeForDisplay(earliestDrugThyl)}].`,
+                        cost: costIfCritical(ruleKeyThylConflict, service.thanh_tien_bh),
+                        itemName: service.ten_dich_vu
+                    });
+                }
+            });
+        }
     }
-}
-// =================================================================
-// KẾT THÚC
-// =================================================================
+    // =================================================================
+    // KẾT THÚC
+    // =================================================================
 
     const isSimple = record.t_thuoc > 0 &&
         record.t_xn === 0 &&
@@ -1337,7 +1458,7 @@ if (validationSettings[ruleKeyThylConflict]?.enabled && record.drugs.length > 0 
         record.t_vanchuyen === 0 &&
         tongTienDVKTKhacKham === 0;
     record.isSimpleCase = isSimple;
-    
+
     return { record, drugs: drugsForGlobalList, xml4Data };
 }
 
@@ -1380,7 +1501,7 @@ function applyFilters() {
             if (filters.severity === 'warning' && (!r.errors.some(e => e.severity === 'warning') || r.errors.some(e => e.severity === 'critical'))) return false;
         }
         if (filters.searchText && !`${r.hoTen} ${r.maLk} ${r.maBn}`.toLowerCase().includes(filters.searchText)) return false;
-        
+
         if (filters.staffName) {
             const staffCodes = [...r.bac_si_chi_dinh, ...r.nguoi_thuc_hien];
             const hasMatchingStaff = staffCodes.some(code => {
@@ -1394,18 +1515,18 @@ function applyFilters() {
         if (filters.dateFrom && recordDate < filters.dateFrom) return false;
         if (filters.dateTo && recordDate > filters.dateTo) return false;
         if (filters.gender && r.gioiTinh !== filters.gender) return false;
-        
+
         if (filters.bncct === 'yes' && (!r.t_bncct || r.t_bncct <= 0)) return false;
         if (filters.bncct === 'no' && r.t_bncct && r.t_bncct > 0) return false;
 
         if (filters.dvkt === 'yes' && !r.has_kham_and_dvkt) return false;
         if (filters.dvkt === 'no' && r.has_kham_and_dvkt) return false;
-        
+
         if (filters.missingXml4 === 'yes' && !(r.has_kham_and_dvkt && !r.has_xml4)) return false;
 
         return true;
     });
-    
+
     globalData.currentPage = 1;
     updateResultsTable();
 }
@@ -1414,12 +1535,12 @@ function updateResultsTable() {
     const tbody = document.getElementById('resultsTableBody');
     const startIndex = (globalData.currentPage - 1) * globalData.pageSize;
     const pageRecords = globalData.filteredRecords.slice(startIndex, startIndex + globalData.pageSize);
-    
+
     tbody.innerHTML = '';
     pageRecords.forEach((record, index) => {
         const row = tbody.insertRow();
         row.onclick = () => handleRowClick(record);
-        if(record.has_xml4) {
+        if (record.has_xml4) {
             row.classList.add('has-xml4');
         }
 
@@ -1431,7 +1552,7 @@ function updateResultsTable() {
         }
 
         const errorDetails = record.errors.map(e => `<div class="error-detail"><span class="status-badge ${e.severity === 'critical' ? 'status-error' : 'status-warning'}">${ERROR_TYPES[e.type] || e.type}</span> <small>${e.message}</small></div>`).join('');
-        
+
         const formatStaffInfo = (staffSet) => {
             if (!staffSet || staffSet.size === 0) return '';
             return Array.from(staffSet).map(code => {
@@ -1455,12 +1576,12 @@ function updateResultsTable() {
                 ${formatCurrency(record.t_bhtt)}
                 ${record.ngayTtoan ? `<br><small style="color: #555;">TT: ${formatDateTimeForDisplay(record.ngayTtoan)}</small>` : ''}
             </td>
-            <td>${bsInfo ? `<strong>BS CĐ:</strong> ${bsInfo}` : ''}${nthInfo ? `<br><strong>Người TH:</strong> ${nthInfo}`: ''}</td>
+            <td>${bsInfo ? `<strong>BS CĐ:</strong> ${bsInfo}` : ''}${nthInfo ? `<br><strong>Người TH:</strong> ${nthInfo}` : ''}</td>
             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
             <td>${errorDetails || '<span class="status-badge status-success">Không có lỗi</span>'}</td>
         `;
     });
-    
+
     updatePagination();
     updateResultsInfo();
 }
@@ -1509,14 +1630,14 @@ function clearFilters() {
 }
 
 function exportToExcel(errorsOnly = false) {
-    const recordsToExport = errorsOnly 
+    const recordsToExport = errorsOnly
         ? globalData.filteredRecords.filter(r => r.errors.length > 0)
         : globalData.filteredRecords;
 
     if (recordsToExport.length === 0) return alert('Không có dữ liệu để xuất!');
-    
+
     const wb = XLSX.utils.book_new();
-    
+
     const stats = calculateGlobalStats(recordsToExport);
     const summaryData = [
         ['BÁO CÁO KIỂM TRA FILE XML BHYT'],
@@ -1535,20 +1656,20 @@ function exportToExcel(errorsOnly = false) {
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Tong_Quan');
 
     const data = recordsToExport.map((r, i) => ({
-    'STT': i + 1, 
-    'Họ Tên': r.hoTen, 
-    'Mã LK': r.maLk, 
-    'Mã BN': r.maBn,
-    'Mã Thẻ BHYT': r.maThe || '',
-    'Số CCCD': r.soCccd || '',
-    'Ngày Vào': formatDateTimeForDisplay(r.ngayVao), 
-    'Ngày Ra': formatDateTimeForDisplay(r.ngayRa),
-    'BHYT TT': r.t_bhtt, 
-    'BN CCT': r.t_bncct, 
-    'Tổng Chi': r.t_tongchi,
-    'Trạng Thái': r.errors.length > 0 ? (r.errors.some(e => e.severity === 'critical') ? 'Lỗi nghiêm trọng' : 'Cảnh báo') : 'Hợp lệ',
-    'Chi Tiết Lỗi': r.errors.map(e => `${ERROR_TYPES[e.type] || e.type}: ${e.message}`).join('\n')
-}));
+        'STT': i + 1,
+        'Họ Tên': r.hoTen,
+        'Mã LK': r.maLk,
+        'Mã BN': r.maBn,
+        'Mã Thẻ BHYT': r.maThe || '',
+        'Số CCCD': r.soCccd || '',
+        'Ngày Vào': formatDateTimeForDisplay(r.ngayVao),
+        'Ngày Ra': formatDateTimeForDisplay(r.ngayRa),
+        'BHYT TT': r.t_bhtt,
+        'BN CCT': r.t_bncct,
+        'Tổng Chi': r.t_tongchi,
+        'Trạng Thái': r.errors.length > 0 ? (r.errors.some(e => e.severity === 'critical') ? 'Lỗi nghiêm trọng' : 'Cảnh báo') : 'Hợp lệ',
+        'Chi Tiết Lỗi': r.errors.map(e => `${ERROR_TYPES[e.type] || e.type}: ${e.message}`).join('\n')
+    }));
     const wsData = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, wsData, 'Chi_Tiet');
 
@@ -1595,7 +1716,7 @@ function displayXml4Details(maLk) {
     const modal = document.getElementById('xml4Modal');
     const title = document.getElementById('xml4ModalTitle');
     const container = document.getElementById('xml4DetailsTableContainer');
-    
+
     const record = globalData.allRecords.find(r => r.maLk === maLk);
     title.textContent = `Chi tiết CLS - BN: ${record.hoTen} (${record.maLk})`;
 
@@ -1652,10 +1773,343 @@ function closeSummaryPopup() {
     document.getElementById('summaryModal').style.display = 'none';
 }
 
+// ============================= CHUKY DONVI POPUP =============================
+
+/**
+ * Giải mã Base64 an toàn, hỗ trợ UTF-8
+ */
+function safeBase64Decode(b64) {
+    try {
+        // Chuẩn hóa: bỏ khoảng trắng/xuống dòng
+        const clean = b64.replace(/\s/g, '');
+        // Dùng TextDecoder để hỗ trợ UTF-8
+        const binary = atob(clean);
+        const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+        return new TextDecoder('utf-8').decode(bytes);
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Lấy text an toàn từ XML element theo tên tag (hỗ trợ nhiều tên)
+ */
+function getChukyText(doc, ...tags) {
+    for (const tag of tags) {
+        const el = doc.querySelector(tag);
+        if (el && el.textContent.trim()) return el.textContent.trim();
+    }
+    return null;
+}
+
+/**
+ * Định dạng ngày giờ từ chuỗi ISO/XML sang dạng dễ đọc
+ */
+function formatChukyDate(str) {
+    if (!str) return null;
+    // Thử parse ISO 8601
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+        return d.toLocaleString('vi-VN', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+    }
+    return str;
+}
+
+/**
+ * Tạo HTML một dòng thông tin trong bảng chi tiết
+ */
+function chukyRow(icon, label, value, highlight) {
+    if (!value) return '';
+    const style = highlight
+        ? 'background:#f0fff4; border-left:4px solid #38a169; padding:10px 14px; border-radius:0 8px 8px 0; margin-bottom:6px;'
+        : 'border-bottom:1px solid #e8ecf0; padding:8px 12px; margin-bottom:2px;';
+    return `<div style="${style} display:flex; gap:10px; align-items:flex-start;">
+        <span style="min-width:22px; font-size:1.1em;">${icon}</span>
+        <div style="flex:1;">
+            <div style="font-size:0.8em; color:#718096; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">${label}</div>
+            <div style="font-size:0.95em; color:#2d3748; font-weight:500; word-break:break-all;">${value}</div>
+        </div>
+    </div>`;
+}
+
+/**
+ * Lấy text của tag đầu tiên tìm thấy (namespace-agnostic, dùng getElementsByTagName)
+ */
+function getTagText(doc, ...tagNames) {
+    for (const tag of tagNames) {
+        const els = doc.getElementsByTagName(tag);
+        if (els.length > 0 && els[0].textContent.trim()) return els[0].textContent.trim();
+        // Thử tên viết thường
+        const els2 = doc.getElementsByTagName(tag.toLowerCase());
+        if (els2.length > 0 && els2[0].textContent.trim()) return els2[0].textContent.trim();
+    }
+    return null;
+}
+
+/**
+ * Parse chuỗi DN kiểu "CN=Tên,UID=MST:123,ST=TP HCM,C=VN,L=..."
+ * Trả về object { CN, UID, O, OU, ST, C, L, E }
+ */
+function parseDN(dnString) {
+    if (!dnString) return {};
+    const result = {};
+    // Tách theo dấu phẩy nhưng bỏ qua dấu phẩy trong quoted strings
+    const parts = dnString.match(/([A-Za-z]+)=([^,]+(?:,[^A-Za-z=,][^,]*)*)/g) || [];
+    for (const part of parts) {
+        const eqIdx = part.indexOf('=');
+        if (eqIdx < 0) continue;
+        const key = part.substring(0, eqIdx).trim().toUpperCase();
+        const val = part.substring(eqIdx + 1).trim();
+        result[key] = val;
+    }
+    return result;
+}
+
+/**
+ * Rút gọn URL algorithm thành tên ngắn gọn
+ */
+function shortAlgorithm(url) {
+    if (!url) return null;
+    const map = {
+        'rsa-sha256': 'RSA-SHA256',
+        'rsa-sha1': 'RSA-SHA1',
+        'sha256': 'SHA-256',
+        'sha1': 'SHA-1',
+        'enveloped-signature': 'Enveloped Signature',
+        'xml-c14n': 'C14N',
+    };
+    for (const [key, val] of Object.entries(map)) {
+        if (url.includes(key)) return val;
+    }
+    // Lấy phần cuối URL
+    return url.split(/[/#]/).filter(Boolean).pop() || url;
+}
+
+/**
+ * Parse nội dung XML chữ ký số (XMLDSig), trả về object các trường thông tin
+ */
+function parseChukyXml(xmlString) {
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlString, 'text/xml');
+        if (doc.getElementsByTagName('parsererror').length > 0) return null;
+
+        const info = {};
+
+        // === 1. Phân tích X509SubjectName (chứa DN đầy đủ) ===
+        const subjectNameEl = doc.getElementsByTagName('X509SubjectName')[0];
+        if (subjectNameEl) {
+            const dn = parseDN(subjectNameEl.textContent.trim());
+            info.tenNguoiKy = dn['CN'] || null;
+            info.toChuc = dn['O'] || null;
+            info.donVi = dn['OU'] || null;
+            info.tinh = dn['ST'] || null;
+            info.quocGia = dn['C'] || null;
+            info.diaChi = dn['L'] || null;
+            // UID thường chứa MST:0305468850
+            const uid = dn['UID'] || '';
+            info.maSoThue = uid.startsWith('MST:') ? uid.substring(4) : (uid || null);
+        }
+
+        // === 2. Email từ SubjectAltName hoặc cert ===
+        info.email = getTagText(doc, 'X509SubjectAltName') || null;
+
+        // === 3. Thời gian ký ===
+        info.thoiGianKy = getTagText(doc, 'SigningTime', 'SignTime');
+
+        // === 4. Thuật toán chữ ký ===
+        const sigMethodEl = doc.getElementsByTagName('SignatureMethod')[0];
+        if (sigMethodEl) {
+            info.thuatToan = shortAlgorithm(sigMethodEl.getAttribute('Algorithm'));
+        }
+
+        // === 5. Thuật toán băm (Digest) ===
+        const digestEl = doc.getElementsByTagName('DigestMethod')[0];
+        if (digestEl) {
+            info.thuatToanBam = shortAlgorithm(digestEl.getAttribute('Algorithm'));
+        }
+
+        // === 6. Nhà cung cấp CA (từ IssuerName hoặc cert issuer) ===
+        const issuerEl = doc.getElementsByTagName('X509IssuerName')[0];
+        if (issuerEl) {
+            const issuerDN = parseDN(issuerEl.textContent.trim());
+            info.ca = issuerDN['CN'] || issuerEl.textContent.trim();
+        }
+        // Nếu không có IssuerName, thử đọc từ text cert (thường không decode được tốt)
+        if (!info.ca) {
+            // Fallback: tìm chuỗi smartCA trong cert text
+            const certEl = doc.getElementsByTagName('X509Certificate')[0];
+            if (certEl) {
+                const certText = certEl.textContent || '';
+                if (certText.length > 10) {
+                    info.certLength = certText.trim().replace(/\s/g, '').length;
+                }
+            }
+        }
+
+        // === 7. Serial số chứng thư ===
+        const serialEl = doc.getElementsByTagName('X509SerialNumber')[0];
+        if (serialEl) info.serial = serialEl.textContent.trim();
+
+        // === 8. Signature ID ===
+        const sigEl = doc.getElementsByTagName('Signature')[0];
+        if (sigEl) info.sigId = sigEl.getAttribute('Id');
+
+        // Kiểm tra có field nào tìm được không
+        const hasAny = Object.values(info).some(v => v !== null && v !== undefined);
+        if (!hasAny) info._raw = xmlString;
+
+        return info;
+    } catch (e) {
+        return null;
+    }
+} // end parseChukyXml
+
+function showChukyPopup(chukyInfo) {
+    const modal = document.getElementById('chukyModal');
+    const header = document.getElementById('chukyModalHeader');
+    const titleEl = document.getElementById('chukyModalTitle');
+    const bodyEl = document.getElementById('chukyModalBody');
+
+    if (!chukyInfo.exists) {
+        // ── Không có chữ ký số ──
+        header.style.background = 'linear-gradient(135deg, #742a2a, #c53030)';
+        header.style.color = '#fff';
+        titleEl.textContent = '⚠️ Không Có Chữ Ký Số Đơn Vị';
+        bodyEl.innerHTML = `
+            <div style="background:#fff5f5; border:2px dashed #fc8181; border-radius:10px; padding:22px 20px; text-align:center;">
+                <p style="font-size:2.4em; margin-bottom:10px;">🔓</p>
+                <p style="color:#c53030; font-weight:700; font-size:1.1em; margin-bottom:10px;">
+                    File XML CHƯA có chữ ký số đơn vị!
+                </p>
+                <p style="color:#742a2a; font-size:0.93em; line-height:1.6;">
+                    Thẻ <code>&lt;CHUKYDONVI/&gt;</code> không tồn tại hoặc rỗng trong file XML này.<br>
+                    Vui lòng kiểm tra lại quy trình ký số trước khi nộp hồ sơ BHYT.
+                </p>
+            </div>`;
+        modal.style.display = 'block';
+        return;
+    }
+
+    // ── Có chữ ký số → cố giải mã ──
+    header.style.background = 'linear-gradient(135deg, #1a4731, #2d6a4f)';
+    header.style.color = '#fff';
+    titleEl.textContent = '✅ Chữ Ký Số Đơn Vị';
+
+    const raw = chukyInfo.value;
+
+    // Ưu tiên: nếu raw là XML (XMLDSig), parse ngay
+    let info = null;
+    let decodedXml = null;
+
+    if (raw.trim().startsWith('<')) {
+        // Trường hợp CHUKYDONVI chứa XML thuần (XMLDSig)
+        info = parseChukyXml(raw);
+        decodedXml = raw;
+    } else {
+        // Thử decode Base64 (CHUKYDONVI chứa dữ liệu mã hóa)
+        const cleanRaw = raw.replace(/\s/g, '');
+        const decoded = safeBase64Decode(cleanRaw);
+        if (decoded && decoded.trim().startsWith('<')) {
+            info = parseChukyXml(decoded);
+            decodedXml = decoded;
+        }
+    }
+
+    let bodyHtml = `<p style="color:#276749; font-weight:600; margin-bottom:14px; font-size:0.95em;">
+        🔐 File XML này <strong>ĐÃ được ký số</strong> bởi đơn vị.
+    </p>`;
+
+    if (info && !info._raw) {
+        // ── Đã giải mã và parse được XML → hiển thị bảng thông tin ──
+        bodyHtml += `<div style="background:#f7fafc; border:1px solid #cbd5e0; border-radius:10px; overflow:hidden; margin-bottom:10px;">`;
+
+        if (info.tenNguoiKy) bodyHtml += chukyRow('👤', 'Người/Đơn vị ký', info.tenNguoiKy, true);
+        if (info.maSoThue) bodyHtml += chukyRow('🔢', 'Mã số thuế', info.maSoThue, false);
+        if (info.toChuc) bodyHtml += chukyRow('🏢', 'Tổ chức', info.toChuc, false);
+        if (info.donVi) bodyHtml += chukyRow('🏥', 'Đơn vị / Phòng ban', info.donVi, false);
+        if (info.diaChi) bodyHtml += chukyRow('🏘️', 'Địa chỉ', info.diaChi, false);
+        if (info.tinh) bodyHtml += chukyRow('📍', 'Tỉnh/Thành phố', info.tinh, false);
+        if (info.quocGia) bodyHtml += chukyRow('🌏', 'Quốc gia', info.quocGia, false);
+        if (info.email) bodyHtml += chukyRow('📧', 'Email', info.email, false);
+
+        const tgKy = formatChukyDate(info.thoiGianKy);
+        if (tgKy) bodyHtml += chukyRow('🕐', 'Thời gian ký', tgKy, true);
+
+        const hlTu = formatChukyDate(info.hieuLucTu);
+        const hlDen = formatChukyDate(info.hieuLucDen);
+        if (hlTu || hlDen) bodyHtml += chukyRow('📅', 'Hiệu lực chứng thư', `${hlTu || '?'} → ${hlDen || '?'}`, false);
+
+        if (info.serial) bodyHtml += chukyRow('🔑', 'Số serial chứng thư', info.serial, false);
+        if (info.ca) bodyHtml += chukyRow('🏛️', 'Nhà cung cấp CA', info.ca, false);
+        if (info.thuatToan) bodyHtml += chukyRow('⚙️', 'Thuật toán ký', info.thuatToan, false);
+        if (info.thuatToanBam) bodyHtml += chukyRow('🔏', 'Thuật toán băm', info.thuatToanBam, false);
+        if (info.certLength) bodyHtml += chukyRow('📜', 'Chứng thư số', `Base64, ${info.certLength} ký tự`, false);
+
+        const trangThaiVal = info.trangThai || '';
+        if (trangThaiVal) {
+            const isOk = /valid|ok|success|hợp lệ/i.test(trangThaiVal);
+            bodyHtml += chukyRow(isOk ? '✅' : '⚠️', 'Trạng thái xác thực', trangThaiVal, false);
+        }
+        if (info.thongBao) bodyHtml += chukyRow('💬', 'Thông báo', info.thongBao, false);
+
+        bodyHtml += `</div>`;
+
+        // Nút xem XML thô (collapsible)
+        if (decodedXml) {
+            const xmlEscaped = decodedXml.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            bodyHtml += `
+            <details style="margin-top:8px;">
+                <summary style="cursor:pointer; font-size:0.85em; color:#4a5568; padding:6px 10px;
+                    background:#edf2f7; border-radius:6px; user-select:none;">
+                    🗂️ Xem XML đã giải mã
+                </summary>
+                <pre style="background:#1a202c; color:#68d391; border-radius:8px; padding:12px;
+                    font-size:0.78em; overflow:auto; max-height:180px; margin-top:6px;
+                    white-space:pre-wrap; word-break:break-all;">${xmlEscaped}</pre>
+            </details>`;
+        }
+
+    } else if (decoded) {
+        // ── Decode được nhưng không phải XML → hiện text thô đã decode ──
+        const textEscaped = decoded.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        bodyHtml += `
+        <div style="background:#f0fff4; border:1px solid #68d391; border-radius:8px; padding:12px 14px; margin-bottom:10px;">
+            <p style="font-size:0.82em; color:#276749; margin-bottom:6px;">📄 <strong>Nội dung đã giải mã Base64:</strong></p>
+            <pre style="white-space:pre-wrap; word-break:break-all; font-size:0.83em; color:#2d3748; max-height:160px; overflow-y:auto;">${textEscaped}</pre>
+        </div>
+        <div style="font-size:0.82em; color:#718096; margin-top:4px;">
+            📏 Độ dài dữ liệu gốc: <strong>${cleanRaw.length}</strong> ký tự Base64
+        </div>`;
+
+    } else {
+        // ── Không decode được → hiện raw rút gọn ──
+        bodyHtml += `
+        <div style="background:#fffbea; border:1px solid #f6e05e; border-radius:8px; padding:12px 14px;">
+            <p style="font-size:0.82em; color:#744210; margin-bottom:6px;">⚠️ Không thể giải mã tự động (có thể là chữ ký nhị phân CMS/PKCS#7)</p>
+            <p style="font-size:0.82em; color:#744210;">📏 Độ dài: <strong>${cleanRaw.length}</strong> ký tự</p>
+            <div style="font-size:0.78em; background:#fefce8; border-radius:6px; padding:8px; margin-top:8px;
+                word-break:break-all; max-height:100px; overflow-y:auto; font-family:monospace; color:#92400e;">
+                ${raw.substring(0, 300)}${raw.length > 300 ? '...' : ''}
+            </div>
+        </div>`;
+    }
+
+    bodyEl.innerHTML = bodyHtml;
+    modal.style.display = 'block';
+}
+
+function closeChukyPopup() {
+    document.getElementById('chukyModal').style.display = 'none';
+}
+
 // ============================= SETTINGS MODAL =============================
 function openSettingsModal() {
     const tbody = document.getElementById('settingsTableBody');
-    tbody.innerHTML = ''; 
+    tbody.innerHTML = '';
 
     Object.entries(validationSettings).forEach(([key, setting]) => {
         if (!setting.isConfigurable) return;
@@ -1696,7 +2150,7 @@ function saveSettings() {
         }
     });
     closeSettingsModal();
-    
+
     if (globalData.xmlDataContent) {
         alert('Đã lưu cài đặt. Đang áp dụng lại quy tắc kiểm tra...');
         showLoading('validatorLoading');
@@ -1706,13 +2160,15 @@ function saveSettings() {
     }
 }
 
-window.onclick = function(event) {
+window.onclick = function (event) {
     const xmlModal = document.getElementById('xml4Modal');
     const summaryModal = document.getElementById('summaryModal');
     const settingsModal = document.getElementById('settingsModal');
+    const chukyModal = document.getElementById('chukyModal');
     if (event.target == xmlModal) xmlModal.style.display = "none";
     if (event.target == summaryModal) summaryModal.style.display = "none";
     if (event.target == settingsModal) settingsModal.style.display = "none";
+    if (event.target == chukyModal) chukyModal.style.display = "none";
 }
 
 // ============================= COMPARATOR FUNCTIONALITY (UPGRADED) =============================
@@ -1723,7 +2179,7 @@ function initializeComparator() {
 }
 
 function findKey(obj, possibleKeys) {
-    if(!obj) return null;
+    if (!obj) return null;
     const upperKeys = possibleKeys.map(k => k.toUpperCase().replace(/ /g, ''));
     for (const key in obj) {
         if (upperKeys.includes(key.trim().toUpperCase().replace(/ /g, ''))) {
@@ -1752,9 +2208,9 @@ async function performComparison() {
 
         globalData.excelRecords.clear();
         const file = globalData.excelFile;
-        
+
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             const data = e.target.result;
             const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
@@ -1762,31 +2218,31 @@ async function performComparison() {
 
             excelJson.forEach(row => {
                 const maLkKey = findKey(row, ['MA_LK', 'MÃ LK', 'MÃ LIÊN KẾT']);
-                if(maLkKey && row[maLkKey]) {
+                if (maLkKey && row[maLkKey]) {
                     globalData.excelRecords.set(String(row[maLkKey]), row);
                 }
             });
-            
+
             const allKeys = new Set([...globalData.xmlRecords.keys(), ...globalData.excelRecords.keys()]);
             globalData.comparisonResults = [];
             for (const key of allKeys) {
                 const xmlRec = globalData.xmlRecords.get(key);
                 const excelRec = globalData.excelRecords.get(key);
-                
+
                 let result = { key, xmlRec, excelRec, status: 'mismatch', details: [] };
-                
+
                 if (xmlRec && excelRec) {
                     const t_bhtt_xml = xmlRec.t_bhtt || 0;
                     const t_bhtt_excel_key = findKey(excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']);
                     const t_bhtt_excel = t_bhtt_excel_key ? (parseFloat(excelRec[t_bhtt_excel_key]) || 0) : 0;
-                    if(Math.abs(t_bhtt_xml - t_bhtt_excel) > 1) { 
+                    if (Math.abs(t_bhtt_xml - t_bhtt_excel) > 1) {
                         result.details.push(`BHYT TT: XML=${formatCurrency(t_bhtt_xml)} vs Excel=${formatCurrency(t_bhtt_excel)}`);
                     }
-                    
+
                     const t_bncct_xml = xmlRec.t_bncct || 0;
                     const t_bncct_excel_key = findKey(excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']);
                     const t_bncct_excel = t_bncct_excel_key ? (parseFloat(excelRec[t_bncct_excel_key]) || 0) : 0;
-                    if(Math.abs(t_bncct_xml - t_bncct_excel) > 1) {
+                    if (Math.abs(t_bncct_xml - t_bncct_excel) > 1) {
                         result.details.push(`BN CCT: XML=${formatCurrency(t_bncct_xml)} vs Excel=${formatCurrency(t_bncct_excel)}`);
                     }
 
@@ -1812,7 +2268,7 @@ async function performComparison() {
                     if (xmlChanDoan && excelChanDoan && !xmlChanDoan.startsWith(excelChanDoan)) {
                         result.details.push(`Chẩn đoán: XML=${xmlChanDoan} vs Excel=${excelChanDoan}`);
                     }
-                    
+
                     result.status = result.details.length === 0 ? 'match' : 'mismatch';
 
                 } else if (xmlRec) {
@@ -1822,7 +2278,7 @@ async function performComparison() {
                 }
                 globalData.comparisonResults.push(result);
             }
-         // === 🚀 CHỖ THÊM MỚI 2: TÍNH TOÁN VÀ HIỂN THỊ TÓM TẮT ===
+            // === 🚀 CHỖ THÊM MỚI 2: TÍNH TOÁN VÀ HIỂN THỊ TÓM TẮT ===
             // =======================================================
             const totalXml = globalData.xmlRecords.size;
             const totalExcel = globalData.excelRecords.size;
@@ -1864,7 +2320,7 @@ async function performComparison() {
 
 
             // === GỌI HÀM GỬI BÁO CÁO (đã có từ lần trước) ===
- processAndSendComparisonReport(globalData.comparisonResults);
+            processAndSendComparisonReport(globalData.comparisonResults);
             hideLoading('comparatorLoading');
             document.getElementById('comparatorResults').style.display = 'block';
             applyComparatorFilters();
@@ -1900,7 +2356,7 @@ function applyComparatorFilters() {
 function displayComparatorResults() {
     const wrapper = document.getElementById('comparatorResultsTableWrapper');
     const info = document.getElementById('comparatorResultsInfo');
-    
+
     let tableHTML = `<table class="results-table"><thead><tr>
         <th>Mã LK</th>
         <th>Trạng thái</th>
@@ -1923,16 +2379,16 @@ function displayComparatorResults() {
 
             const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN', 'TÊN BỆNH NHÂN']) : null;
             const excelName = excelHoTenKey ? r.excelRec[excelHoTenKey] : 'N/A';
-            
+
             const excelBHTTKey = r.excelRec ? findKey(r.excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']) : null;
             const excel_t_bhtt = excelBHTTKey ? formatCurrency(r.excelRec[excelBHTTKey]) : 'N/A';
 
             const excelBNCCTKey = r.excelRec ? findKey(r.excelRec, ['BỆNH NHÂN CCT', 'BENHNHANCCT', 'T_BNCCT']) : null;
             const excel_t_bncct = excelBNCCTKey ? formatCurrency(r.excelRec[excelBNCCTKey]) : 'N/A';
-            
+
             const excelNgayVaoKey = r.excelRec ? findKey(r.excelRec, ['NGAY_VAO', 'NGÀY VÀO']) : null;
             const excel_ngay_vao = excelNgayVaoKey ? flexibleFormatDate(r.excelRec[excelNgayVaoKey]) : 'N/A';
-            
+
             const excelNgayRaKey = r.excelRec ? findKey(r.excelRec, ['NGAY_RA', 'NGÀY RA']) : null;
             const excel_ngay_ra = excelNgayRaKey ? flexibleFormatDate(r.excelRec[excelNgayRaKey]) : 'N/A';
 
@@ -1948,9 +2404,9 @@ function displayComparatorResults() {
                 'xml-only': { text: '📄 Chỉ có trong XML', class: 'status-xml-only' },
                 'excel-only': { text: '📊 Chỉ có trong file đối chiếu', class: 'status-excel-only' }
             };
-            
+
             const isMismatch = r.status === 'mismatch';
-            
+
             let detailsHtml = '';
             if (r.details && r.details.length > 0) {
                 detailsHtml = `<div class="comparator-details"><ul><li>${r.details.join('</li><li>')}</li></ul></div>`;
@@ -1962,21 +2418,21 @@ function displayComparatorResults() {
                     <td><span class="status-badge ${statusMap[r.status].class}">${statusMap[r.status].text}</span></td>
                     <td>
                         <strong>${xmlName}</strong><br>
-                        <span ${isMismatch && r.details.some(d => d.startsWith('BHYT')) ? 'style="color:red;"':''}>BHYT TT: ${xml_t_bhtt}</span><br>
-                        <span ${isMismatch && r.details.some(d => d.startsWith('BN CCT')) ? 'style="color:red;"':''}>BN CCT: ${xml_t_bncct}</span><br>
-                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày vào')) ? 'style="color:red;"':''}>Vào: ${xml_ngay_vao}</small> | 
-                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày ra')) ? 'style="color:red;"':''}>Ra: ${xml_ngay_ra}</small><br>
+                        <span ${isMismatch && r.details.some(d => d.startsWith('BHYT')) ? 'style="color:red;"' : ''}>BHYT TT: ${xml_t_bhtt}</span><br>
+                        <span ${isMismatch && r.details.some(d => d.startsWith('BN CCT')) ? 'style="color:red;"' : ''}>BN CCT: ${xml_t_bncct}</span><br>
+                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày vào')) ? 'style="color:red;"' : ''}>Vào: ${xml_ngay_vao}</small> | 
+                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày ra')) ? 'style="color:red;"' : ''}>Ra: ${xml_ngay_ra}</small><br>
                         <small>TT: ${xml_ngay_ttoan} | </small>
-                        <small ${isMismatch && r.details.some(d => d.startsWith('Chẩn đoán')) ? 'style="color:red;"':''}>CĐ: ${xml_chan_doan}</small>
+                        <small ${isMismatch && r.details.some(d => d.startsWith('Chẩn đoán')) ? 'style="color:red;"' : ''}>CĐ: ${xml_chan_doan}</small>
                     </td>
                     <td>
                         <strong>${excelName}</strong><br>
-                        <span ${isMismatch && r.details.some(d => d.startsWith('BHYT')) ? 'style="color:red;"':''}>BHYT TT: ${excel_t_bhtt}</span><br>
-                        <span ${isMismatch && r.details.some(d => d.startsWith('BN CCT')) ? 'style="color:red;"':''}>BN CCT: ${excel_t_bncct}</span><br>
-                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày vào')) ? 'style="color:red;"':''}>Vào: ${excel_ngay_vao}</small> | 
-                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày ra')) ? 'style="color:red;"':''}>Ra: ${excel_ngay_ra}</small><br>
+                        <span ${isMismatch && r.details.some(d => d.startsWith('BHYT')) ? 'style="color:red;"' : ''}>BHYT TT: ${excel_t_bhtt}</span><br>
+                        <span ${isMismatch && r.details.some(d => d.startsWith('BN CCT')) ? 'style="color:red;"' : ''}>BN CCT: ${excel_t_bncct}</span><br>
+                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày vào')) ? 'style="color:red;"' : ''}>Vào: ${excel_ngay_vao}</small> | 
+                        <small ${isMismatch && r.details.some(d => d.startsWith('Ngày ra')) ? 'style="color:red;"' : ''}>Ra: ${excel_ngay_ra}</small><br>
                         <small>TT: ${excel_ngay_ttoan} | </small>
-                        <small ${isMismatch && r.details.some(d => d.startsWith('Chẩn đoán')) ? 'style="color:red;"':''}>CĐ: ${excel_chan_doan}</small>
+                        <small ${isMismatch && r.details.some(d => d.startsWith('Chẩn đoán')) ? 'style="color:red;"' : ''}>CĐ: ${excel_chan_doan}</small>
                     </td>
                     <td>${detailsHtml}</td>
                 </tr>
@@ -1998,7 +2454,7 @@ function clearComparatorFilters() {
 
 function exportComparatorResults() {
     if (globalData.filteredComparisonResults.length === 0) return alert('Không có dữ liệu để xuất!');
-    
+
     const data = globalData.filteredComparisonResults.map(r => {
         const excelHoTenKey = r.excelRec ? findKey(r.excelRec, ['HO_TEN', 'HỌ TÊN']) : null;
         const excelBHTTKey = r.excelRec ? findKey(r.excelRec, ['BẢO HIỂM TT', 'BAOHIEMTT', 'T_BHTT']) : null;
@@ -2065,7 +2521,7 @@ function updateDenialProjectionTab() {
         }
 
         recordsWithErrors.add(record.maLk);
-        const countedItemsInRecord = new Set(); 
+        const countedItemsInRecord = new Set();
 
         itemErrors.forEach(error => {
             const itemKey = error.itemName;
@@ -2082,7 +2538,7 @@ function updateDenialProjectionTab() {
                 countedItemsInRecord.add(itemKey);
             }
         });
-        
+
         totalDeniedItemCount += countedItemsInRecord.size;
     });
 
@@ -2148,12 +2604,12 @@ function generateReport() {
         if (dateTo && recordDate > dateTo) return false;
         return true;
     });
-    
+
     const stats = calculateGlobalStats(filteredForReport);
     let chart1Type, chart1Data, chart1Title;
     let chart2Type, chart2Data, chart2Title;
 
-    switch(reportType) {
+    switch (reportType) {
         case 'error-summary':
             const sortedErrors = Object.entries(stats.errorTypes).sort(([, a], [, b]) => b - a);
             chart1Type = 'bar';
@@ -2174,7 +2630,7 @@ function generateReport() {
             const sortedTimeline = Object.entries(stats.timeline).sort(([a], [b]) => a.localeCompare(b));
             chart1Type = 'line';
             chart1Data = {
-                labels: sortedTimeline.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
+                labels: sortedTimeline.map(([day]) => `${day.substring(6, 8)}/${day.substring(4, 6)}`),
                 datasets: [{ label: 'Số Hồ Sơ', data: sortedTimeline.map(([, count]) => count), borderColor: '#667eea', tension: 0.1 }]
             };
             chart1Title = 'Phân Tích Số Lượng Hồ Sơ Theo Ngày';
@@ -2189,7 +2645,7 @@ function generateReport() {
             const filledErrorTimelineData = sortedTimeline.map(([day]) => errorTimeline[day] || 0);
             chart2Type = 'line';
             chart2Data = {
-                labels: sortedTimeline.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
+                labels: sortedTimeline.map(([day]) => `${day.substring(6, 8)}/${day.substring(4, 6)}`),
                 datasets: [{ label: 'Số Hồ Sơ Lỗi', data: filledErrorTimelineData, borderColor: '#dc3545', tension: 0.1 }]
             };
             chart2Title = 'Phân Tích Số Lượng Lỗi Theo Ngày';
@@ -2210,7 +2666,7 @@ function generateReport() {
             const sortedCostByDay = Object.entries(costByDay).sort(([a], [b]) => a.localeCompare(b));
             chart2Type = 'bar';
             chart2Data = {
-                labels: sortedCostByDay.map(([day]) => `${day.substring(6,8)}/${day.substring(4,6)}`),
+                labels: sortedCostByDay.map(([day]) => `${day.substring(6, 8)}/${day.substring(4, 6)}`),
                 datasets: [{ label: 'Tổng Chi Phí BHYT TT (VNĐ)', data: sortedCostByDay.map(([, cost]) => cost), backgroundColor: 'rgba(54, 162, 235, 0.8)' }]
             };
             chart2Title = 'Tổng Chi Phí BHYT TT Theo Ngày';
@@ -2220,7 +2676,7 @@ function generateReport() {
             chart1Type = 'bar';
             chart1Data = {
                 labels: sortedDepts.map(([name]) => name || 'Không xác định'),
-                datasets: [{ label: 'Số Hồ Sơ', data: sortedDepts.map(([, count]) => count), backgroundColor: 'rgba(75, 192, 192, 0.8)'}]
+                datasets: [{ label: 'Số Hồ Sơ', data: sortedDepts.map(([, count]) => count), backgroundColor: 'rgba(75, 192, 192, 0.8)' }]
             };
             chart1Title = 'Top 15 Khoa Theo Số Lượng Hồ Sơ';
 
@@ -2261,12 +2717,12 @@ function exportReport() {
         if (dateTo && recordDate > dateTo) return false;
         return true;
     });
-    
+
     const wb = XLSX.utils.book_new();
     const stats = calculateGlobalStats(filteredForReport);
     let reportData, sheetName, fileName;
 
-    switch(reportType) {
+    switch (reportType) {
         case 'error-summary':
             const sortedErrors = Object.entries(stats.errorTypes).sort(([, a], [, b]) => b - a);
             reportData = sortedErrors.map(([type, count]) => ({
@@ -2278,7 +2734,7 @@ function exportReport() {
             break;
         case 'time-analysis':
             const timelineData = Object.entries(stats.timeline).sort(([a], [b]) => a.localeCompare(b));
-            reportData = timelineData.map(([day, count]) => ({ 'Ngày': formatDateTimeForDisplay(day), 'Số Hồ Sơ': count}));
+            reportData = timelineData.map(([day, count]) => ({ 'Ngày': formatDateTimeForDisplay(day), 'Số Hồ Sơ': count }));
             sheetName = 'PhanTichThoiGian';
             fileName = 'BaoCao_PhanTichThoiGian.xlsx';
             break;
@@ -2300,7 +2756,7 @@ function exportReport() {
             fileName = 'BaoCao_PhanTichKhoa.xlsx';
             break;
     }
-    
+
     const ws = XLSX.utils.json_to_sheet(reportData);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
     XLSX.writeFile(wb, fileName);
@@ -2351,7 +2807,7 @@ function exportDoctorAnalysis() {
     const wb = XLSX.utils.book_new();
 
     // Sheet for Doctors
-    const sortedDoctors = Array.from(doctorStatsMap.entries()).sort(([,a], [,b]) => b.totalCost - a.totalCost);
+    const sortedDoctors = Array.from(doctorStatsMap.entries()).sort(([, a], [, b]) => b.totalCost - a.totalCost);
     const doctorData = sortedDoctors.map(([maBS, stats]) => ({
         'Mã Bác Sĩ': maBS,
         'Tên Bác Sĩ': staffNameMap.get(maBS) || '',
@@ -2366,7 +2822,7 @@ function exportDoctorAnalysis() {
     }
 
     // Sheet for Performers
-    const sortedPerformers = Array.from(performerStatsMap.entries()).sort(([,a], [,b]) => b.totalCost - a.totalCost);
+    const sortedPerformers = Array.from(performerStatsMap.entries()).sort(([, a], [, b]) => b.totalCost - a.totalCost);
     const performerData = sortedPerformers.map(([maNTH, stats]) => ({
         'Mã Người Thực Hiện': maNTH,
         'Tên Người Thực Hiện': staffNameMap.get(maNTH) || '',
@@ -2379,7 +2835,7 @@ function exportDoctorAnalysis() {
         const wsPerformers = XLSX.utils.json_to_sheet(performerData);
         XLSX.utils.book_append_sheet(wb, wsPerformers, "Nguoi_ThucHien");
     }
-    
+
     if (wb.SheetNames.length > 0) {
         XLSX.writeFile(wb, 'BaoCao_PhanTich_NhanVienYTe.xlsx');
     } else {
@@ -2391,23 +2847,23 @@ function exportDoctorAnalysis() {
 function initializeValidationSettings() {
     // Rules that users can configure (enable/disable, change severity)
     const configurableRules = [
-        'BS_TRUNG_THOI_GIAN', 
+        'BS_TRUNG_THOI_GIAN',
         'BS_KHAM_CHONG_LAN',
         'DVKT_YL_TRUNG_NGAY_VAO', 'DVKT_YL_TRUNG_NGAY_RA',
-        'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA', 
+        'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA',
         'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
         'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC',
         'NGAY_TAI_KHAM_NO_XML14',
         'KQ_DVKT_SAU_YL_THUOC', // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
-      'THUOC_DVKT_THYL_TRUNG_GIO', // <-- THÊM VÀO ĐÂY
-       'BS_KHAM_VUOT_DINH_MUC','THUOC_CHONG_CHI_DINH_ICD'
+        'THUOC_DVKT_THYL_TRUNG_GIO', // <-- THÊM VÀO ĐÂY
+        'BS_KHAM_VUOT_DINH_MUC', 'THUOC_CHONG_CHI_DINH_ICD'
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
     const fixedWarnings = [
-        'NGAY_TTOAN_SAU_RA_VIEN', 
+        'NGAY_TTOAN_SAU_RA_VIEN',
         'KHAM_DUOI_5_PHUT',
-        'NGAY_TTOAN_TRUOC_VAO_VIEN', 
+        'NGAY_TTOAN_TRUOC_VAO_VIEN',
         'NGAY_TTOAN_TRUOC_YL'
     ];
 
@@ -2426,7 +2882,7 @@ function initializeValidationSettings() {
             isConfigurable: true
         };
     });
-    
+
     fixedWarnings.forEach(key => {
         validationSettings[key] = {
             enabled: true,
@@ -2447,30 +2903,30 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeValidationSettings();
     initializeValidator();
     initializeComparator();
-    
+
     document.querySelectorAll('.filter-content').forEach(el => {
         const parent = el.parentElement;
         const toggleButton = parent.querySelector('.filter-toggle');
         if (toggleButton) {
             el.style.display = 'none';
-            if(parent.querySelector('.filter-actions')) parent.querySelector('.filter-actions').style.display = 'none';
+            if (parent.querySelector('.filter-actions')) parent.querySelector('.filter-actions').style.display = 'none';
             toggleButton.textContent = 'Mở rộng';
         }
     });
 
     Object.keys(globalData.charts).forEach(key => {
-        if(globalData.charts[key] && typeof globalData.charts[key].destroy === 'function') {
+        if (globalData.charts[key] && typeof globalData.charts[key].destroy === 'function') {
             globalData.charts[key].destroy();
         }
     });
-    updateChart('errorTypesChart', 'doughnut', {labels:[], datasets:[{data:[]}]}, 'Phân bố loại lỗi (chưa có dữ liệu)');
-    updateChart('timelineChart', 'line', {labels:[], datasets:[{data:[]}]}, 'Xu hướng theo thời gian (chưa có dữ liệu)');
-    updateChart('departmentChart', 'bar', {labels:[], datasets:[{data:[]}]}, 'Phân bố theo khoa (chưa có dữ liệu)');
-    updateChart('amountChart', 'bar', {labels:[], datasets:[{data:[]}]}, 'Phân bố chi phí (chưa có dữ liệu)');
-    updateChart('reportChart1', 'bar', {labels:[], datasets:[{data:[]}]}, 'Báo cáo 1 (chưa có dữ liệu)');
-    updateChart('reportChart2', 'bar', {labels:[], datasets:[{data:[]}]}, 'Báo cáo 2 (chưa có dữ liệu)');
-    updateChart('topDrugsChart', 'bar', {labels:[], datasets:[{data:[]}]}, 'Top 10 Thuốc (chưa có dữ liệu)');
-    updateChart('topServicesChart', 'bar', {labels:[], datasets:[{data:[]}]}, 'Top 10 DVKT (chưa có dữ liệu)');
+    updateChart('errorTypesChart', 'doughnut', { labels: [], datasets: [{ data: [] }] }, 'Phân bố loại lỗi (chưa có dữ liệu)');
+    updateChart('timelineChart', 'line', { labels: [], datasets: [{ data: [] }] }, 'Xu hướng theo thời gian (chưa có dữ liệu)');
+    updateChart('departmentChart', 'bar', { labels: [], datasets: [{ data: [] }] }, 'Phân bố theo khoa (chưa có dữ liệu)');
+    updateChart('amountChart', 'bar', { labels: [], datasets: [{ data: [] }] }, 'Phân bố chi phí (chưa có dữ liệu)');
+    updateChart('reportChart1', 'bar', { labels: [], datasets: [{ data: [] }] }, 'Báo cáo 1 (chưa có dữ liệu)');
+    updateChart('reportChart2', 'bar', { labels: [], datasets: [{ data: [] }] }, 'Báo cáo 2 (chưa có dữ liệu)');
+    updateChart('topDrugsChart', 'bar', { labels: [], datasets: [{ data: [] }] }, 'Top 10 Thuốc (chưa có dữ liệu)');
+    updateChart('topServicesChart', 'bar', { labels: [], datasets: [{ data: [] }] }, 'Top 10 DVKT (chưa có dữ liệu)');
 });
 
 // ============================= Loading helpers =============================
@@ -2497,21 +2953,21 @@ const notifications = [
         title: 'Bổ sung CẢNH BÁO',
         content: 'Thanh toán chi phí có y lệnh trước ngày vào viện'
     },
-     {
+    {
         id: 15,
         date: '27-10-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
         title: 'Bổ sung CẢNH BÁO',
         content: 'XML4 - NGAY_KQ không được để trống (Thiếu ngày trả kết quả trong HIS)'
     },
-      {
+    {
         id: 14,
         date: '11-09-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
         title: 'Bổ sung CẢNH BÁO',
         content: 'Y lệnh thuốc sai, chống chỉ định'
     },
-     {
+    {
         id: 13,
         date: '09-09-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
@@ -2525,7 +2981,7 @@ const notifications = [
         title: 'Bổ sung CẢNH BÁO',
         content: 'XML3. NGÀY TH Y lệnh DVKT bằng hoặc sau NGÀY TH Y lệnh THUỐC'
     },
-    
+
     {
         id: 11,
         date: '19-08-2025',
@@ -2533,14 +2989,14 @@ const notifications = [
         title: 'Bổ sung ngày NV nghỉ',
         content: 'Bác sỹ khi nghỉ phát sinh khám sẽ báo lỗi nghiêm trọng'
     },
-     {
+    {
         id: 10,
         date: '19-08-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
         title: 'Bổ sung cảnh báo',
         content: 'XML3. Y lệnh DVKT sau thời gian y lệnh THUỐC. Trừ dịch vụ kỹ thuật gửi mẫu'
     },
-     {
+    {
         id: 9,
         date: '18-08-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
@@ -2554,14 +3010,14 @@ const notifications = [
         title: 'Xem chi tiết hồ sơ và 🤖 Phân tích AI',
         content: 'Bổ sung xem chi tiết hồ sơ và phân tích AI hồ sơ đó'
     },
-     {
+    {
         id: 7,
         date: '14-08-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
         title: 'Sửa lỗi XML 3 nếu có 2 người TH',
         content: 'Giờ đây xem chi tiết XML 4 sẽ hiện ra người thực hiện và đọc kết quả chỉ số'
     },
-    
+
     {
         id: 6,
         date: '13-08-2025',
@@ -2679,19 +3135,19 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
     const styleSheet = document.createElement("style");
     styleSheet.innerText = newStyles;
     document.head.appendChild(styleSheet);
-    
+
     // ===================================================================
     // BƯỚC 2: TIÊM HTML & GẮN CLASS/SỰ KIỆN
     // ===================================================================
     // LOẠI BỎ: HTML cho pop-up chi tiết không còn cần thiết
     // Các đoạn mã tiêm HTML khác không thay đổi
-    const specialCasesHTML = `<div class="special-cases-container"><div class="special-cases-header"><h3>⚠️ Các trường hợp đặc biệt</h3><span class="toggle-icon">▼</span></div><div class="special-cases-body"><div class="special-cases-controls"><label for="specialCaseFilter">Chọn loại hồ sơ bất thường:</label><select id="specialCaseFilter" class="filter-select"><option value="">--- Chọn ---</option><option value="no_kham">Không Khám (chỉ có Thuốc/DVKT)</option><option value="no_thuoc">Không Thuốc (chỉ có Khám/DVKT)</option><option value="only_dvkt">Chỉ có DVKT (không Khám, không Thuốc)</option><option value="dvkt_kham_no_thuoc">Chỉ có DVKT và Khám (Không Thuốc)</option></select></div><div id="specialCaseResults"><p class="case-placeholder">Vui lòng chọn một loại để xem danh sách.</p></div></div></div>`; const dashboardTab = document.getElementById('dashboardTab'); if(dashboardTab) { dashboardTab.insertAdjacentHTML('beforeend', specialCasesHTML); }
+    const specialCasesHTML = `<div class="special-cases-container"><div class="special-cases-header"><h3>⚠️ Các trường hợp đặc biệt</h3><span class="toggle-icon">▼</span></div><div class="special-cases-body"><div class="special-cases-controls"><label for="specialCaseFilter">Chọn loại hồ sơ bất thường:</label><select id="specialCaseFilter" class="filter-select"><option value="">--- Chọn ---</option><option value="no_kham">Không Khám (chỉ có Thuốc/DVKT)</option><option value="no_thuoc">Không Thuốc (chỉ có Khám/DVKT)</option><option value="only_dvkt">Chỉ có DVKT (không Khám, không Thuốc)</option><option value="dvkt_kham_no_thuoc">Chỉ có DVKT và Khám (Không Thuốc)</option></select></div><div id="specialCaseResults"><p class="case-placeholder">Vui lòng chọn một loại để xem danh sách.</p></div></div></div>`; const dashboardTab = document.getElementById('dashboardTab'); if (dashboardTab) { dashboardTab.insertAdjacentHTML('beforeend', specialCasesHTML); }
     const oldThemeToggle = document.getElementById('themeToggle'); const header = document.querySelector('.header'); if (oldThemeToggle && header) { oldThemeToggle.remove(); const headerActions = document.createElement('div'); headerActions.className = 'header-actions'; headerActions.innerHTML = `<button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark"><span class="icon icon-sun">☀️</span><span class="icon icon-moon">🌙</span></button>`; header.appendChild(headerActions); document.getElementById('themeToggle').addEventListener('click', () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); }); }
     const bellButtonHTML = `<button id="notificationBell" title="Thông báo & Cập nhật">🔔</button>`; document.body.insertAdjacentHTML('beforeend', bellButtonHTML);
     const notificationPanelHTML = `<div id="notificationPanel"><div class="notification-header"><h3>Thông báo & Cập nhật</h3></div><div class="notification-list"></div></div>`; document.body.insertAdjacentHTML('beforeend', notificationPanelHTML);
     const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
     const updateModalHTML = `<div id="updateNoticeModal" class="modal"><div class="modal-content update-modal-content"><div class="modal-header"><h2 id="updateModalTitle">🔔 Có gì mới trong phiên bản này?</h2><span class="close-button" onclick="closeUpdateModal()">&times;</span></div><div id="updateModalBody" class="update-modal-body"></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeUpdateModal()">Đã hiểu</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', updateModalHTML);
-  // === THÊM MỚI: Tạo DOM cho tóm tắt đối chiếu ===
+    // === THÊM MỚI: Tạo DOM cho tóm tắt đối chiếu ===
     const comparatorInfo = document.getElementById('comparatorResultsInfo');
     if (comparatorInfo) {
         const summaryDiv = document.createElement('div');
@@ -2704,7 +3160,7 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
 
     applyAutoTheme(); initializeNotifications(); checkForcedUpdateNotice();
     const bulkZaloButton = document.createElement('button'); bulkZaloButton.id = 'bulkZaloButton'; bulkZaloButton.className = 'icon-action-btn'; bulkZaloButton.title = 'Soạn tóm tắt hàng loạt cho lỗi đã lọc'; bulkZaloButton.innerHTML = '📋'; bulkZaloButton.style.display = 'none'; bulkZaloButton.onclick = () => { const errorType = document.getElementById('errorTypeFilter').value; if (errorType && globalData.filteredRecords.length > 0) { openZaloModal(globalData.filteredRecords, true, errorType); } };
-   // MỚI: Gắn sự kiện nhấn Enter cho các ô input
+    // MỚI: Gắn sự kiện nhấn Enter cho các ô input
     const filterInputs = ['#searchBox', '#maBsFilter', '#dateFromFilter', '#dateToFilter'];
     filterInputs.forEach(selector => {
         const input = document.querySelector(selector);
@@ -2717,7 +3173,7 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
             });
         }
     });
-  
+
     const toggleActionsButton = document.createElement('button'); toggleActionsButton.id = 'toggleActionsButton'; toggleActionsButton.className = 'btn btn-info'; toggleActionsButton.innerHTML = '⚙️ Hiện Hành động'; toggleActionsButton.onclick = () => { const container = document.getElementById('validatorResults'); if (container) { container.classList.toggle('actions-hidden'); const isHidden = container.classList.contains('actions-hidden'); toggleActionsButton.innerHTML = isHidden ? '⚙️ Hiện Hành động' : '⚙️ Ẩn Hành động'; } };
     const filterActions = document.querySelector('#validatorFilters .filter-actions'); if (filterActions) { filterActions.appendChild(bulkZaloButton); filterActions.appendChild(toggleActionsButton); }
     const resultsContainer = document.getElementById('validatorResults'); if (resultsContainer) { resultsContainer.classList.add('actions-hidden'); }
@@ -2730,13 +3186,13 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
     const cardClassMapping = { 'errorCount': ['stat-card--error', 'stat-card--colored'], 'totalAmount': ['stat-card--bhyttt', 'stat-card--colored'], 'totalBncct': ['stat-card--bncct', 'stat-card--colored'], 'totalNguonKhacDashboard': ['stat-card--primary', 'stat-card--colored'] };
     for (const id in cardClassMapping) { const h3 = document.getElementById(id); if (h3 && h3.parentElement.classList.contains('stat-card')) { h3.parentElement.classList.add(...cardClassMapping[id]); } }
     initializeSpecialCases();
-    
+
     // Các hàm bọc logic không thay đổi
-    if (typeof validateSingleHoso === 'function') { const original_validateSingleHoso = validateSingleHoso; validateSingleHoso = function(hoso) { const result = original_validateSingleHoso(hoso); if (result && result.record) { let tongHopNode = null; for (const fileNode of hoso.children) { if (fileNode.nodeName === 'FILEHOSO') { const loaiHosoNode = fileNode.querySelector('LOAIHOSO'); if (loaiHosoNode && loaiHosoNode.textContent.trim() === 'XML1') { const noiDungFileNode = fileNode.querySelector('NOIDUNGFILE'); if (noiDungFileNode) { tongHopNode = noiDungFileNode.querySelector('TONG_HOP'); } break; } } } if (tongHopNode) { const t_nguonkhac_text = tongHopNode.querySelector('T_NGUONKHAC')?.textContent.trim() || '0'; result.record.t_nguonkhac = parseFloat(t_nguonkhac_text); } else { result.record.t_nguonkhac = 0; } const r = result.record; r.t_dvkt_khac = (r.t_xn || 0) + (r.t_cdha || 0) + (r.t_pttt || 0) + (r.t_vtyt || 0) + (r.t_mau || 0); let hasThuocData = false; for (const fileNode of hoso.children) { if (fileNode.nodeName === 'FILEHOSO') { const loaiHosoNode = fileNode.querySelector('LOAIHOSO'); if (loaiHosoNode && loaiHosoNode.textContent.trim() === 'XML2') { const dsThuoc = fileNode.querySelector('DSACH_CHI_TIET_THUOC'); if (dsThuoc && dsThuoc.children.length > 0) { hasThuocData = true; } break; } } } result.record.has_thuoc_data = hasThuocData; } return result; }; }
-    if (typeof updateDashboard === 'function') { const original_updateDashboard = updateDashboard; updateDashboard = function() { original_updateDashboard(); if (globalData.allRecords.length > 0) { const rawTotalAmount = globalData.allRecords.reduce((sum, r) => sum + (r.t_bhtt || 0), 0); const rawTotalBncct = globalData.allRecords.reduce((sum, r) => sum + (r.t_bncct || 0), 0); const totalNguonKhac = globalData.allRecords.reduce((sum, record) => sum + (record.t_nguonkhac || 0), 0); updateStatCard('totalAmount', rawTotalAmount); updateStatCard('totalBncct', rawTotalBncct); updateStatCard('totalNguonKhacDashboard', totalNguonKhac); if(document.getElementById('dashboardTab').classList.contains('active')) { renderSpecialCases(); } } }; }
-    if (typeof applyFilters === 'function') { const original_applyFilters = applyFilters; applyFilters = function() { const nguonKhacValue = document.getElementById('nguonKhacFilter').value; original_applyFilters(); globalData.filteredRecords = globalData.filteredRecords.filter(r => { const hasNguonKhac = r.t_nguonkhac && r.t_nguonkhac > 0; if (nguonKhacValue === 'yes' && !hasNguonKhac) return false; if (nguonKhacValue === 'no' && hasNguonKhac) return false; return true; }); globalData.currentPage = 1; updateResultsTable(); updatePagination(); updateResultsInfo(); updateDynamicSummaries(); const errorType = document.getElementById('errorTypeFilter').value; const bulkBtn = document.getElementById('bulkZaloButton'); if(bulkBtn){ bulkBtn.style.display = (errorType && globalData.filteredRecords.length > 0) ? 'inline-flex' : 'none'; } }; }
-    if (typeof clearFilters === 'function') { const original_clearFilters = clearFilters; clearFilters = function() { original_clearFilters(); const nguonKhacFilter = document.getElementById('nguonKhacFilter'); if(nguonKhacFilter) nguonKhacFilter.value = ''; const bulkBtn = document.getElementById('bulkZaloButton'); if(bulkBtn) bulkBtn.style.display = 'none'; }; }
-    if (typeof updateResultsTable === 'function') { const original_updateResultsTable = updateResultsTable; updateResultsTable = function() { original_updateResultsTable(); const table = document.querySelector('#validatorResults .results-table'); if (!table) return; const headerRow = table.querySelector('thead tr'); const tbody = table.querySelector('tbody'); if (!headerRow || !tbody) return; const headers = Array.from(headerRow.querySelectorAll('th')).map(th => th.textContent.trim()); if (!headerRow.querySelector('.action-header')) { const th = document.createElement('th'); th.className = 'action-header'; th.textContent = 'Hành động'; th.style.width = '100px'; th.style.textAlign = 'center'; headerRow.appendChild(th); headers.push('Hành động'); } const startIndex = (globalData.currentPage - 1) * globalData.pageSize; const pageRecords = globalData.filteredRecords.slice(startIndex, startIndex + globalData.pageSize); tbody.querySelectorAll('tr').forEach((row, rowIndex) => { const record = pageRecords[rowIndex]; if (!record) return; row.classList.remove('row-critical-error', 'row-warning'); const hasCritical = record.errors.some(e => e.severity === 'critical'); if (hasCritical) { row.classList.add('row-critical-error'); } else if (record.errors.length > 0) { row.classList.add('row-warning'); } const cells = row.querySelectorAll('td'); cells.forEach((cell, cellIndex) => { if (headers[cellIndex]) { cell.setAttribute('data-label', headers[cellIndex]); } }); if (!row.querySelector('.action-cell')) { const td = document.createElement('td'); td.className = 'action-cell'; td.setAttribute('data-label', 'Hành động'); td.style.verticalAlign = 'middle'; td.style.textAlign = 'center'; if (record.errors.length > 0) { const zaloButton = document.createElement('button'); zaloButton.className = 'icon-action-btn'; zaloButton.title = 'Soạn tin Zalo cho hồ sơ này'; zaloButton.innerHTML = '✉️'; zaloButton.onclick = (e) => { e.stopPropagation(); openZaloModal(record); }; td.appendChild(zaloButton); } row.appendChild(td); } if (record.t_nguonkhac > 0) { const costCell = cells[3]; if(costCell && !costCell.querySelector('.cost-nguon-khac')){ costCell.innerHTML += `<span class="cost-nguon-khac">Nguồn khác: ${formatCurrency(record.t_nguonkhac)}</span>`; } } }); }; }
+    if (typeof validateSingleHoso === 'function') { const original_validateSingleHoso = validateSingleHoso; validateSingleHoso = function (hoso) { const result = original_validateSingleHoso(hoso); if (result && result.record) { let tongHopNode = null; for (const fileNode of hoso.children) { if (fileNode.nodeName === 'FILEHOSO') { const loaiHosoNode = fileNode.querySelector('LOAIHOSO'); if (loaiHosoNode && loaiHosoNode.textContent.trim() === 'XML1') { const noiDungFileNode = fileNode.querySelector('NOIDUNGFILE'); if (noiDungFileNode) { tongHopNode = noiDungFileNode.querySelector('TONG_HOP'); } break; } } } if (tongHopNode) { const t_nguonkhac_text = tongHopNode.querySelector('T_NGUONKHAC')?.textContent.trim() || '0'; result.record.t_nguonkhac = parseFloat(t_nguonkhac_text); } else { result.record.t_nguonkhac = 0; } const r = result.record; r.t_dvkt_khac = (r.t_xn || 0) + (r.t_cdha || 0) + (r.t_pttt || 0) + (r.t_vtyt || 0) + (r.t_mau || 0); let hasThuocData = false; for (const fileNode of hoso.children) { if (fileNode.nodeName === 'FILEHOSO') { const loaiHosoNode = fileNode.querySelector('LOAIHOSO'); if (loaiHosoNode && loaiHosoNode.textContent.trim() === 'XML2') { const dsThuoc = fileNode.querySelector('DSACH_CHI_TIET_THUOC'); if (dsThuoc && dsThuoc.children.length > 0) { hasThuocData = true; } break; } } } result.record.has_thuoc_data = hasThuocData; } return result; }; }
+    if (typeof updateDashboard === 'function') { const original_updateDashboard = updateDashboard; updateDashboard = function () { original_updateDashboard(); if (globalData.allRecords.length > 0) { const rawTotalAmount = globalData.allRecords.reduce((sum, r) => sum + (r.t_bhtt || 0), 0); const rawTotalBncct = globalData.allRecords.reduce((sum, r) => sum + (r.t_bncct || 0), 0); const totalNguonKhac = globalData.allRecords.reduce((sum, record) => sum + (record.t_nguonkhac || 0), 0); updateStatCard('totalAmount', rawTotalAmount); updateStatCard('totalBncct', rawTotalBncct); updateStatCard('totalNguonKhacDashboard', totalNguonKhac); if (document.getElementById('dashboardTab').classList.contains('active')) { renderSpecialCases(); } } }; }
+    if (typeof applyFilters === 'function') { const original_applyFilters = applyFilters; applyFilters = function () { const nguonKhacValue = document.getElementById('nguonKhacFilter').value; original_applyFilters(); globalData.filteredRecords = globalData.filteredRecords.filter(r => { const hasNguonKhac = r.t_nguonkhac && r.t_nguonkhac > 0; if (nguonKhacValue === 'yes' && !hasNguonKhac) return false; if (nguonKhacValue === 'no' && hasNguonKhac) return false; return true; }); globalData.currentPage = 1; updateResultsTable(); updatePagination(); updateResultsInfo(); updateDynamicSummaries(); const errorType = document.getElementById('errorTypeFilter').value; const bulkBtn = document.getElementById('bulkZaloButton'); if (bulkBtn) { bulkBtn.style.display = (errorType && globalData.filteredRecords.length > 0) ? 'inline-flex' : 'none'; } }; }
+    if (typeof clearFilters === 'function') { const original_clearFilters = clearFilters; clearFilters = function () { original_clearFilters(); const nguonKhacFilter = document.getElementById('nguonKhacFilter'); if (nguonKhacFilter) nguonKhacFilter.value = ''; const bulkBtn = document.getElementById('bulkZaloButton'); if (bulkBtn) bulkBtn.style.display = 'none'; }; }
+    if (typeof updateResultsTable === 'function') { const original_updateResultsTable = updateResultsTable; updateResultsTable = function () { original_updateResultsTable(); const table = document.querySelector('#validatorResults .results-table'); if (!table) return; const headerRow = table.querySelector('thead tr'); const tbody = table.querySelector('tbody'); if (!headerRow || !tbody) return; const headers = Array.from(headerRow.querySelectorAll('th')).map(th => th.textContent.trim()); if (!headerRow.querySelector('.action-header')) { const th = document.createElement('th'); th.className = 'action-header'; th.textContent = 'Hành động'; th.style.width = '100px'; th.style.textAlign = 'center'; headerRow.appendChild(th); headers.push('Hành động'); } const startIndex = (globalData.currentPage - 1) * globalData.pageSize; const pageRecords = globalData.filteredRecords.slice(startIndex, startIndex + globalData.pageSize); tbody.querySelectorAll('tr').forEach((row, rowIndex) => { const record = pageRecords[rowIndex]; if (!record) return; row.classList.remove('row-critical-error', 'row-warning'); const hasCritical = record.errors.some(e => e.severity === 'critical'); if (hasCritical) { row.classList.add('row-critical-error'); } else if (record.errors.length > 0) { row.classList.add('row-warning'); } const cells = row.querySelectorAll('td'); cells.forEach((cell, cellIndex) => { if (headers[cellIndex]) { cell.setAttribute('data-label', headers[cellIndex]); } }); if (!row.querySelector('.action-cell')) { const td = document.createElement('td'); td.className = 'action-cell'; td.setAttribute('data-label', 'Hành động'); td.style.verticalAlign = 'middle'; td.style.textAlign = 'center'; if (record.errors.length > 0) { const zaloButton = document.createElement('button'); zaloButton.className = 'icon-action-btn'; zaloButton.title = 'Soạn tin Zalo cho hồ sơ này'; zaloButton.innerHTML = '✉️'; zaloButton.onclick = (e) => { e.stopPropagation(); openZaloModal(record); }; td.appendChild(zaloButton); } row.appendChild(td); } if (record.t_nguonkhac > 0) { const costCell = cells[3]; if (costCell && !costCell.querySelector('.cost-nguon-khac')) { costCell.innerHTML += `<span class="cost-nguon-khac">Nguồn khác: ${formatCurrency(record.t_nguonkhac)}</span>`; } } }); }; }
     function updateDynamicSummaries() { const bncctFilterValue = document.getElementById('bncctFilter').value; const nguonKhacFilterValue = document.getElementById('nguonKhacFilter').value; const bncctSummaryBox = document.getElementById('bncctSummary'); const nguonKhacSummaryBox = document.getElementById('nguonKhacSummary'); if (bncctFilterValue === 'yes') { const total = globalData.filteredRecords.reduce((sum, record) => sum + (record.t_bncct || 0), 0); document.getElementById('totalBncctValue').textContent = formatCurrency(total); bncctSummaryBox.style.display = 'inline-flex'; } else { bncctSummaryBox.style.display = 'none'; } if (nguonKhacFilterValue === 'yes') { const total = globalData.filteredRecords.reduce((sum, record) => sum + (record.t_nguonkhac || 0), 0); document.getElementById('totalNguonKhacValue').textContent = formatCurrency(total); nguonKhacSummaryBox.style.display = 'inline-flex'; } else { nguonKhacSummaryBox.style.display = 'none'; } }
 });
 
@@ -2749,7 +3205,7 @@ function updateStatCard(elementId, fullValue) {
     if (el) {
         const abbreviatedText = formatCurrencyAbbreviated(fullValue);
         const fullDetailText = formatCurrencyWithDecimals(fullValue);
-        
+
         el.textContent = abbreviatedText;
         el.title = `Chính xác: ${fullDetailText}`; // Dành cho máy tính khi di chuột
 
@@ -2785,17 +3241,17 @@ function generateBulkZaloMessage(records, errorType) {
         // Lấy chi tiết lỗi
         const relevantError = record.errors.find(e => e.type === errorType);
         const cost = relevantError && relevantError.cost > 0 ? ` - ${formatCurrency(relevantError.cost)}` : '';
-        
+
         // === BỔ SUNG MỚI ===
         // 1. Lấy ngày vào (chỉ lấy phần ngày cho gọn)
         const ngayVao = formatDateTimeForDisplay(record.ngayVao).split(' ')[0] || 'N/A';
-        
+
         // 2. Lấy Người Thực Hiện và tra cứu tên
         let nguoiThucHien = 'Không rõ';
         if (record.nguoi_thuc_hien && record.nguoi_thuc_hien.size > 0) {
             nguoiThucHien = Array.from(record.nguoi_thuc_hien)
-                                .map(code => staffNameMap.get(code) || code) // Tra cứu tên
-                                .join(', ');
+                .map(code => staffNameMap.get(code) || code) // Tra cứu tên
+                .join(', ');
         }
         // === KẾT THÚC BỔ SUNG ===
 
@@ -2923,7 +3379,7 @@ function saveSchedules() {
 function renderVacationList(maBS) {
     const vacationListDiv = document.getElementById('vacationList');
     if (!vacationListDiv) return;
-    
+
     const schedule = doctorSchedules[maBS] || [];
     vacationListDiv.innerHTML = `<h4>Lịch nghỉ của ${staffNameMap.get(maBS) || maBS}:</h4>`;
 
@@ -3039,7 +3495,7 @@ function initializeScheduler() {
         if (!doctorSchedules[selectedBS]) {
             doctorSchedules[selectedBS] = [];
         }
-        
+
         if (!doctorSchedules[selectedBS].includes(vacationDate)) {
             doctorSchedules[selectedBS].push(vacationDate);
             renderVacationList(selectedBS);
@@ -3047,9 +3503,9 @@ function initializeScheduler() {
             alert('Ngày nghỉ này đã được thêm từ trước.');
         }
     });
-    
+
     saveButton.addEventListener('click', saveSchedules);
-    
+
     if (viewByDateButton) {
         viewByDateButton.addEventListener('click', viewVacationsByDate);
     }
@@ -3170,7 +3626,7 @@ function updateTelegramLog(messageId, stats) {
 }
 
 // Thay thế bằng URL Web App bạn đã lấy ở Bước 3
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5pQsM15B9vKXf6cubtcaE6VyjM6SkK5utD6cTwPWcs1RUGCyLU9kwIZk4Ycj9NvR4/exec'; 
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5pQsM15B9vKXf6cubtcaE6VyjM6SkK5utD6cTwPWcs1RUGCyLU9kwIZk4Ycj9NvR4/exec';
 
 /**
  * Gửi dữ liệu lịch sử kiểm tra tới Google Apps Script.
@@ -3199,15 +3655,15 @@ function logCheckHistoryToGoogleSheet(totalRecords, maCoSo) {
         },
         body: JSON.stringify(data),
     })
-    .then(response => {
-        // Vì mode: 'no-cors', response.ok sẽ luôn là false và không thể đọc body,
-        // nên ta chỉ cần kiểm tra xem request có được gửi đi không.
-        console.log("Request đã được gửi thành công (kiểm tra Google Sheet để xác nhận).");
-        // Nếu muốn xác nhận, bạn cần triển khai phức tạp hơn với JSONP hoặc CORS proxy.
-    })
-    .catch(error => {
-        console.error("Lỗi khi gửi dữ liệu đến Google Sheet:", error);
-    });
+        .then(response => {
+            // Vì mode: 'no-cors', response.ok sẽ luôn là false và không thể đọc body,
+            // nên ta chỉ cần kiểm tra xem request có được gửi đi không.
+            console.log("Request đã được gửi thành công (kiểm tra Google Sheet để xác nhận).");
+            // Nếu muốn xác nhận, bạn cần triển khai phức tạp hơn với JSONP hoặc CORS proxy.
+        })
+        .catch(error => {
+            console.error("Lỗi khi gửi dữ liệu đến Google Sheet:", error);
+        });
 }
 /**
  * ===================================================================
@@ -3236,7 +3692,7 @@ async function processAndSendComparisonReport(results) {
     // Action 2: Tạo tin nhắn Telegram dựa trên yêu cầu của bạn
     let message = `<b>⚠️ BÁO CÁO ĐỐI CHIẾU XML & CỔNG ⚠️</b>\n\n`;
     message += `Phát hiện tổng cộng <b>${totalErrors}</b> hồ sơ có sai lệch:\n\n`;
-    
+
     if (mismatches.length > 0) {
         message += `<b>1️⃣ Không khớp (${mismatches.length} HS):</b>\n`;
         message += `   👉 <i>Yêu cầu xem lại XML và đẩy thay thế.</i>\n\n`;
@@ -3318,12 +3774,12 @@ function generateComparisonExcel(mismatches, xmlOnly, excelOnly) {
 async function sendTelegramComparisonReport(message, excelBlob) {
     const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- Token của bạn
     const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
-    
+
     try {
         // Phần 1: Gửi tin nhắn văn bản tóm tắt
         const urlMessage = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
         const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
-        
+
         const responseMsg = await fetch(urlMessage, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3368,8 +3824,8 @@ async function sendTelegramComparisonReport(message, excelBlob) {
  * - Giao diện: Popup hiện đại, hiệu ứng kính mờ, hoạt hình nhẹ nhàng.
  */
 
-(function() { // Bọc trong hàm ẩn danh để tránh xung đột biến với hệ thống cũ
-    
+(function () { // Bọc trong hàm ẩn danh để tránh xung đột biến với hệ thống cũ
+
     // Kiểm tra nếu đã chạy rồi thì không chạy lại
     if (window.isPortfolioLoaded) return;
     window.isPortfolioLoaded = true;
@@ -3577,10 +4033,10 @@ async function sendTelegramComparisonReport(message, excelBlob) {
         // 3. TÌM MENU VÀ CHÈN NÚT
         // ===================================================================
         // Tìm thanh menu dựa trên class phổ biến (dựa trên ảnh bạn gửi)
-        const navBar = document.querySelector('.tab-nav') || 
-                       document.querySelector('.nav-tabs') || 
-                       document.querySelector('#nav') ||
-                       document.body;
+        const navBar = document.querySelector('.tab-nav') ||
+            document.querySelector('.nav-tabs') ||
+            document.querySelector('#nav') ||
+            document.body;
 
         const btn = document.createElement('div');
         btn.className = 'tab-button profile-btn';
@@ -3591,7 +4047,7 @@ async function sendTelegramComparisonReport(message, excelBlob) {
         `;
 
         // Xử lý vị trí chèn
-        if(document.querySelector('.tab-nav') || document.querySelector('.nav-tabs')) {
+        if (document.querySelector('.tab-nav') || document.querySelector('.nav-tabs')) {
             navBar.appendChild(btn);
         } else {
             // Nếu không tìm thấy menu, hiện nút nổi góc phải dưới
@@ -3608,7 +4064,7 @@ async function sendTelegramComparisonReport(message, excelBlob) {
         // ===================================================================
         // 4. XỬ LÝ SỰ KIỆN (BẬT/TẮT)
         // ===================================================================
-        
+
         // Mở Popup
         btn.addEventListener('click', (e) => {
             e.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
