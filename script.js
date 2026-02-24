@@ -95,8 +95,7 @@ const ERROR_TYPES = {
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)',
 
     'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
-    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp' // <-- THÊM DÒNG NÀY
-
+    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp'
 };
 
 let validationSettings = {};
@@ -128,47 +127,6 @@ const staffNameMap = new Map([
     ['0028445/HCM-CCHNN', 'Hồ Thị Thùy Linh'],
     ['0028516/HCM-CCHN', 'Trần Văn Thành']
 ]);
-
-// Utility functions
-const formatDateTimeForDisplay = (dateString) => {
-    if (!dateString) return '';
-    const s = String(dateString).trim();
-    if (s.length >= 8) {
-        const year = s.substring(0, 4);
-        const month = s.substring(4, 6);
-        const day = s.substring(6, 8);
-        let formatted = `${day}/${month}/${year}`;
-        if (s.length >= 12) {
-            const hour = s.substring(8, 10);
-            const minute = s.substring(10, 12);
-            formatted += ` ${hour}:${minute}`;
-        }
-        return formatted;
-    }
-    return dateString;
-};
-
-const flexibleFormatDate = (dateInput) => {
-    if (!dateInput) return 'N/A';
-
-    if (dateInput instanceof Date) {
-        const day = String(dateInput.getDate()).padStart(2, '0');
-        const month = String(dateInput.getMonth() + 1).padStart(2, '0');
-        const year = dateInput.getFullYear();
-        const hours = String(dateInput.getHours()).padStart(2, '0');
-        const minutes = String(dateInput.getMinutes()).padStart(2, '0');
-        if (hours === '00' && minutes === '00') {
-            return `${day}/${month}/${year}`;
-        }
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
-    }
-
-    if (typeof dateInput === 'string' && /^\d{8,}/.test(dateInput)) {
-        return formatDateTimeForDisplay(dateInput);
-    }
-
-    return dateInput.toString();
-};
 
 const normalizeDate = (dateInput) => {
     if (!dateInput) return null;
