@@ -1,23 +1,24 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giám sát BHYT Toàn diện - Tết 2026</title>
-    <!-- Favicon: Ngựa Vàng (Year of the Horse) -->
-    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/13625/13625947.png" type="image/png" />
+    <title>Giám sát BHYT Toàn diện</title>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966327.png" type="image/png" />
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=B6RbtCtuIiYPlqTmsbNYXTul70u1Zg4_qGpgCTN1ijc7cwxUQonR9TAWPhCtcMNn" charset="UTF-8"></script><script type="text/javascript"
+    <script type="text/javascript"
+        src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=B6RbtCtuIiYPlqTmsbNYXTul70u1Zg4_qGpgCTN1ijc7cwxUQonR9TAWPhCtcMNn"
+        charset="UTF-8"></script>
+    <script type="text/javascript"
         src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=-pPa_OFvx_acnCQ20xfwmsezUEw9h0AE8j8A2DmewmnfuBGVUjLdi537WBp4FyEp"
         charset="UTF-8"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link
-        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
 
@@ -33,40 +34,63 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* TET 2026 BACKGROUND */
-            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-                url('https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEijFImc8JW0zwzCoEIqRT5XdNrwHLfA-XznLi_hTG9SigfMh0Moh-9xglqOYSUIRyBrEDwFGTMAfXfozIrr9EVo0eutn5VPZezX-xhfwW7a4ljvAUIs5V5EvksDaSRiVJ4K1EF_uxgNfEzln2X1OzbO7sL7LgY6JM3cC1t46ZalRJauXwW0geuWlVvSjiI/s1600/hinh-nen-tet-2026.jpg?auto=format&fit=crop');
-            /* Note: URL above is placeholder-ish, searching for "Tet 2026" specifically is hard for exact year hotlink, 
-               but this is a generic high quality Red Tet background. User asked for "Google Image". */
-            background-size: cover;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Four Seasons Background - set by JS based on current month */
+            background: var(--season-bg, linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 30%, #a5d6a7 60%, #81c784 100%));
             background-attachment: fixed;
-            background-position: center;
             min-height: 100vh;
             padding: 20px;
             line-height: 1.6;
-
-            /* Custom Cursor: Golden Horse 🐎 (32px for better usability) */
-            cursor: url('https://cdn-icons-png.flaticon.com/32/18239/18239549.png'), auto;
+            transition: background 1s ease;
+            /* CRM Accent Colors - overridden by seasons JS */
+            --accent: #4f46e5;
+            --accent-dark: #3730a3;
+            --accent-light: #e0e7ff;
+            --accent-rgb: 79, 70, 229;
+            --surface: #ffffff;
+            --surface-hover: #f8fafc;
+            --border: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --radius: 12px;
         }
 
         .container {
             max-width: 1800px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.06);
             overflow: hidden;
+            border: 1px solid var(--border);
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, #6B1C23 0%, #8B2332 50%, #5C1018 100%);
+            background: var(--header-bg, linear-gradient(135deg, #2e7d32 0%, #388e3c 50%, #1b5e20 100%));
             color: white;
-            padding: 30px;
+            padding: 20px 30px;
             text-align: center;
             position: relative;
             overflow: hidden;
+        }
+
+        .header h1 {
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-size: 1.6em;
+            margin-bottom: 4px;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+            font-size: 0.9em;
+            font-weight: 400;
         }
 
         .header::before {
@@ -91,101 +115,42 @@
             }
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            position: relative;
-            z-index: 1;
-        }
 
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-            position: relative;
-            z-index: 1;
-        }
 
-        /* LUXURY TET FRAME */
-        .luxury-tet-frame {
-            display: inline-block;
-            border: 3px solid transparent;
-            border-image: linear-gradient(to right, #FFD700, #FDB931, #FFD700, #FDB931, #FFD700) 1;
-            padding: 20px 60px;
-            position: relative;
-            background: rgba(139, 0, 0, 0.4);
-            /* Dark translucent red */
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.1);
-            backdrop-filter: blur(2px);
-            margin-bottom: 20px;
-        }
 
-        /* Decorative Corners */
-        .luxury-tet-frame::after {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            border: 2px solid #FFD700;
-            z-index: -1;
-            opacity: 0.6;
-        }
-
-        .tet-title-lux {
-            font-family: 'NVN Morning Calm', 'Playfair Display', serif;
-            /* Font requested: NVN Morning Calm */
-            font-size: 3.8em !important;
-            margin-bottom: 5px !important;
-            background: linear-gradient(to bottom, #FFD700, #FDB931, #fffacd, #FDB931, #FFD700);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(2px 2px 0px rgba(139, 0, 0, 0.8));
-            letter-spacing: 1px;
-            font-weight: normal !important;
-        }
-
-        .tet-subtitle-lux {
-            font-family: 'NVN Morning Calm', 'Playfair Display', serif;
-            font-size: 1.8em !important;
-            color: #FFD700 !important;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-            opacity: 1 !important;
-            margin-top: 5px;
-            font-weight: bold;
-        }
 
         /* Tab Navigation */
         .tab-nav {
             display: flex;
-            background: #f8f9fa;
-            border-bottom: 3px solid #dee2e6;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 8px;
         }
 
         .tab-button {
             flex: 1;
-            padding: 20px 30px;
+            padding: 16px 24px;
             border: none;
             background: transparent;
-            font-size: 1.1em;
+            font-size: 0.95em;
             font-weight: 600;
-            color: #6c757d;
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             position: relative;
+            border-bottom: 2px solid transparent;
         }
 
         .tab-button:hover {
-            background: rgba(196, 30, 58, 0.1);
-            color: #C41E3A;
-            transform: translateY(-2px);
+            background: var(--accent-light);
+            color: var(--accent);
         }
 
         .tab-button.active {
-            background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%);
-            color: #FFD700;
-            box-shadow: 0 4px 15px rgba(139, 0, 0, 0.4);
+            background: transparent;
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            box-shadow: none;
         }
 
         .tab-content {
@@ -226,35 +191,54 @@
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(139, 0, 0, 0.3);
-            transition: transform 0.3s ease;
+            background: var(--surface);
+            color: var(--text-primary);
+            padding: 24px;
+            border-radius: var(--radius);
+            text-align: left;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px 0 0 4px;
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.12);
+            border-color: rgba(var(--accent-rgb), 0.3);
         }
 
         .stat-card h3 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 2em;
+            margin-bottom: 4px;
             font-weight: 700;
+            color: var(--accent);
         }
 
         .stat-card p {
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            font-weight: 500;
         }
 
         .chart-container {
             background: white;
             border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
             height: 400px;
         }
 
@@ -361,65 +345,66 @@
         }
 
         .btn {
-            padding: 12px 25px;
+            padding: 10px 22px;
             border: none;
-            border-radius: 25px;
-            font-size: 1em;
+            border-radius: 8px;
+            font-size: 0.9em;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%);
+            background: var(--accent);
             color: white;
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #228B22 0%, #006400 100%);
+            background: #059669;
             color: white;
         }
 
         .btn-info {
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            background: #0284c7;
             color: white;
         }
 
         .btn-warning {
-            background: linear-gradient(135deg, #FF8C00 0%, #FF6347 100%);
+            background: #d97706;
             color: white;
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            background: #dc2626;
             color: white;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            filter: brightness(1.05);
         }
 
         /* File Upload Area */
         .upload-area {
-            border: 3px dashed #C41E3A;
-            border-radius: 15px;
-            padding: 50px 30px;
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 48px 30px;
             text-align: center;
-            background: linear-gradient(135deg, #f8f9ff 0%, #e6f3ff 100%);
+            background: var(--surface-hover);
             margin-bottom: 30px;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .upload-area:hover {
-            border-color: #8B0000;
-            background: linear-gradient(135deg, #e6f3ff 0%, #d4edda 100%);
+            border-color: var(--accent);
+            background: var(--accent-light);
         }
 
         .upload-area.drag-over {
-            border-color: #28a745;
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            transform: scale(1.02);
+            border-color: #059669;
+            background: #ecfdf5;
+            transform: scale(1.01);
         }
 
         .file-input-wrapper {
@@ -437,36 +422,39 @@
         }
 
         .file-button {
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%);
+            padding: 12px 28px;
+            background: var(--accent);
             color: white;
-            border-radius: 25px;
+            border-radius: 8px;
             font-weight: 600;
             border: none;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            font-size: 0.95em;
         }
 
         .file-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(139, 0, 0, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
+            filter: brightness(1.08);
         }
 
-        /* Results Table */
         .results-container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
             overflow: hidden;
             margin-top: 30px;
         }
 
         .table-header {
-            background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%);
-            color: white;
-            padding: 20px;
+            background: var(--surface-hover);
+            color: var(--text-primary);
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border);
         }
 
         .results-table {
@@ -475,19 +463,24 @@
         }
 
         .results-table th {
-            background: #f8f9fa;
-            padding: 15px;
+            background: var(--surface-hover);
+            padding: 12px 16px;
             text-align: left;
             font-weight: 600;
-            color: #2c3e50;
-            border-bottom: 2px solid #dee2e6;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .results-table td {
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-            transition: background-color 0.3s ease;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            transition: background-color 0.2s ease;
             vertical-align: top;
+            font-size: 0.9em;
+            color: var(--text-primary);
         }
 
         .results-table tr {
@@ -495,15 +488,15 @@
         }
 
         .results-table tr:hover {
-            background: rgba(102, 126, 234, 0.05);
+            background: var(--surface-hover);
         }
 
         .results-table tr.has-xml4 {
-            background-color: #f0fff0;
+            background-color: #f0fdf4;
         }
 
         .results-table tr.has-xml4:hover {
-            background: rgba(102, 234, 150, 0.2);
+            background: #dcfce7;
         }
 
         .xml4-indicator::before {
@@ -529,56 +522,56 @@
             cursor: copy;
             text-decoration: underline;
             text-decoration-style: dotted;
-            color: #3182ce;
+            color: var(--accent);
+            font-weight: 500;
         }
 
         .copyable:hover {
-            color: #2c5282;
+            color: var(--accent-dark);
+            text-decoration-style: solid;
         }
 
         /* Status Badges */
         .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75em;
             font-weight: 600;
             margin: 2px;
         }
 
-        .status-success {
-            background: #d4edda;
-            color: #155724;
+        .status-success,
+        .status-match {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
 
         .status-warning {
-            background: #fff3cd;
-            color: #856404;
+            background: #fef9c3;
+            color: #854d0e;
+            border: 1px solid #fef08a;
         }
 
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
+        .status-error,
         .status-mismatch {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-match {
-            background: #d4edda;
-            color: #155724;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
         }
 
         .status-xml-only {
-            background: #d1ecf1;
-            color: #0c5460;
+            background: #e0f2fe;
+            color: #075985;
+            border: 1px solid #bae6fd;
         }
 
         .status-excel-only {
-            background: #e2e3e5;
-            color: #383d41;
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
         }
 
         /* Loading Animation */
@@ -593,13 +586,13 @@
         }
 
         .spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--accent-light);
+            border-top: 3px solid var(--accent);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
         }
 
         @keyframes spin {
@@ -628,39 +621,44 @@
 
         /* Pagination */
         .pagination {
-            padding: 20px;
+            padding: 16px;
             text-align: center;
-            background: #f8f9fa;
+            background: var(--surface-hover);
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            border-top: 1px solid var(--border);
         }
 
         .pagination button {
-            padding: 8px 15px;
-            border: 1px solid #dee2e6;
-            background: white;
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            background: var(--surface);
             cursor: pointer;
-            border-radius: 5px;
-            transition: all 0.3s ease;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-size: 0.85em;
+            font-weight: 500;
+            color: var(--text-primary);
         }
 
         .pagination button:hover:not(:disabled) {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
+            background: var(--accent-light);
+            color: var(--accent);
+            border-color: var(--accent);
         }
 
         .pagination button:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
         .pagination .page-info {
-            margin: 0 15px;
+            margin: 0 12px;
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--text-secondary);
+            font-size: 0.9em;
         }
 
         /* Modals (XML4, Summary, Settings) */
@@ -678,15 +676,15 @@
         }
 
         .modal-content {
-            background-color: #fefefe;
+            background-color: var(--surface);
             margin: 5% auto;
-            padding: 25px;
-            border: 1px solid #888;
-            width: 80%;
+            padding: 32px;
+            border: 1px solid var(--border);
+            width: 85%;
             max-width: 1200px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            animation: fadeInScale 0.4s ease-out;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes fadeInScale {
@@ -705,15 +703,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .modal-header h2 {
             margin: 0;
-            font-size: 1.8em;
-            color: #2c3e50;
+            font-size: 1.5em;
+            color: var(--text-primary);
+            font-weight: 700;
         }
 
         .close-button {
@@ -744,54 +743,63 @@
 
         /* Summary Modal Specifics */
         .summary-modal-content {
-            margin: 15% auto;
+            margin: 10% auto;
             width: 90%;
-            max-width: 550px;
-            /* Increased width */
+            max-width: 500px;
         }
 
         .summary-modal-body {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            padding: 20px 0;
+            gap: 12px;
+            padding: 8px 0;
         }
 
         .summary-item {
             display: flex;
             align-items: center;
-            font-size: 1.2em;
+            font-size: 1.1em;
+            padding: 12px 16px;
+            background: var(--surface-hover);
+            border-radius: 12px;
+            border: 1px solid var(--border);
         }
 
         .summary-item .icon {
-            font-size: 1.5em;
-            margin-right: 15px;
-            width: 30px;
-            text-align: center;
+            font-size: 1.4em;
+            margin-right: 16px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .summary-item .icon-total {
-            color: #667eea;
+            color: var(--accent);
         }
 
         .summary-item .icon-error {
-            color: #dc3545;
+            color: #dc2626;
         }
 
         .summary-item .icon-valid {
-            color: #28a745;
+            color: #059669;
         }
 
         .summary-item .text {
             font-weight: 500;
+            color: var(--text-primary);
         }
 
         .summary-item .value {
             margin-left: auto;
             font-weight: 700;
-            background: #f1f3f5;
-            padding: 5px 12px;
+            background: var(--accent-light);
+            color: var(--accent);
+            padding: 4px 12px;
             border-radius: 20px;
+            font-size: 0.9em;
         }
 
         /* Settings Modal Specifics */
@@ -886,18 +894,21 @@
         }
 
         #vacationList li button {
-            padding: 4px 10px;
-            border: 1px solid #dc3545;
-            background-color: #f8d7da;
-            color: #721c24;
-            border-radius: 5px;
+            padding: 6px 12px;
+            border: 1px solid #fee2e2;
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
+            font-size: 0.8em;
+            font-weight: 600;
         }
 
         #vacationList li button:hover {
-            background-color: #dc3545;
+            background-color: #dc2626;
             color: white;
+            border-color: #dc2626;
         }
     </style>
 
@@ -949,17 +960,15 @@
             transition: background-color .15s ease, transform .12s ease, box-shadow .12s ease;
         }
 
-        /* WOW hover khi hàng chứa LỖI/CẢNH BÁO – ưu tiên “không đụng” style cũ */
+        /* WOW hover khi hàng chứa LỖI/CẢNH BÁO */
         .results-table tr:has(.status-badge.status-error):hover {
-            background: rgba(220, 53, 69, .10) !important;
-            box-shadow: inset 0 0 0 2px rgba(220, 53, 69, .45);
-            transform: translateY(-1px);
+            background: #fff1f2 !important;
+            box-shadow: inset 2px 0 0 #dc2626;
         }
 
         .results-table tr:has(.status-badge.status-warning):hover {
-            background: rgba(255, 193, 7, .14) !important;
-            box-shadow: inset 0 0 0 2px rgba(255, 193, 7, .45);
-            transform: translateY(-1px);
+            background: #fffbeb !important;
+            box-shadow: inset 2px 0 0 #d97706;
         }
 
         /* Fallback nếu browser không hỗ trợ :has (JS sẽ gắn class) */
@@ -975,312 +984,75 @@
             transform: translateY(-1px);
         }
 
-        /* Dark Mode – chỉ override màu, không đổi font/bố cục */
+        /* Dark Mode */
         body.dark {
-            background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
-            color: #e5e7eb;
+            background: #0f172a;
+            color: #f1f5f9;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --border: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-light: rgba(var(--accent-rgb), 0.15);
         }
 
         body.dark .container {
-            background: #0b1220;
-            box-shadow: 0 24px 70px rgba(0, 0, 0, .5);
+            background: var(--surface);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            border-color: var(--border);
         }
 
-        body.dark .header {
-            background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
-        }
-
-        body.dark .tab-nav {
-            background: #0b1220;
-            border-bottom-color: #243244;
-        }
-
-        body.dark .tab-button {
-            color: #a0aec0;
-        }
-
-        body.dark .tab-button:hover {
-            background: rgba(99, 102, 241, .12);
-            color: #c7d2fe;
-        }
-
-        body.dark .tab-button.active {
-            color: white;
-            box-shadow: 0 6px 18px rgba(99, 102, 241, .35) inset, 0 8px 22px rgba(99, 102, 241, .25);
+        body.dark .results-table th {
+            background: #0f172a;
         }
 
         body.dark .chart-container,
         body.dark .results-container {
-            background: #0f172a;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, .45);
-        }
-
-        body.dark .results-table th {
-            background: #0b1220;
-            color: #e5e7eb;
-            border-bottom-color: #243244;
-        }
-
-        body.dark .results-table td {
-            border-bottom-color: #243244;
-        }
-
-        body.dark .advanced-filters {
-            background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
-            border-color: #1f2a3a;
+            background: var(--surface);
+            border-color: var(--border);
         }
 
         body.dark .filter-input,
         body.dark .filter-select {
-            background: #0b1220;
-            color: #e5e7eb;
-            border-color: #243244;
-        }
-
-        body.dark .upload-area {
-            background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
-            border-color: #3b82f6;
-        }
-
-        body.dark .table-header {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: #0f172a;
+            color: #f1f5f9;
+            border-color: var(--border);
         }
 
         body.dark .pagination {
-            background: #0b1220;
+            background: var(--surface-hover);
         }
 
-        /* ========== TRANG TRÍ TẾT 2025 ========== */
-        /* Hoa mai vàng rơi */
-        @keyframes fall-flower {
-            0% {
-                transform: translateY(-100px) rotate(0deg);
-                opacity: 1;
-            }
-
-            100% {
-                transform: translateY(100vh) rotate(360deg);
-                opacity: 0.3;
-            }
+        /* ========== FOUR SEASONS THEME ========== */
+        .season-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 18px;
+            border-radius: 50px;
+            font-size: 0.85em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.95);
+            animation: badgePulse 3s ease-in-out infinite;
         }
 
-        .tet-flower {
-            position: fixed;
-            font-size: 30px;
-            animation: fall-flower linear infinite;
-            pointer-events: none;
-            z-index: 9999;
-        }
+        @keyframes badgePulse {
 
-        /* Pháo hoa */
-        @keyframes firework {
-            0% {
-                transform: scale(0);
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 1;
-            }
-
+            0%,
             100% {
                 transform: scale(1);
-                opacity: 0;
-            }
-        }
-
-        .tet-firework {
-            position: fixed;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 9998;
-            animation: firework 1.5s ease-out;
-        }
-
-        /* Lồng đèn đỏ */
-        @keyframes swing {
-
-            0%,
-            100% {
-                transform: rotate(-5deg);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2);
             }
 
             50% {
-                transform: rotate(5deg);
+                transform: scale(1.02);
+                box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.1);
             }
-        }
-
-        .tet-lantern {
-            position: fixed;
-            font-size: 50px;
-            animation: swing 3s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 9997;
-            filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5));
-        }
-
-        /* Chữ Tết chạy qua lại */
-        .tet-text {
-            position: fixed;
-            top: 5px;
-            /* Sát mép trên */
-            left: 0;
-            width: 100%;
-            font-size: 28px;
-            font-weight: bold;
-            font-family: 'NVN Morning Calm', 'Playfair Display', serif;
-            /* Font xịn */
-            color: #FFFF00;
-            /* Vàng chanh sáng */
-            text-shadow: 2px 2px 4px #FF0000;
-            z-index: 9996;
-            pointer-events: none;
-            will-change: transform;
-            /* Animation: Trái -> Phải -> Trái */
-            animation: tet-bounce 20s linear infinite;
-        }
-
-        @keyframes tet-bounce {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            /* Bắt đầu từ bên trái */
-            50% {
-                transform: translateX(100%);
-            }
-
-            /* Chạy sang phải */
-            100% {
-                transform: translateX(-100%);
-            }
-
-            /* Quay về trái */
-        }
-
-        /* Pháo đỏ */
-        @keyframes dangle {
-
-            0%,
-            100% {
-                transform: translateY(0) rotate(-2deg);
-            }
-
-            50% {
-                transform: translateY(5px) rotate(2deg);
-            }
-        }
-
-        .tet-firecracker {
-            position: fixed;
-            font-size: 50px;
-            animation: dangle 2.5s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 9996;
-            filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.6));
-        }
-
-        /* Câu đối Tết */
-        .homenest-tet-left {
-            position: fixed;
-            left: 0;
-            top: 0;
-            /* Lên trên cùng */
-            z-index: 9997;
-            pointer-events: none;
-            animation: swing 4s ease-in-out infinite;
-
-        }
-
-        .homenest-tet-left img {
-            height: 180px;
-            /* Nhỏ lại */
-            width: auto;
-            filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
-        }
-
-        .homenest-tet-right {
-            position: fixed;
-            right: 0;
-            top: 0;
-            /* Lên trên cùng */
-            z-index: 9997;
-            pointer-events: none;
-            animation: swing 4s ease-in-out infinite;
-            animation-delay: 0.5s;
-
-        }
-
-        .homenest-tet-right img {
-            height: 180px;
-            /* Nhỏ lại */
-            width: auto;
-            filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
-        }
-
-        /* Khung Tiêu Đề Xịn */
-        .luxury-tet-frame {
-            display: inline-block;
-            border: 4px double #FFD700;
-            /* Viền đôi vàng như ảnh */
-            padding: 20px 80px;
-            /* Rộng rãi */
-            position: relative;
-            background: rgba(100, 0, 0, 0.6);
-            /* Nền đỏ tối trong suốt */
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
-            border-radius: 4px;
-            /* Góc vuông nhẹ */
-            margin-top: 40px;
-            /* Để chỗ cho chữ chạy */
-            margin-bottom: 30px;
-        }
-
-        /* Góc trang trí 4 góc */
-        .luxury-tet-frame::before,
-        .luxury-tet-frame::after {
-            content: '✥';
-            /* Họa tiết góc */
-            position: absolute;
-            color: #FFD700;
-            font-size: 24px;
-        }
-
-        .luxury-tet-frame::before {
-            top: 5px;
-            left: 5px;
-        }
-
-        .luxury-tet-frame::after {
-            bottom: 5px;
-            right: 5px;
-        }
-
-        .tet-title-lux {
-            font-family: 'NVN Morning Calm', 'Great Vibes', 'Dancing Script', cursive;
-            /* Fallback to luxury cursive */
-            font-size: 3.5em !important;
-            margin: 0 !important;
-            color: #FFD700 !important;
-            text-shadow: 3px 3px 0 #8B0000;
-            /* Bóng đổ cứng tạo khối */
-            font-weight: bold !important;
-            letter-spacing: 1px;
-            background: none;
-            -webkit-text-fill-color: initial;
-        }
-
-        .tet-subtitle-lux {
-            font-family: 'NVN Morning Calm', 'Dancing Script', cursive;
-            /* Fallback to readable cursive */
-            font-size: 1.6em !important;
-            color: #FFFACD !important;
-            /* Vàng kem */
-            text-shadow: 1px 1px 0 #800000;
-            margin-top: 10px;
-            font-weight: normal;
         }
     </style>
 </head>
@@ -1288,11 +1060,10 @@
 <body>
     <div class="container">
         <header class="header">
-            <div class="luxury-tet-frame">
-                <h1 class="tet-title-lux">🏥 Giám sát BHYT Toàn diện</h1>
-                <p class="tet-subtitle-lux">Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - 79764
-                    - IT Anh Khoa</p>
-            </div>
+            <h1 class="header h1">🏥 Giám sát BHYT Toàn diện</h1>
+            <p class="header p">Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - 79764 - IT Anh
+                Khoa</p>
+            <div class="season-badge" id="seasonBadge"></div>
 
             <!-- Nút chuyển Light/Dark (mới) -->
             <button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark">
@@ -1354,9 +1125,9 @@
         <div id="validatorTab" class="tab-content active">
             <div class="upload-area" id="validatorUploadArea">
                 <h2>📁 Tải lên file XML BHYT</h2>
-                <p>Kéo thả file XML vào đây hoặc click để chọn file</p>
+                <p>Kéo thả file XML vào đây hoặc click để chọn file (có thể chọn nhiều file)</p>
                 <div class="file-input-wrapper">
-                    <input type="file" class="file-input" id="validatorFileInput" accept=".xml">
+                    <input type="file" class="file-input" id="validatorFileInput" accept=".xml" multiple>
                     <button class="file-button">Chọn file XML</button>
                 </div>
                 <div id="validatorFileInfo"
@@ -1761,6 +1532,25 @@
         </div>
     </div>
 
+    <!-- ===== CHUKY DONVI MODAL ===== -->
+    <div id="chukyModal" class="modal" style="z-index:10001;">
+        <div class="modal-content" style="max-width:520px; border-radius:16px; overflow:hidden;">
+            <div class="modal-header" id="chukyModalHeader"
+                style="padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
+                <h2 id="chukyModalTitle" style="margin:0; font-size:1.2em;"></h2>
+                <span class="close-button" onclick="closeChukyPopup()"
+                    style="font-size:1.5em; cursor:pointer;">&times;</span>
+            </div>
+            <div id="chukyModalBody" style="padding:24px 28px; font-size:0.97em; line-height:1.7;">
+            </div>
+            <div class="modal-footer"
+                style="padding:14px 24px; text-align:right; background:#f8f9fa; border-top:1px solid #dee2e6;">
+                <button class="btn btn-primary" onclick="closeChukyPopup()">Đóng</button>
+            </div>
+        </div>
+    </div>
+    <!-- ===== END CHUKY DONVI MODAL ===== -->
+
     <!-- ========== JS BỔ SUNG NHẸ: Theme + Tab mặc định + Fallback hover ========== -->
     <script>
         // Áp dụng theme theo localStorage (ưu tiên), fallback theo hệ thống
@@ -1956,505 +1746,58 @@
         });
     </script>
 
-    <!-- ========== JAVASCRIPT TRANG TRÍ TẾT 2026 ========== -->
+    <!-- ========== FOUR SEASONS THEME JS ========== -->
     <script>
         (function () {
-            // Tạo chữ "Chúc Mừng Năm Mới 2026 - Bính Ngọ" (không fixed, nằm trong header)
-            const tetText = document.createElement('div');
-            tetText.className = 'tet-text';
-            tetText.innerHTML = 'Chúc Mừng Năm Mới 2026 - Bính Ngọ';
-            tetText.style.position = 'absolute';
-            tetText.style.top = '5px';
-            tetText.style.left = '50%';
-            tetText.style.transform = 'translateX(-50%)';
-            tetText.style.zIndex = '100';
-            const header = document.querySelector('.header');
-            if (header) {
-                header.appendChild(tetText);
-            } else {
-                document.body.appendChild(tetText);
+            const month = new Date().getMonth(); // 0-11
+            const seasons = {
+                spring: {
+                    months: [1, 2, 3], icon: '🌸', name: 'Mùa Xuân',
+                    bg: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                    header: 'linear-gradient(135deg, #166534 0%, #15803d 100%)',
+                    accent: '#16a34a', accentDark: '#166534', accentLight: '#dcfce7', accentRGB: '22, 163, 74'
+                },
+                summer: {
+                    months: [4, 5, 6], icon: '☀️', name: 'Mùa Hạ',
+                    bg: 'linear-gradient(135deg, #fbffea 0%, #fcffd6 100%)',
+                    header: 'linear-gradient(135deg, #854d0e 0%, #a16207 100%)',
+                    accent: '#ca8a04', accentDark: '#854d0e', accentLight: '#fef9c3', accentRGB: '202, 138, 4'
+                },
+                autumn: {
+                    months: [7, 8, 9], icon: '🍂', name: 'Mùa Thu',
+                    bg: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+                    header: 'linear-gradient(135deg, #9a3412 0%, #c2410c 100%)',
+                    accent: '#ea580c', accentDark: '#9a3412', accentLight: '#ffedd5', accentRGB: '234, 88, 12'
+                },
+                winter: {
+                    months: [10, 11, 0], icon: '❄️', name: 'Mùa Đông',
+                    bg: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                    header: 'linear-gradient(135deg, #075985 0%, #0369a1 100%)',
+                    accent: '#0284c7', accentDark: '#075985', accentLight: '#e0f2fe', accentRGB: '2, 132, 199'
+                }
+            };
+            let current = seasons.spring;
+            for (const [key, s] of Object.entries(seasons)) {
+                if (s.months.includes(month)) { current = s; break; }
             }
+            const root = document.documentElement;
+            root.style.setProperty('--season-bg', current.bg);
+            root.style.setProperty('--header-bg', current.header);
+            root.style.setProperty('--accent', current.accent);
+            root.style.setProperty('--accent-dark', current.accentDark);
+            root.style.setProperty('--accent-light', current.accentLight);
+            root.style.setProperty('--accent-rgb', current.accentRGB);
 
-            // Tạo ÔNG THẦN TÀI (Góc trái)
-            const thanTai = document.createElement('div');
-            thanTai.className = 'than-tai-icon';
-            thanTai.innerHTML = '<img src="https://png.pngtree.com/png-clipart/20190617/original/pngtree-god-of-wealth-god-of-wealth-cartoon-god-of-wealth-golden-png-image_3892232.jpg" alt="Thần Tài" />';
-            document.body.appendChild(thanTai);
-
-            // Tạo câu đối Tết bên trái
-            const tetLeft1 = document.createElement('a');
-            tetLeft1.className = 'homenest-tet-left';
-            tetLeft1.innerHTML = '<img src="https://homenest.com.vn/wp-content/uploads/2025/12/Cau-noi-cau-duoc-uoc-thay.png" />';
-            document.body.appendChild(tetLeft1);
-
-            const tetLeft2 = document.createElement('a');
-            tetLeft2.className = 'homenest-tet-left';
-            tetLeft2.style.left = '60px';
-            tetLeft2.innerHTML = '<img src="https://homenest.com.vn/wp-content/uploads/2025/12/Tan-tai-tan-loc-tan-binh-an.png" />';
-            document.body.appendChild(tetLeft2);
-
-            // Tạo câu đối Tết bên phải
-            const tetRight1 = document.createElement('a');
-            tetRight1.className = 'homenest-tet-right';
-            tetRight1.innerHTML = '<img src="https://homenest.com.vn/wp-content/uploads/2025/12/Cau-noi-cau-duoc-uoc-thay.png" />';
-            document.body.appendChild(tetRight1);
-
-            const tetRight2 = document.createElement('a');
-            tetRight2.className = 'homenest-tet-right';
-            tetRight2.style.right = '60px';
-            tetRight2.innerHTML = '<img src="https://homenest.com.vn/wp-content/uploads/2025/12/Tan-tai-tan-loc-tan-binh-an.png" />';
-            document.body.appendChild(tetRight2);
-
-            // ========== HIỆU ỨNG TẾT MỚI ==========
-
-            // Danh sách câu chúc Tết
-            const tetWishes = [
-                '\u{1F9E7} Chúc Mừng Năm Mới 2026!',
-                '\u{1F434} Năm Bính Ngọ Mã Đáo Thành Công!',
-                '\u{1F4B0} Phát Tài Phát Lộc!',
-                '\u{1F3EE} An Khang Thịnh Vượng!',
-                '\u{1F338} Vạn Sự Như Ý!',
-                '\u{1F38A} Tân Xuân Như Ý!',
-                '\u{1F9E7} Lì Xì Đầy Túi!',
-                '\u{1F434} Mã Đáo Thành Công!'
-            ];
-
-            // Tạo hoa mai rơi (chỉ hoa vàng)
-            function createFallingFlower() {
-                const flower = document.createElement('div');
-                flower.className = 'tet-falling-item';
-                // Chỉ sử dụng hoa màu vàng (Mai)
-                const items = ['\u{1F33C}', '\u{1F33B}', '\u{2728}', '\u{1F33C}', '\u{1F33C}'];
-                flower.textContent = items[Math.floor(Math.random() * items.length)];
-                flower.style.left = Math.random() * 100 + '%';
-                flower.style.fontSize = (20 + Math.random() * 20) + 'px';
-                flower.style.animationDuration = (5 + Math.random() * 5) + 's';
-                document.body.appendChild(flower);
-                setTimeout(() => flower.remove(), 10000);
-            }
-
-            // Xử lý mở lì xì
-            function openLiXi(event, element) {
-                event.stopPropagation();
-                element.style.transform = 'scale(1.5)';
-                element.style.opacity = '0';
-
-                const moneys = ['10.000đ', '20.000đ', '50.000đ', '100.000đ', '200.000đ', '500.000đ', '68.000đ', '88.000đ', '1 Tỷ \u{1F4B8}'];
-                const amount = moneys[Math.floor(Math.random() * moneys.length)];
-
-                const moneyPopup = document.createElement('div');
-                moneyPopup.className = 'tet-money-popup';
-                moneyPopup.innerHTML = `<span>+${amount}</span>`;
-                moneyPopup.style.left = event.clientX + 'px';
-                moneyPopup.style.top = event.clientY + 'px';
-                document.body.appendChild(moneyPopup);
-
-                setTimeout(() => {
-                    element.remove();
-                    setTimeout(() => moneyPopup.remove(), 2000);
-                }, 200);
-            }
-
-            // Tạo bao lì xì bay (có thể click)
-            function createLiXi() {
-                const lixi = document.createElement('div');
-                lixi.className = 'tet-lixi';
-                lixi.textContent = '\u{1F9E7}';
-                lixi.style.left = Math.random() * 90 + '%';
-                lixi.style.animationDuration = (4 + Math.random() * 4) + 's';
-                lixi.onclick = (e) => openLiXi(e, lixi);
-                document.body.appendChild(lixi);
-                setTimeout(() => { if (document.body.contains(lixi)) lixi.remove(); }, 8000);
-            }
-
-            // Tạo câu chúc Tết xuất hiện
-            function showTetWish() {
-                const wish = document.createElement('div');
-                wish.className = 'tet-wish-popup';
-                wish.textContent = tetWishes[Math.floor(Math.random() * tetWishes.length)];
-                wish.style.left = (10 + Math.random() * 80) + '%';
-                wish.style.top = (20 + Math.random() * 60) + '%';
-                document.body.appendChild(wish);
-                setTimeout(() => wish.remove(), 4000);
-            }
-
-            // Khởi động hiệu ứng
-            // Khởi động hiệu ứng
-            // setInterval(createFallingFlower, 1500); // Tắt hoa
-            setInterval(createLiXi, 2000); // Chỉ rớt Lì Xì (nhanh hơn xíu)
-            // setInterval(showTetWish, 5000); // Tắt chữ nếu muốn "chỉ rớt lì xì"
-
-            // Tạo ban đầu
-            /* for (let i = 0; i < 5; i++) {
-                setTimeout(createFallingFlower, i * 500);
-            } */
-            setTimeout(createLiXi, 1000);
-            // setTimeout(showTetWish, 2000);
-
-            // SỰ KIỆN CLICK HOẶC CHỌN FILE -> NỔ CÂU CHÚC (Đỡ bị che bởi dialog)
-            const fileInput = document.getElementById('validatorFileInput');
-
-            function showLuckyWish() {
-                const wishes = [
-                    "🐎 Năm Bính Ngọ - Mã Đáo Thành Công!",
-                    "💰 Tiền vào như nước sông Đà!",
-                    "🌸 Tấn Tài Tấn Lộc - Vạn Sự Như Ý!",
-                    "🧧 Sức Khỏe Dồi Dào - An Khang Thịnh Vượng!",
-                    "🏆 Sự Nghiệp Thăng Tiến - Phi Mã Đằng Vân!",
-                    "🍀 Cung Chúc Tân Xuân - Vạn Sự Bình An!",
-                    "🥂 Đa Lộc, Đa Tài, Đa Phú Quý!",
-                    "🏮 Đắc Thời, Đắc Lợi, Đắc Nhân Tâm!"
-                ];
-                const wishText = wishes[Math.floor(Math.random() * wishes.length)];
-
-                // Xóa câu chúc cũ nếu có
-                const oldWish = document.querySelector('.tet-wish-banner');
-                if (oldWish) oldWish.remove();
-
-                const wishEl = document.createElement('div');
-                wishEl.className = 'tet-wish-banner';
-                wishEl.innerHTML = `<span>${wishText}</span>`;
-
-                // Style trực tiếp hoặc class (đã định nghĩa bên dưới)
-                document.body.appendChild(wishEl);
-
-                // Âm thanh nhẹ (nếu muốn, nhưng thôi giữ silent cho web)
-
-                setTimeout(() => {
-                    wishEl.style.opacity = '0';
-                    wishEl.style.transform = 'translate(-50%, -20px) scale(0.9)';
-                    setTimeout(() => wishEl.remove(), 500);
-                }, 4000);
-            }
-
-            if (fileInput) {
-                // Click thì hiện ngay (có thể bị che 1 chút)
-                fileInput.addEventListener('click', showLuckyWish);
-                // Chọn xong file (đóng dialog) thì hiện tiếp (chắc chắn thấy)
-                fileInput.addEventListener('change', showLuckyWish);
-            }
+            const badge = document.getElementById('seasonBadge');
+            if (badge) badge.innerHTML = `${current.icon} ${current.name}`;
         })();
     </script>
-
-    <!-- CSS cho hiệu ứng Tết mới -->
-    <style>
-        .tet-falling-item {
-            position: fixed;
-            top: -50px;
-            z-index: 9999;
-            pointer-events: none;
-            animation: tet-fall linear forwards;
-            opacity: 0.9;
-        }
-
-        @keyframes tet-fall {
-            0% {
-                transform: translateY(0) rotate(0deg);
-                opacity: 1;
-            }
-
-            100% {
-                transform: translateY(100vh) rotate(360deg);
-                opacity: 0.3;
-            }
-        }
-
-        .tet-lixi {
-            position: fixed;
-            top: -60px;
-            font-size: 45px;
-            z-index: 10000;
-            cursor: pointer;
-            pointer-events: auto !important;
-            animation: tet-lixi-fall ease-in-out forwards;
-            transition: transform 0.2s;
-        }
-
-        .tet-lixi:hover {
-            transform: scale(1.2);
-            filter: drop-shadow(0 0 10px gold);
-        }
-
-        @keyframes tet-lixi-fall {
-            0% {
-                transform: translateY(0) rotate(-10deg);
-            }
-
-            100% {
-                transform: translateY(110vh) rotate(10deg);
-            }
-        }
-
-        .tet-money-popup {
-            position: fixed;
-            z-index: 10001;
-            font-family: 'Segoe UI', sans-serif;
-            font-weight: bold;
-            font-size: 24px;
-            color: #ffff00;
-            text-shadow: 2px 2px 0 #cc0000;
-            pointer-events: none;
-            animation: money-fly-up 2s ease-out forwards;
-            transform: translate(-50%, -50%);
-        }
-
-        @keyframes money-fly-up {
-            0% {
-                transform: translate(-50%, -50%) scale(0.5);
-                opacity: 0;
-            }
-
-            20% {
-                transform: translate(-50%, -80%) scale(1.2);
-                opacity: 1;
-            }
-
-            100% {
-                transform: translate(-50%, -200px) scale(1);
-                opacity: 0;
-            }
-        }
-
-
-        .tet-wish-popup {
-            position: fixed;
-            z-index: 9997;
-            pointer-events: none;
-            font-family: 'Dancing Script', cursive;
-            font-size: 28px;
-            font-weight: bold;
-            color: #FFD700;
-            text-shadow: 2px 2px 4px #8B0000, 0 0 10px rgba(255, 215, 0, 0.8);
-            animation: tet-wish-appear 4s ease-in-out forwards;
-            white-space: nowrap;
-        }
-
-        @keyframes tet-wish-appear {
-            0% {
-                transform: scale(0.5);
-                opacity: 0;
-            }
-
-            20% {
-                transform: scale(1.2);
-                opacity: 1;
-            }
-
-            80% {
-                transform: scale(1);
-                opacity: 1;
-            }
-
-            100% {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-        }
-
-        .tet-wish-banner {
-            position: fixed;
-            top: 15%;
-            /* Cao hẳn lên trên để không bị che */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 200000;
-            /* Cao hơn cả dialog trình duyệt nếu có thể (ảo giác) */
-
-            background: linear-gradient(to right, #b91c1c, #dc2626, #b91c1c);
-            padding: 15px 40px;
-            border-radius: 50px;
-            border: 3px solid #FCD34D;
-            /* Viền vàng */
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.6);
-
-            font-family: 'Dancing Script', cursive;
-            font-size: 2rem;
-            font-weight: bold;
-            color: #FEF3C7;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-            white-space: nowrap;
-
-            animation: bannerPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transition: all 0.5s ease;
-        }
-
-        @keyframes bannerPop {
-            0% {
-                transform: translate(-50%, 50px) scale(0.5);
-                opacity: 0;
-            }
-
-            100% {
-                transform: translate(-50%, 0) scale(1);
-                opacity: 1;
-            }
-        }
-
-        .than-tai-icon {
-            position: fixed;
-            top: auto;
-            /* Bỏ top */
-            bottom: 10px;
-            /* Xuống góc dưới */
-            left: 10px;
-            /* Góc trái */
-            z-index: 9999;
-            /* On top of everything */
-            width: 100px;
-            /* To hơn xíu cho đẹp */
-            animation: floatThanTai 3s ease-in-out infinite;
-            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6));
-            cursor: pointer;
-            transition: transform 0.3s;
-            mix-blend-mode: multiply;
-            /* Fix for JPG white background */
-        }
-
-        .than-tai-icon:hover {
-            transform: scale(1.1) rotate(10deg);
-        }
-
-        .than-tai-icon img {
-            width: 100%;
-            height: auto;
-        }
-
-        @keyframes floatThanTai {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-15px);
-            }
-        }
-    </style>
-    <!-- Container for Running Horses -->
-    <div id="animal-footer">
-        <div class="horse-runway">
-            <!-- Using the GIF provided -->
-            <img src="https://cdn.pixabay.com/animation/2022/10/17/00/48/00-48-56-670_512.gif" class="running-horse"
-                alt="Running Horse">
-            <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3d0NDNudXJnY21rdXM2dHFhNWkzNGU3Nnh6a2l3ZHFjZmNqem9hbiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/L3C6DkHQsyeB30h9h3/giphy.gif"
-                class="running-horse delay-1" alt="Running Horse">
-            <img src="https://cdn.pixabay.com/animation/2023/12/17/23/19/23-19-00-162_512.gif"
-                class="running-horse delay-2" alt="Running Horse">
-        </div>
-    </div>
-
-    <!-- Styles for the Running Horses -->
-    <style>
-        #animal-footer {
-            position: fixed;
-            bottom: 0px;
-            left: 0;
-            width: 100%;
-            height: 120px;
-            /* Adjust based on GIF height */
-            pointer-events: none;
-            z-index: 9995;
-            overflow: hidden;
-        }
-
-        .horse-runway {
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
-
-        .running-horse {
-            position: absolute;
-            bottom: 0;
-            height: 100px;
-            /* Adjust size */
-            width: auto;
-            animation: runAcrossScreen 15s linear infinite;
-            left: -150px;
-            /* Start off-screen */
-        }
-
-        .delay-1 {
-            animation-delay: 5s;
-        }
-
-        .delay-2 {
-            animation-delay: 10s;
-        }
-
-        @keyframes runAcrossScreen {
-            from {
-                transform: translateX(0);
-            }
-
-            to {
-                transform: translateX(110vw);
-            }
-
-            /* Run past the screen end */
-        }
-    </style>
-    <!-- Hiệu ứng chuột Lấp Lánh Tết -->
-    <script>
-        document.addEventListener('mousemove', function (e) {
-            // Tạo hạt lấp lánh
-            const sparkle = document.createElement('div');
-            sparkle.classList.add('tet-sparkle');
-
-            // Vị trí chuột
-            sparkle.style.left = e.pageX + 'px';
-            sparkle.style.top = e.pageY + 'px';
-
-            // Random màu vàng/đỏ/cam
-            const colors = ['#FFD700', '#FFA500', '#FF4500', '#FFFFE0'];
-            sparkle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-
-            // Random kích thước
-            const size = Math.random() * 6 + 4 + 'px'; // 4px - 10px
-            sparkle.style.width = size;
-            sparkle.style.height = size;
-
-            // Random hướng bay nhẹ
-            sparkle.style.setProperty('--tx', (Math.random() * 40 - 20) + 'px');
-            sparkle.style.setProperty('--ty', (Math.random() * 40 + 20) + 'px'); // Rơi xuống
-
-            document.body.appendChild(sparkle);
-
-            // Xóa sau khi animation xong
-            setTimeout(() => {
-                sparkle.remove();
-            }, 1000);
-        });
-    </script>
-    <style>
-        .tet-sparkle {
-            position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 99999;
-            box-shadow: 0 0 6px gold;
-            animation: sparkle-fall 1s ease-out forwards;
-        }
-
-        @keyframes sparkle-fall {
-            0% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-
-            100% {
-                opacity: 0;
-                transform: translate(var(--tx), var(--ty)) scale(0);
-            }
-        }
-    </style>
     <script defer
         src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015"
         integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ=="
         data-cf-beacon='{"version":"2024.11.0","token":"db0c89750f364ceea3cb03b0503af93a","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}'
         crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"db0c89750f364ceea3cb03b0503af93a","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+
 </body>
 
 </html>
