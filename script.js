@@ -128,6 +128,48 @@ const staffNameMap = new Map([
     ['0028516/HCM-CCHN', 'Trần Văn Thành']
 ]);
 
+// Utility functions
+
+const formatDateTimeForDisplay = (dateString) => {
+    if (!dateString) return '';
+    const s = String(dateString).trim();
+    if (s.length >= 8) {
+        const year = s.substring(0, 4);
+        const month = s.substring(4, 6);
+        const day = s.substring(6, 8);
+        let formatted = `${day}/${month}/${year}`;
+        if (s.length >= 12) {
+            const hour = s.substring(8, 10);
+            const minute = s.substring(10, 12);
+            formatted += ` ${hour}:${minute}`;
+        }
+        return formatted;
+    }
+    return dateString;
+};
+
+const flexibleFormatDate = (dateInput) => {
+    if (!dateInput) return 'N/A';
+
+    if (dateInput instanceof Date) {
+        const day = String(dateInput.getDate()).padStart(2, '0');
+        const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+        const year = dateInput.getFullYear();
+        const hours = String(dateInput.getHours()).padStart(2, '0');
+        const minutes = String(dateInput.getMinutes()).padStart(2, '0');
+        if (hours === '00' && minutes === '00') {
+            return `${day}/${month}/${year}`;
+        }
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+
+    if (typeof dateInput === 'string' && /^\d{8,}/.test(dateInput)) {
+        return formatDateTimeForDisplay(dateInput);
+    }
+
+    return dateInput.toString();
+};
+
 const normalizeDate = (dateInput) => {
     if (!dateInput) return null;
     if (dateInput instanceof Date) {
