@@ -33,6 +33,10 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             /* Four Seasons Background - set by JS based on current month */
@@ -42,6 +46,7 @@
             padding: 20px;
             line-height: 1.6;
             transition: background 1s ease;
+            overscroll-behavior: contain;
             /* CRM Accent Colors - overridden by seasons JS */
             --accent: #4f46e5;
             --accent-dark: #3730a3;
@@ -457,46 +462,101 @@
             border-bottom: 1px solid var(--border);
         }
 
+        /* ===== RESULTS TABLE – Card-row design ===== */
         .results-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0 4px;
         }
 
-        .results-table th {
-            background: var(--surface-hover);
-            padding: 12px 16px;
+        /* Header */
+        .results-table thead th {
+            padding: 10px 14px;
             text-align: left;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-secondary);
-            border-bottom: 1px solid var(--border);
-            font-size: 0.85em;
+            font-size: 0.75em;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
+            border-bottom: 2px solid var(--border);
+            background: transparent;
+            white-space: nowrap;
         }
 
-        .results-table td {
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border);
-            transition: background-color 0.2s ease;
-            vertical-align: top;
-            font-size: 0.9em;
-            color: var(--text-primary);
-        }
-
-        .results-table tr {
+        /* Body rows – card style */
+        .results-table tbody tr {
             cursor: pointer;
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+            border-radius: 8px;
         }
 
-        .results-table tr:hover {
+        .results-table tbody tr td {
+            padding: 12px 14px;
+            vertical-align: middle;
+            font-size: 0.88em;
+            color: var(--text-primary);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .results-table tbody tr td:first-child {
+            border-left: 4px solid #cbd5e1;
+            border-radius: 8px 0 0 8px;
+            padding-left: 12px;
+        }
+
+        .results-table tbody tr td:last-child {
+            border-right: 1px solid var(--border);
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Zebra striping nhẹ */
+        .results-table tbody tr:nth-child(even) td {
             background: var(--surface-hover);
         }
 
-        .results-table tr.has-xml4 {
-            background-color: #f0fdf4;
+        /* Hover tất cả rows */
+        .results-table tbody tr:hover td {
+            background: #f0f9ff;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
         }
 
-        .results-table tr.has-xml4:hover {
-            background: #dcfce7;
+        /* Hover hiệu ứng lift thực sự */
+        .results-table tbody tr:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Row TRẠNG THÁI – viền trái màu */
+        .results-table tbody tr.row-critical-error td:first-child {
+            border-left-color: #ef4444;
+        }
+
+        .results-table tbody tr.row-critical-error td {
+            background: #fff8f8;
+        }
+
+        .results-table tbody tr.row-critical-error:hover td {
+            background: #fff0f0;
+        }
+
+        .results-table tbody tr.row-warning td:first-child {
+            border-left-color: #f59e0b;
+        }
+
+        .results-table tbody tr.row-warning td {
+            background: #fffdf5;
+        }
+
+        .results-table tbody tr.row-warning:hover td {
+            background: #fffbeb;
+        }
+
+        /* Row có XML4 */
+        .results-table tbody tr.has-xml4 td:first-child {
+            border-left-color: #10b981;
         }
 
         .xml4-indicator::before {
@@ -505,7 +565,7 @@
         }
 
         .results-table .error-detail {
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .comparator-details ul {
@@ -864,6 +924,197 @@
         }
 
         /* ======================================================= */
+        /* CSS BỘ LỌC MỚI (filter-bar) */
+        /* ======================================================= */
+        .filter-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-row-main,
+        .filter-row-sub {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-row-sub {
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1 1 160px;
+            min-width: 140px;
+        }
+
+        .filter-item-wide {
+            flex: 2 1 220px;
+        }
+
+        .filter-item-narrow {
+            flex: 0 1 130px;
+            min-width: 110px;
+        }
+
+        .filter-label {
+            font-size: 0.72em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .filter-actions-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .filter-actions-left,
+        .filter-actions-right {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-sm {
+            padding: 6px 13px !important;
+            font-size: 0.82em !important;
+            border-radius: 8px !important;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .btn-outline {
+            background: transparent !important;
+            border: 1.5px solid var(--border) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .btn-outline:hover {
+            background: var(--surface-hover) !important;
+        }
+
+        .btn-export {
+            background: #0e7490 !important;
+            color: #fff !important;
+        }
+
+        .btn-export:hover {
+            background: #155e75 !important;
+        }
+
+        .btn-export-err {
+            background: #b91c1c !important;
+            color: #fff !important;
+        }
+
+        .btn-export-err:hover {
+            background: #991b1b !important;
+        }
+
+        .date-range-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .date-range-group .filter-input {
+            flex: 1;
+        }
+
+        /* ======================================================= */
+        /* CSS CHO RECORD DETAIL MODAL */
+        /* ======================================================= */
+        .rdetail-section {
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .rdetail-section-title {
+            background: var(--surface-hover);
+            padding: 10px 16px;
+            font-size: 0.95em;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rdetail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 0;
+        }
+
+        .rdetail-item {
+            display: flex;
+            flex-direction: column;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+
+        .rdetail-item:last-child {
+            border-right: none;
+        }
+
+        .rdetail-full {
+            grid-column: 1 / -1;
+        }
+
+        .rdetail-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .rdetail-value {
+            font-size: 0.9em;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .rdetail-errors .rdetail-section-title {
+            background: #fff0f0;
+            color: #c53030;
+        }
+
+        #recordDetailModal .modal-content {
+            max-width: 900px;
+        }
+
+        #recordDetailBody {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* ======================================================= */
         /* CSS ĐỂ DANH SÁCH NGÀY NGHỈ CÓ THỂ CUỘN VÀ ĐẸP HƠN */
         /* ======================================================= */
         #vacationList ul {
@@ -961,27 +1212,67 @@
         }
 
         /* WOW hover khi hàng chứa LỖI/CẢNH BÁO */
-        .results-table tr:has(.status-badge.status-error):hover {
-            background: #fff1f2 !important;
-            box-shadow: inset 2px 0 0 #dc2626;
+        .results-table tr:has(.status-badge.status-error):hover td {
+            background: #fff0f0 !important;
         }
 
-        .results-table tr:has(.status-badge.status-warning):hover {
+        .results-table tr:has(.status-badge.status-error):hover td:first-child {
+            border-left-color: #dc2626;
+        }
+
+        .results-table tr:has(.status-badge.status-warning):hover td {
             background: #fffbeb !important;
-            box-shadow: inset 2px 0 0 #d97706;
         }
 
-        /* Fallback nếu browser không hỗ trợ :has (JS sẽ gắn class) */
-        .results-table tr.row-errorish:hover {
-            background: rgba(220, 53, 69, .10) !important;
-            box-shadow: inset 0 0 0 2px rgba(220, 53, 69, .45);
-            transform: translateY(-1px);
+        .results-table tr:has(.status-badge.status-warning):hover td:first-child {
+            border-left-color: #d97706;
         }
 
-        .results-table tr.row-warningish:hover {
-            background: rgba(255, 193, 7, .14) !important;
-            box-shadow: inset 0 0 0 2px rgba(255, 193, 7, .45);
-            transform: translateY(-1px);
+        /* Fallback class từ JS */
+        .results-table tr.row-errorish td {
+            background: #fff8f8;
+        }
+
+        .results-table tr.row-errorish td:first-child {
+            border-left-color: #ef4444;
+        }
+
+        .results-table tr.row-warningish td {
+            background: #fffdf5;
+        }
+
+        .results-table tr.row-warningish td:first-child {
+            border-left-color: #f59e0b;
+        }
+
+        /* Dark Mode – table card rows */
+        body.dark .results-table tbody tr td {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark .results-table tbody tr:nth-child(even) td {
+            background: #243044;
+        }
+
+        body.dark .results-table tbody tr:hover td {
+            background: #2d3f55 !important;
+        }
+
+        body.dark .results-table tbody tr.row-critical-error td {
+            background: #2d1f1f;
+        }
+
+        body.dark .results-table tbody tr.row-critical-error:hover td {
+            background: #3d2222 !important;
+        }
+
+        body.dark .results-table tbody tr.row-warning td {
+            background: #2a2410;
+        }
+
+        body.dark .results-table tbody tr.row-warning:hover td {
+            background: #332d14 !important;
         }
 
         /* Dark Mode */
@@ -1060,9 +1351,16 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1 class="header h1">🏥 Giám sát BHYT Toàn diện</h1>
-            <p class="header p">Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông minh - 79764 - IT Anh
-                Khoa</p>
+            <h1 class="header h1" style="font-size:1.6em; font-weight:900; letter-spacing:-0.02em; line-height:1.1;">
+                <span style="color:#fff">🏥 GIÁM SÁT</span>
+                <span style="color:#818cf8"> BHYT</span><br>
+                <span
+                    style="background:linear-gradient(90deg,#fbbf24,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">TOÀN
+                    DIỆN</span>
+                <span style="color:rgba(255,255,255,0.25)"> &amp; CHÍNH XÁC</span>
+            </h1>
+            <p class="header p" style="margin-top:6px;">Hệ thống quản lý và phân tích dữ liệu BHYT với dashboard thông
+                minh – 79764 – IT Anh Khoa</p>
             <div class="season-badge" id="seasonBadge"></div>
 
             <!-- Nút chuyển Light/Dark (mới) -->
@@ -1143,91 +1441,127 @@
             </div>
 
             <div class="advanced-filters" id="validatorFilters">
-                <div class="filter-header">
-                    <h3>🔍 Bộ lọc nâng cao</h3>
-                    <button class="filter-toggle" onclick="toggleFilterVisibility('validatorFilters')">Mở rộng</button>
-                </div>
-                <div class="filter-content" style="display: none;">
-                    <div class="filter-grid">
-                        <div class="filter-group">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <label>Loại lỗi:</label>
+
+                <!-- ===== THANH BỘ LỌC ===== -->
+                <div class="filter-bar" id="filterBar">
+
+                    <!-- Hàng 1: Tìm kiếm + Trạng thái -->
+                    <div class="filter-row-main">
+                        <!-- Tìm kiếm nhanh -->
+                        <div class="filter-item filter-item-wide">
+                            <div class="filter-label">🔍 Tìm kiếm</div>
+                            <input type="text" class="filter-input" id="searchBox"
+                                placeholder="Họ tên, Mã LK, Mã BN...">
+                        </div>
+                        <!-- BS / NTH -->
+                        <div class="filter-item filter-item-wide">
+                            <div class="filter-label">👨‍⚕️ Bác sĩ / Người TH</div>
+                            <input type="text" class="filter-input" id="maBsFilter" placeholder="Tên nhân viên y tế...">
+                        </div>
+                        <!-- Loại lỗi -->
+                        <div class="filter-item">
+                            <div class="filter-label" style="display:flex;align-items:center;gap:6px;">
+                                <span>⚠️ Loại lỗi</span>
                                 <button class="settings-btn" onclick="openSettingsModal()"
-                                    title="Cài đặt quy tắc kiểm tra">⚙️</button>
+                                    title="Cài đặt quy tắc kiểm tra" style="margin-left:auto;">⚙️</button>
                             </div>
                             <select class="filter-select" id="errorTypeFilter">
                                 <option value="">Tất cả loại lỗi</option>
                             </select>
                         </div>
-                        <div class="filter-group">
-                            <label>Mức độ:</label>
+                        <!-- Mức độ -->
+                        <div class="filter-item">
+                            <div class="filter-label">🎯 Mức độ</div>
                             <select class="filter-select" id="severityFilter">
-                                <option value="">Tất cả mức độ</option>
+                                <option value="">Tất cả</option>
                                 <option value="critical">🔴 Nghiêm trọng</option>
                                 <option value="warning">🟡 Cảnh báo</option>
                                 <option value="success">🟢 Hợp lệ</option>
                             </select>
                         </div>
-                        <div class="filter-group">
-                            <label>Tìm kiếm (Tên, Mã LK, Mã BN):</label>
-                            <input type="text" class="filter-input" id="searchBox" placeholder="Nhập từ khóa...">
-                        </div>
-                        <div class="filter-group">
-                            <label>Tên Bác sĩ / Người TH:</label>
-                            <input type="text" class="filter-input" id="maBsFilter"
-                                placeholder="Nhập tên nhân viên y tế...">
-                        </div>
-                        <div class="filter-group">
-                            <label>Khoảng thời gian vào viện:</label>
-                            <div class="date-range-group">
-                                <input type="date" class="filter-input" id="dateFromFilter">
-                                <input type="date" class="filter-input" id="dateToFilter">
-                            </div>
-                        </div>
-                        <div class="filter-group">
-                            <label>Giới tính:</label>
+                        <!-- Giới tính -->
+                        <div class="filter-item filter-item-narrow">
+                            <div class="filter-label">👤 Giới tính</div>
                             <select class="filter-select" id="genderFilter">
                                 <option value="">Tất cả</option>
                                 <option value="1">Nam</option>
                                 <option value="2">Nữ</option>
                             </select>
                         </div>
-                        <div class="filter-group">
-                            <label>Bệnh nhân cùng chi trả (CCT):</label>
+                    </div>
+
+                    <!-- Hàng 2: Thời gian + Bộ lọc chuyên sâu -->
+                    <div class="filter-row-sub">
+                        <!-- Khoảng ngày vào viện -->
+                        <div class="filter-item">
+                            <div class="filter-label">📅 Ngày vào viện</div>
+                            <div class="date-range-group">
+                                <input type="date" class="filter-input" id="dateFromFilter" title="Từ ngày">
+                                <span style="color:var(--text-secondary);font-size:0.85em;">→</span>
+                                <input type="date" class="filter-input" id="dateToFilter" title="Đến ngày">
+                            </div>
+                        </div>
+                        <!-- CCT -->
+                        <div class="filter-item filter-item-narrow">
+                            <div class="filter-label">💰 BN Cùng chi trả</div>
                             <select class="filter-select" id="bncctFilter">
                                 <option value="">Tất cả</option>
-                                <option value="yes">Có CCT (> 0)</option>
-                                <option value="no">Không có CCT (= 0)</option>
+                                <option value="yes">Có CCT (&gt; 0)</option>
+                                <option value="no">Không có (= 0)</option>
                             </select>
                         </div>
-                        <div class="filter-group">
-                            <label>Lọc ca có DVKT & Khám:</label>
+                        <!-- DVKT & Khám -->
+                        <div class="filter-item">
+                            <div class="filter-label">🔬 Ca có DVKT &amp; Khám</div>
                             <select class="filter-select" id="dvktFilter">
                                 <option value="">Tất cả</option>
-                                <option value="yes">Có DVKT & Khám</option>
-                                <option value="no">Không (Chỉ DVKT hoặc chỉ Khám)</option>
+                                <option value="yes">Có DVKT &amp; Khám</option>
+                                <option value="no">Chỉ DVKT hoặc chỉ Khám</option>
                             </select>
                         </div>
-                        <div class="filter-group">
-                            <label>Lọc ca thiếu XML4:</label>
+                        <!-- Thiếu XML4 -->
+                        <div class="filter-item">
+                            <div class="filter-label">📄 Lọc ca thiếu XML4</div>
                             <select class="filter-select" id="missingXml4Filter">
                                 <option value="">Tất cả</option>
-                                <option value="yes">Có DVKT & Khám nhưng thiếu XML4</option>
+                                <option value="yes">Có DVKT &amp; Khám nhưng thiếu XML4</option>
+                            </select>
+                        </div>
+                        <!-- Tiền từ nguồn khác -->
+                        <div class="filter-item filter-item-narrow">
+                            <div class="filter-label">🏷️ Tiền nguồn khác</div>
+                            <select class="filter-select" id="nguonKhacFilter">
+                                <option value="">Tất cả</option>
+                                <option value="yes">Có Nguồn khác (&gt; 0)</option>
+                                <option value="no">Không có Nguồn khác</option>
                             </select>
                         </div>
                     </div>
-                    <div class="filter-actions" style="display: none;">
-                        <button class="btn btn-primary" onclick="applyFilters()">🔍 Áp dụng lọc</button>
-                        <button class="btn btn-warning" onclick="clearFilters()">🔄 Xóa bộ lọc</button>
-                        <button class="btn btn-success" onclick="exportToExcel(false)">📊 Xuất Excel (Tất cả)</button>
-                        <button class="btn btn-danger" onclick="exportToExcel(true)">⚠️ Xuất Excel (Chỉ Lỗi)</button>
-                        <button class="btn btn-info" onclick="exportDvktPlusKham()">📄 Xuất Excel (DVKT & Khám)</button>
+
+                    <!-- Thanh actions -->
+                    <div class="filter-actions-bar">
+                        <div class="filter-actions-left">
+                            <button class="btn btn-primary btn-sm" onclick="applyFilters()">🔍 Áp dụng</button>
+                            <button class="btn btn-outline btn-sm" onclick="clearFilters()">↺ Xóa lọc</button>
+                        </div>
+                        <div class="filter-actions-right">
+                            <button id="showChukyBtn" class="btn btn-sm" onclick="showChukyPopup(globalData.chukyInfo)"
+                                style="display:none;">🔐 Chữ ký số</button>
+                            <button class="btn btn-sm btn-export" onclick="exportToExcel(false)">⬇️ Excel (Tất
+                                cả)</button>
+                            <button class="btn btn-sm btn-export-err" onclick="exportToExcel(true)">⬇️ Excel
+                                (Lỗi)</button>
+                            <button class="btn btn-sm btn-export" onclick="exportDvktPlusKham()">⬇️ Excel (DVKT &amp;
+                                Khám)</button>
+                        </div>
                     </div>
                 </div>
+
             </div>
+
             <div class="results-container" id="validatorResults" style="display: none;">
                 <div class="table-header">
-                    <h3>📋 Kết quả kiểm tra (Click vào hàng có biểu tượng 📄 để xem chi tiết XML4)</h3>
+                    <h3>📋 Kết quả kiểm tra (Click vào hàng để xem chi tiết hồ sơ)</h3>
                     <div id="resultsInfo"></div>
                 </div>
                 <div style="overflow-x: auto; max-height: 600px;">
@@ -1399,6 +1733,18 @@
         </div>
     </div>
 
+    <!-- MODAL CHI TIẾT HỒ SƠ -->
+    <div id="recordDetailModal" class="modal" style="z-index:1050;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="recordDetailTitle" style="font-size:1.15em;">Chi tiết hồ sơ</h2>
+                <span class="close-button" onclick="closeRecordDetailModal()">&times;</span>
+            </div>
+            <div id="recordDetailBody"></div>
+        </div>
+    </div>
+    <!-- END MODAL CHI TIẾT HỒ SƠ -->
+
     <div id="xml4Modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1459,8 +1805,7 @@
             </div>
         </div>
     </div>
-    <div id="xml4Modal" class="modal">
-    </div>
+
     <div id="summaryModal" class="modal">
         <div class="modal-content summary-modal-content">
             <div class="modal-header">
@@ -1610,7 +1955,6 @@
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="script.js" defer></script>
     <script src="Support.js" defer></script>
-    <script src="gemini_analysis.js" defer></script>
     <!-- ========== BỔ SUNG HIỆU ỨNG ICON 💸 / 🎉 (KHÔNG ĐỤNG LOGIC GỐC) ========== -->
     <style>
         /* Chuẩn bị cho icon animation */
