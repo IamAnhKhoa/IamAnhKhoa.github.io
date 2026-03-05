@@ -19,6 +19,34 @@ let globalData = {
 // Đặt đoạn code này ở phần đầu script của bạn
 // Đặt đoạn code này ở phần đầu script của bạn
 
+// ===== MAPPING MÃ CCHN → PHÒNG KHÁM =====
+// Mỗi entry: mã CCHN (chữ thường) → key phòng ('hiv','lao','tamthan','noitonghop')
+// Hồ sơ của BS không có trong bản đồ → mặc định 'khac'
+const PHONG_KHAM_MAP = new Map([
+    // ─── Phòng khám HIV ───
+    ['0032340/hcm-cchn', 'hiv'],   // Huỳnh Thị Hiền
+    ['hcm-cchn-0032340', 'hiv'],
+    ['051532/hcm-cchn', 'hiv'],    // Nguyễn Hoàng Thắng
+
+    // ─── Phòng khám Lao ───
+    ['0028516/hcm-cchn', 'lao'],   // Trần Văn Thành
+
+    // ─── Phòng khám Tâm thần ───
+    ['0032379/hcm-cchn', 'tamthan'], // Công Tằng Tôn Nữ Thị Thanh Xuân
+
+    // ─── Nội tổng hợp BHYT ───
+    ['051523/hcm-cchn', 'noitonghop'],  // Đặng Thị Liên
+]);
+
+// Matching theo tên (dùng khi chưa biết mã CCHN)
+const PHONG_KHAM_NAMES = [
+    { keywords: ['nguyễn hoàng thắng'], room: 'hiv' },
+    { keywords: ['huỳnh thị hiền'], room: 'hiv' },
+    { keywords: ['trần văn thành'], room: 'lao' },
+    { keywords: ['công tằng tôn nữ thị thanh xuân', 'thanh xuân'], room: 'tamthan' },
+    { keywords: ['đặng thị liên'], room: 'noitonghop' },
+];
+
 const indicationMap = new Map([
     // Ví dụ: Kê thuốc Mizho (05C.11) thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30
     ['05C.11', {
@@ -1504,7 +1532,7 @@ function applyFilters() {
         errorType: document.getElementById('errorTypeFilter').value,
         severity: document.getElementById('severityFilter').value,
         searchText: document.getElementById('searchBox').value.toLowerCase(),
-        staffName: document.getElementById('maBsFilter').value.toLowerCase().trim(),
+        phongKham: document.getElementById('phongKhamFilter')?.value || '',
         dateFrom: document.getElementById('dateFromFilter').value.replace(/-/g, ''),
         dateTo: document.getElementById('dateToFilter').value.replace(/-/g, ''),
         gender: document.getElementById('genderFilter').value,
@@ -1522,13 +1550,24 @@ function applyFilters() {
         }
         if (filters.searchText && !`${r.hoTen} ${r.maLk} ${r.maBn}`.toLowerCase().includes(filters.searchText)) return false;
 
-        if (filters.staffName) {
-            const staffCodes = [...r.bac_si_chi_dinh, ...r.nguoi_thuc_hien];
-            const hasMatchingStaff = staffCodes.some(code => {
-                const name = staffNameMap.get(code);
-                return name && name.toLowerCase().includes(filters.staffName);
-            });
-            if (!hasMatchingStaff) return false;
+        if (filters.phongKham) {
+            const staffCodes = [...(r.bac_si_chi_dinh || []), ...(r.nguoi_thuc_hien || [])];
+            // 1. Tìm theo mã CCHN trước
+            let roomOfRecord = staffCodes.reduce((found, code) => {
+                if (found) return found;
+                return PHONG_KHAM_MAP.get((code || '').toLowerCase()) || null;
+            }, null);
+            // 2. Fallback: tìm theo tên BS (từ staffNameMap)
+            if (!roomOfRecord) {
+                const staffNames = staffCodes.map(c => (staffNameMap?.get(c) || '').toLowerCase());
+                for (const entry of PHONG_KHAM_NAMES) {
+                    if (staffNames.some(n => entry.keywords.some(k => n.includes(k)))) {
+                        roomOfRecord = entry.room;
+                        break;
+                    }
+                }
+            }
+            if (filters.phongKham !== (roomOfRecord || 'khac')) return false;
         }
 
         const recordDate = String(r.ngayVao).substring(0, 8);
@@ -1784,12 +1823,37 @@ function showRecordDetailModal(record) {
     <div class="rdetail-section">
         <h4 class="rdetail-section-title">💰 Chi phí BHYT</h4>
         <div class="rdetail-grid">
-            <div class="rdetail-item"><span class="rdetail-label">Tổng chi phí</span><span class="rdetail-value">${formatCurrency(record.t_tongchi)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tổng chi phí</span><span class="rdetail-value">${(() => {
+            if (record.t_tongchi && record.t_tongchi > 0) return formatCurrency(record.t_tongchi);
+            const fromDrugs = (record.drugs || []).reduce((s, d) => s + (d.thanh_tien_bh || 0), 0);
+            const fromSvc = (record.services || []).reduce((s, v) => s + (v.thanh_tien_bh || 0), 0);
+            // Cộng thêm tiền khám fallback (từ DVKT) nếu t_kham = 0 VÀ chưa có trong fromSvc
+            const khamFallback = (!record.t_kham || record.t_kham <= 0)
+                ? (record.services || []).filter(s => (s.ten_dich_vu || '').toLowerCase().includes('kh\u00e1m'))
+                    .reduce((s, v) => s + (v.thanh_tien_bh || 0), 0)
+                : 0;
+            const calc = fromDrugs + fromSvc + (fromSvc === 0 ? khamFallback : 0);
+            if (calc > 0) return `${formatCurrency(calc)} <small style="color:#888">(tính toán)</small>`;
+            const fallback = (record.t_bhtt || 0) + (record.t_bncct || 0) + (record.t_nguonkhac || 0);
+            return fallback > 0 ? `${formatCurrency(fallback)} <small style="color:#888">(tính toán)</small>` : formatCurrency(0);
+        })()}</span></div>
             <div class="rdetail-item"><span class="rdetail-label">BHYT thanh toán</span><span class="rdetail-value"><strong style="color:var(--accent)">${formatCurrency(record.t_bhtt)}</strong></span></div>
             <div class="rdetail-item"><span class="rdetail-label">BN cùng chi trả</span><span class="rdetail-value">${formatCurrency(record.t_bncct)}</span></div>
             <div class="rdetail-item"><span class="rdetail-label">Tiền thuốc</span><span class="rdetail-value">${formatCurrency(record.t_thuoc)}</span></div>
             <div class="rdetail-item"><span class="rdetail-label">Tiền VTYT</span><span class="rdetail-value">${formatCurrency(record.t_vtyt)}</span></div>
-            <div class="rdetail-item"><span class="rdetail-label">Tiền xét nghiệm</span><span class="rdetail-value">${formatCurrency(record.t_xn)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền xét nghiệm</span><span class="rdetail-value">${(() => {
+            // Nếu t_xn trong XML1 = 0, tính từ services (XML3) theo mã DV bắt đầu "24." hoặc tên có từ khóa XN
+            if (record.t_xn && record.t_xn > 0) return formatCurrency(record.t_xn);
+            const xnKeywords = ['xét nghiệm', 'huyết học', 'sinh hóa', 'vi sinh', 'miễn dịch', 'nước tiểu', 'hiv', 'pcr', 'elisa', 'định lượng', 'kháng thể', 'kháng nguyên'];
+            const xnFromSvc = (record.services || []).filter(s => {
+                const ma = (s.ma_dich_vu || '').toLowerCase();
+                const ten = (s.ten_dich_vu || '').toLowerCase();
+                return ma.startsWith('24.') || xnKeywords.some(k => ten.includes(k));
+            }).reduce((sum, s) => sum + (s.thanh_tien_bh || 0), 0);
+            return xnFromSvc > 0
+                ? `${formatCurrency(xnFromSvc)} <small style="color:#888">(từ DVKT)</small>`
+                : formatCurrency(0);
+        })()}</span></div>
             <div class="rdetail-item"><span class="rdetail-label">Tiền CĐHA</span><span class="rdetail-value">${formatCurrency(record.t_cdha)}</span></div>
             <div class="rdetail-item"><span class="rdetail-label">Tiền khám</span><span class="rdetail-value">${(() => {
             // Nếu t_kham trong XML1 = 0, tính từ services (XML3) có chứa "khám"
@@ -3133,6 +3197,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
     {
+        id: 18,
+        date: '05-03-2026',
+        type: 'feature',
+        title: '🎨 Cải tiến giao diện & bộ lọc',
+        content: 'Thiết kế lại bộ lọc nâng cao thành 2 hàng rõ ràng (Tìm kiếm / Trạng thái và Thời gian / Chuyên sâu). Tiền khám tự động lấy từ danh sách DVKT nếu T_KHAM = 0. Cập nhật header với hiệu ứng gradient chữ đẹp hơn. Scroll mượt hơn, bớt trôi. Chữ ký số chuyển thành button thay vì popup tự động. Bỏ tính năng phân tích AI (Gemini).'
+    },
+    {
         id: 17,
         date: '24-02-2026',
         type: 'feature',
@@ -3182,13 +3253,7 @@ const notifications = [
         title: 'Bổ sung ngày NV nghỉ',
         content: 'Bác sỹ khi nghỉ phát sinh khám sẽ báo lỗi nghiêm trọng'
     },
-    {
-        id: 11,
-        date: '05-03-2026',
-        type: 'feature',
-        title: '🎨 Cải tiến giao diện & bộ lọc',
-        content: 'Thiết kế lại bộ lọc nâng cao thành 2 hàng rõ ràng (Tìm kiếm / Trạng thái và Thời gian / Chuyên sâu). Tiền khám tự động lấy từ danh sách DVKT nếu T_KHAM = 0. Cập nhật header với hiệu ứng gradient chữ đẹp hơn. Scroll mượt hơn, bớt trôi. Chữ ký số chuyển thành button thay vì popup tự động. Bỏ tính năng phân tích AI (Gemini).'
-    },
+
     {
         id: 10,
         date: '19-08-2025',
