@@ -4243,7 +4243,7 @@ async function sendTelegramComparisonReport(message, excelBlob) {
                     <img src="https://raw.githubusercontent.com/lqthai97/lqthai97.github.io/refs/heads/main/anhkhoa.jpg" alt="Avatar" class="profile-avatar">
                     <h2 class="profile-name">Trần Anh Khoa</h2>
                     <p class="profile-role">IT Admin & Developer</p>
-                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Trung tâm Y tế Củ Chi</p>
+                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Trạm Y tế xã Tân An Hội</p>
                     
                     <div class="social-links">
                         <a href="https://zalo.me/0332185388" target="_blank" class="social-btn btn-zalo">Zalo</a>
