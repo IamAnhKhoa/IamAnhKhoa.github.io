@@ -13,6 +13,7 @@ let globalData = {
     excelRecords: new Map(),
     comparisonResults: [],
     filteredComparisonResults: [],
+    chukyInfo: null,
     charts: {}
 };
 // Đặt đoạn code này ở phần đầu script của bạn
@@ -540,8 +541,20 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
 
     showSummaryPopup(summaryStats);
 
-    // === HIỂN THỊ THÔNG TIN CHỮ KÝ SỐ (sau 400ms để không che popup kết quả) ===
-    setTimeout(() => showChukyPopup({ exists: hasChuky, value: chukyValue }), 400);
+    // === LƯU THÔNG TIN CHỮ KÝ SỐ để hiển thị khi bấm button ===
+    globalData.chukyInfo = { exists: hasChuky, value: chukyValue };
+    // Cập nhật trạng thái nút ký số
+    const chukyBtn = document.getElementById('showChukyBtn');
+    if (chukyBtn) {
+        if (hasChuky) {
+            chukyBtn.textContent = '🔐 Chữ ký số: ✅ Đã ký';
+            chukyBtn.className = 'btn btn-success';
+        } else {
+            chukyBtn.textContent = '🔐 Chữ ký số: ⚠️ Chưa ký';
+            chukyBtn.className = 'btn btn-danger';
+        }
+        chukyBtn.style.display = 'inline-flex';
+    }
     // =======================================================
     // 👉👉 CODE MỚI CẦN THÊM VÀO ĐÂY ĐỂ GHI LỊCH SỬ SHEET
     // =======================================================
@@ -1021,12 +1034,16 @@ function validateSingleHoso(hoso) {
                 const performer = getText(item, 'NGUOI_THUC_HIEN') || maBacSiStr.split(/[,;]/)[0].trim();
 
                 record.drugs.push({
+                    ma_thuoc: maThuoc,
                     ma_bac_si: maBacSiStr,
                     ngay_yl: ngayYl,
                     ten_thuoc: tenThuoc,
                     thanh_tien_bh: thanhTienBH,
-                    ngay_th_yl: ngayThYl, // <-- Thêm thuộc tính này
-                    performer: performer   // <-- Thêm thuộc tính này
+                    don_gia: parseFloat(getText(item, 'DON_GIA') || '0'),
+                    so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
+                    don_vi_tinh: getText(item, 'DON_VI_TINH'),
+                    ngay_th_yl: ngayThYl,
+                    performer: performer
                 });
                 if (!record.mainDoctor) {
                     record.mainDoctor = maBacSiStr.split(/[,;]/)[0].trim();
@@ -1700,13 +1717,176 @@ function exportDvktPlusKham() {
     XLSX.writeFile(wb, 'BaoCao_DVKT_va_Kham.xlsx');
 }
 
-// ============================= XML4 MODAL =============================
+// ============================= RECORD DETAIL MODAL =============================
 function handleRowClick(record) {
-    if (record.has_xml4) {
-        displayXml4Details(record.maLk);
-    } else {
-        alert('Không có dữ liệu CLS (XML4) cho hồ sơ này.');
+    showRecordDetailModal(record);
+}
+
+function showRecordDetailModal(record) {
+    const modal = document.getElementById('recordDetailModal');
+    if (!modal) return;
+
+    // Tiêu đề
+    document.getElementById('recordDetailTitle').textContent =
+        `📋 Chi tiết hồ sơ: ${record.hoTen} (${record.maLk})`;
+
+    const gioiTinhText = record.gioiTinh === '1' ? 'Nam' : record.gioiTinh === '2' ? 'Nữ' : 'N/A';
+    const staffFormat = (staffSet) => {
+        if (!staffSet || staffSet.size === 0) return 'N/A';
+        return Array.from(staffSet).map(code => {
+            const name = staffNameMap.get(code);
+            return name ? `${name} (${code})` : code;
+        }).join(', ');
+    };
+
+    // ─── THÔNG TIN BỆNH NHÂN ───
+    let html = `
+    <div class="rdetail-section">
+        <h4 class="rdetail-section-title">👤 Thông tin bệnh nhân</h4>
+        <div class="rdetail-grid">
+            <div class="rdetail-item"><span class="rdetail-label">Mã LK</span><span class="rdetail-value copyable" onclick="copyToClipboard(event,'${record.maLk}')">${record.maLk}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Mã BN</span><span class="rdetail-value copyable" onclick="copyToClipboard(event,'${record.maBn || ''}')">${record.maBn || 'N/A'}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Họ tên</span><span class="rdetail-value"><strong>${record.hoTen}</strong></span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Ngày sinh</span><span class="rdetail-value">${formatDateTimeForDisplay(record.ngaySinh) || 'N/A'}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Giới tính</span><span class="rdetail-value">${gioiTinhText}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Mã thẻ BHYT</span><span class="rdetail-value copyable" onclick="copyToClipboard(event,'${record.maThe || ''}')">${record.maThe || 'N/A'}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">CCCD</span><span class="rdetail-value">${record.soCccd || 'N/A'}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Mã khoa</span><span class="rdetail-value">${record.maKhoa || 'N/A'}</span></div>
+        </div>
+    </div>
+
+    <div class="rdetail-section">
+        <h4 class="rdetail-section-title">🏥 Thời gian điều trị</h4>
+        <div class="rdetail-grid">
+            <div class="rdetail-item"><span class="rdetail-label">Ngày vào</span><span class="rdetail-value">${formatDateTimeForDisplay(record.ngayVao) || 'N/A'}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Ngày ra</span><span class="rdetail-value">${formatDateTimeForDisplay(record.ngayRa) || 'N/A'}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Ngày thanh toán</span><span class="rdetail-value">${formatDateTimeForDisplay(record.ngayTtoan) || 'N/A'}</span></div>
+        </div>
+    </div>
+
+    <div class="rdetail-section">
+        <h4 class="rdetail-section-title">💊 Chẩn đoán</h4>
+        <div class="rdetail-grid">
+            <div class="rdetail-item"><span class="rdetail-label">Bệnh chính (ICD)</span><span class="rdetail-value"><strong>${record.chanDoan || 'N/A'}</strong></span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Bệnh kèm theo</span><span class="rdetail-value">${record.maBenhKemTheo || 'N/A'}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Bệnh YHCT</span><span class="rdetail-value">${record.maBenhYHCT || 'N/A'}</span></div>
+        </div>
+    </div>
+
+    <div class="rdetail-section">
+        <h4 class="rdetail-section-title">👨‍⚕️ Nhân viên y tế</h4>
+        <div class="rdetail-grid">
+            <div class="rdetail-item rdetail-full"><span class="rdetail-label">Bác sĩ chỉ định</span><span class="rdetail-value">${staffFormat(record.bac_si_chi_dinh)}</span></div>
+            <div class="rdetail-item rdetail-full"><span class="rdetail-label">Người thực hiện</span><span class="rdetail-value">${staffFormat(record.nguoi_thuc_hien)}</span></div>
+        </div>
+    </div>
+
+    <div class="rdetail-section">
+        <h4 class="rdetail-section-title">💰 Chi phí BHYT</h4>
+        <div class="rdetail-grid">
+            <div class="rdetail-item"><span class="rdetail-label">Tổng chi phí</span><span class="rdetail-value">${formatCurrency(record.t_tongchi)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">BHYT thanh toán</span><span class="rdetail-value"><strong style="color:var(--accent)">${formatCurrency(record.t_bhtt)}</strong></span></div>
+            <div class="rdetail-item"><span class="rdetail-label">BN cùng chi trả</span><span class="rdetail-value">${formatCurrency(record.t_bncct)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền thuốc</span><span class="rdetail-value">${formatCurrency(record.t_thuoc)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền VTYT</span><span class="rdetail-value">${formatCurrency(record.t_vtyt)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền xét nghiệm</span><span class="rdetail-value">${formatCurrency(record.t_xn)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền CĐHA</span><span class="rdetail-value">${formatCurrency(record.t_cdha)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền khám</span><span class="rdetail-value">${(() => {
+            // Nếu t_kham trong XML1 = 0, tính từ services (XML3) có chứa "khám"
+            if (record.t_kham && record.t_kham > 0) return formatCurrency(record.t_kham);
+            const khamFromSvc = (record.services || [])
+                .filter(s => (s.ten_dich_vu || '').toLowerCase().includes('kh\u00e1m'))
+                .reduce((sum, s) => sum + (s.thanh_tien_bh || 0), 0);
+            return khamFromSvc > 0
+                ? `${formatCurrency(khamFromSvc)} <small style="color:#888">(từ DVKT)</small>`
+                : formatCurrency(0);
+        })()}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền giường</span><span class="rdetail-value">${formatCurrency(record.t_giuong)}</span></div>
+            <div class="rdetail-item"><span class="rdetail-label">Tiền PT/TT</span><span class="rdetail-value">${formatCurrency(record.t_pttt)}</span></div>
+        </div>
+    </div>`;
+
+
+    // ─── DANH SÁCH LỖI ───
+    if (record.errors && record.errors.length > 0) {
+        html += `<div class="rdetail-section rdetail-errors">
+            <h4 class="rdetail-section-title">⚠️ Danh sách lỗi / cảnh báo (${record.errors.length})</h4>
+            <div style="display:flex; flex-direction:column; gap:6px;">`;
+        record.errors.forEach(e => {
+            const badgeClass = e.severity === 'critical' ? 'status-error' : 'status-warning';
+            const icon = e.severity === 'critical' ? '🔴' : '🟡';
+            html += `<div style="padding:10px 14px; background:${e.severity === 'critical' ? '#fff0f0' : '#fffbea'}; border-radius:8px; border-left:4px solid ${e.severity === 'critical' ? '#e53e3e' : '#d69e2e'}">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                    <span class="status-badge ${badgeClass}">${icon} ${ERROR_TYPES[e.type] || e.type}</span>
+                    ${e.cost > 0 ? `<span style="color:#e53e3e; font-weight:600; font-size:0.85em;">💸 ${formatCurrency(e.cost)}</span>` : ''}
+                </div>
+                <small style="color:#555">${e.message}</small>
+            </div>`;
+        });
+        html += `</div></div>`;
     }
+
+    // ─── THUỐC ───
+    if (record.drugs && record.drugs.length > 0) {
+        html += `<div class="rdetail-section">
+            <h4 class="rdetail-section-title">💊 Danh sách thuốc (${record.drugs.length})</h4>
+            <div style="overflow-x:auto">
+            <table class="results-table" style="font-size:0.85em">
+                <thead><tr>
+                    <th>STT</th><th>Mã thuốc</th><th>Tên thuốc</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền BH</th><th>Ngày y lệnh</th>
+                </tr></thead><tbody>`;
+        record.drugs.forEach((d, i) => {
+            html += `<tr>
+                <td>${i + 1}</td>
+                <td>${d.ma_thuoc || ''}</td>
+                <td>${d.ten_thuoc || ''}</td>
+                <td>${d.so_luong || ''} ${d.don_vi_tinh || ''}</td>
+                <td>${formatCurrency(d.don_gia)}</td>
+                <td><strong>${formatCurrency(d.thanh_tien_bh)}</strong></td>
+                <td>${formatDateTimeForDisplay(d.ngay_yl) || ''}</td>
+            </tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+    }
+
+    // ─── DỊCH VỤ KỸ THUẬT ───
+    if (record.services && record.services.length > 0) {
+        html += `<div class="rdetail-section">
+            <h4 class="rdetail-section-title">🔬 Dịch vụ kỹ thuật (${record.services.length})</h4>
+            <div style="overflow-x:auto">
+            <table class="results-table" style="font-size:0.85em">
+                <thead><tr>
+                    <th>STT</th><th>Mã DV</th><th>Tên dịch vụ</th><th>Thành tiền BH</th><th>Ngày y lệnh</th><th>Ngày TH YL</th>
+                </tr></thead><tbody>`;
+        record.services.forEach((s, i) => {
+            html += `<tr>
+                <td>${i + 1}</td>
+                <td>${s.ma_dich_vu || ''}</td>
+                <td>${s.ten_dich_vu || ''}</td>
+                <td><strong>${formatCurrency(s.thanh_tien_bh)}</strong></td>
+                <td>${formatDateTimeForDisplay(s.ngay_yl) || ''}</td>
+                <td>${formatDateTimeForDisplay(s.ngay_th_yl) || ''}</td>
+            </tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+    }
+
+    // ─── NÚT XEM CLS (XML4) ───
+    if (record.has_xml4) {
+        html += `<div class="rdetail-section" style="text-align:center; padding-bottom: 0">
+            <button class="btn btn-info" onclick="closeRecordDetailModal(); displayXml4Details('${record.maLk}')">
+                📄 Xem chi tiết Cận lâm sàng (CLS / XML4)
+            </button>
+        </div>`;
+    }
+
+    document.getElementById('recordDetailBody').innerHTML = html;
+    modal.style.display = 'block';
+}
+
+function closeRecordDetailModal() {
+    const modal = document.getElementById('recordDetailModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function displayXml4Details(maLk) {
@@ -2004,9 +2184,11 @@ function showChukyPopup(chukyInfo) {
 
     const raw = chukyInfo.value;
 
-    // Ưu tiên: nếu raw là XML (XMLDSig), parse ngay
+    // Khai báo ở cấp hàm để dùng được trong cả 2 nhánh điều kiện
     let info = null;
     let decodedXml = null;
+    let decoded = null;
+    let cleanRaw = '';
 
     if (raw.trim().startsWith('<')) {
         // Trường hợp CHUKYDONVI chứa XML thuần (XMLDSig)
@@ -2014,8 +2196,8 @@ function showChukyPopup(chukyInfo) {
         decodedXml = raw;
     } else {
         // Thử decode Base64 (CHUKYDONVI chứa dữ liệu mã hóa)
-        const cleanRaw = raw.replace(/\s/g, '');
-        const decoded = safeBase64Decode(cleanRaw);
+        cleanRaw = raw.replace(/\s/g, '');
+        decoded = safeBase64Decode(cleanRaw);
         if (decoded && decoded.trim().startsWith('<')) {
             info = parseChukyXml(decoded);
             decodedXml = decoded;
@@ -2090,6 +2272,7 @@ function showChukyPopup(chukyInfo) {
 
     } else {
         // ── Không decode được → hiện raw rút gọn ──
+        cleanRaw = raw.replace(/\s/g, '');
         bodyHtml += `
         <div style="background:#fffbea; border:1px solid #f6e05e; border-radius:8px; padding:12px 14px;">
             <p style="font-size:0.82em; color:#744210; margin-bottom:6px;">⚠️ Không thể giải mã tự động (có thể là chữ ký nhị phân CMS/PKCS#7)</p>
@@ -3000,6 +3183,13 @@ const notifications = [
         content: 'Bác sỹ khi nghỉ phát sinh khám sẽ báo lỗi nghiêm trọng'
     },
     {
+        id: 11,
+        date: '05-03-2026',
+        type: 'feature',
+        title: '🎨 Cải tiến giao diện & bộ lọc',
+        content: 'Thiết kế lại bộ lọc nâng cao thành 2 hàng rõ ràng (Tìm kiếm / Trạng thái và Thời gian / Chuyên sâu). Tiền khám tự động lấy từ danh sách DVKT nếu T_KHAM = 0. Cập nhật header với hiệu ứng gradient chữ đẹp hơn. Scroll mượt hơn, bớt trôi. Chữ ký số chuyển thành button thay vì popup tự động. Bỏ tính năng phân tích AI (Gemini).'
+    },
+    {
         id: 10,
         date: '19-08-2025',
         type: 'feature', // 'feature', 'fix', 'announcement'
@@ -3185,12 +3375,12 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
     });
 
     const toggleActionsButton = document.createElement('button'); toggleActionsButton.id = 'toggleActionsButton'; toggleActionsButton.className = 'btn btn-info'; toggleActionsButton.innerHTML = '⚙️ Hiện Hành động'; toggleActionsButton.onclick = () => { const container = document.getElementById('validatorResults'); if (container) { container.classList.toggle('actions-hidden'); const isHidden = container.classList.contains('actions-hidden'); toggleActionsButton.innerHTML = isHidden ? '⚙️ Hiện Hành động' : '⚙️ Ẩn Hành động'; } };
-    const filterActions = document.querySelector('#validatorFilters .filter-actions'); if (filterActions) { filterActions.appendChild(bulkZaloButton); filterActions.appendChild(toggleActionsButton); }
+    const filterActionsRight = document.querySelector('#validatorFilters .filter-actions-right'); if (filterActionsRight) { filterActionsRight.appendChild(bulkZaloButton); filterActionsRight.appendChild(toggleActionsButton); }
     const resultsContainer = document.getElementById('validatorResults'); if (resultsContainer) { resultsContainer.classList.add('actions-hidden'); }
     const nguonKhacFilterGroup = document.createElement('div'); nguonKhacFilterGroup.className = 'filter-group'; nguonKhacFilterGroup.innerHTML = `<label>Tiền từ Nguồn khác:</label><select class="filter-select" id="nguonKhacFilter"><option value="">Tất cả</option><option value="yes">Có Nguồn khác (> 0)</option><option value="no">Không có Nguồn khác</option></select>`;
     const dynamicSummaryContainer = document.createElement('div'); dynamicSummaryContainer.id = 'dynamicSummaryContainer'; dynamicSummaryContainer.innerHTML = `<div id="nguonKhacSummary" class="summary-box" style="display: none;"><span>∑ Tiền Nguồn khác</span><strong id="totalNguonKhacValue">0</strong></div><div id="bncctSummary" class="summary-box" style="display: none;"><span>∑ Tiền BN CCT</span><strong id="totalBncctValue">0</strong></div>`;
     const nguonKhacStatCard = document.createElement('div'); nguonKhacStatCard.className = 'stat-card'; nguonKhacStatCard.innerHTML = `<h3 id="totalNguonKhacDashboard">0</h3><p>Tổng Tiền Nguồn khác</p>`;
-    const filterGrid = document.querySelector('#validatorFilters .filter-grid'); const bncctFilter = document.querySelector('#bncctFilter'); if (filterGrid && bncctFilter) { bncctFilter.parentElement.insertAdjacentElement('afterend', nguonKhacFilterGroup); }
+    // nguonKhacFilter đã có trong HTML mới (id="nguonKhacFilter" trong filter-bar), không cần inject nữa
     const tableHeader = document.querySelector('#validatorResults .table-header'); const resultsInfoDiv = document.getElementById('resultsInfo'); if (tableHeader && resultsInfoDiv) { const headerInfoContainer = document.createElement('div'); headerInfoContainer.className = 'header-info-container'; resultsInfoDiv.parentNode.insertBefore(headerInfoContainer, resultsInfoDiv); headerInfoContainer.appendChild(resultsInfoDiv); headerInfoContainer.appendChild(dynamicSummaryContainer); }
     const dashboardStats = document.getElementById('dashboardStats'); if (dashboardStats) { dashboardStats.appendChild(nguonKhacStatCard); }
     const cardClassMapping = { 'errorCount': ['stat-card--error', 'stat-card--colored'], 'totalAmount': ['stat-card--bhyttt', 'stat-card--colored'], 'totalBncct': ['stat-card--bncct', 'stat-card--colored'], 'totalNguonKhacDashboard': ['stat-card--primary', 'stat-card--colored'] };
