@@ -1453,10 +1453,17 @@
                             <input type="text" class="filter-input" id="searchBox"
                                 placeholder="Họ tên, Mã LK, Mã BN...">
                         </div>
-                        <!-- BS / NTH -->
-                        <div class="filter-item filter-item-wide">
-                            <div class="filter-label">👨‍⚕️ Bác sĩ / Người TH</div>
-                            <input type="text" class="filter-input" id="maBsFilter" placeholder="Tên nhân viên y tế...">
+                        <!-- Phòng khám -->
+                        <div class="filter-item">
+                            <div class="filter-label">🏥 Phòng khám</div>
+                            <select class="filter-select" id="phongKhamFilter">
+                                <option value="">Tất cả phòng</option>
+                                <option value="hiv">🔴 Phòng khám HIV</option>
+                                <option value="lao">🟠 Phòng khám Lao</option>
+                                <option value="tamthan">🟣 Phòng khám Tâm thần</option>
+                                <option value="noitonghop">🔵 Nội tổng hợp (BHYT)</option>
+                                <option value="khac">⚪ Khác</option>
+                            </select>
                         </div>
                         <!-- Loại lỗi -->
                         <div class="filter-item">
