@@ -159,7 +159,7 @@ const staffNameMap = new Map([
     ['0028516/HCM-CCHN', 'Trần Văn Thành']
 ]);
 
-// Utility functions
+
 
 const formatDateTimeForDisplay = (dateString) => {
     if (!dateString) return '';
@@ -1040,6 +1040,13 @@ function performCrossRecordValidation(records) {
 
                 // Nếu không tìm được LIEU_DUNG hợp lệ → bỏ qua, không cảnh báo mù
                 if (lieuDungDays === null) continue;
+
+                // ✅ Chỉ cảnh báo khi 2 hồ sơ cùng PHÒNG KHÁM (dựa theo PHONG_KHAM_MAP từ mainDoctor)
+                // Các bác sĩ không có trong map (chưa được phân phòng) → bỏ qua
+                const getPhong = (rec) => PHONG_KHAM_MAP.get((rec.mainDoctor || '').toLowerCase().trim());
+                const phongOlder = getPhong(older);
+                const phongNewer = getPhong(newer);
+                if (!phongOlder || !phongNewer || phongOlder !== phongNewer) continue;
 
                 const dateOlder = parseDate(older.ngayVao);
                 const dateNewer = parseDate(newer.ngayVao);
