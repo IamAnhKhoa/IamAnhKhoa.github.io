@@ -126,7 +126,7 @@ const ERROR_TYPES = {
     'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
     'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp',
     'TOA_THUOC_TRUNG_LAP': 'Toa thuốc trùng lặp trên cùng 1 bệnh nhân',
-    'TAI_KHAM_TRUOC_28_NGAY': '⚡ Tái khám & lãnh thuốc khi thuốc cũ chưa hết (< 28 ngày)'
+    'TAI_KHAM_TRUOC_28_NGAY': '⚡ Tái khám khi thuốc cũ chưa hết (theo Liều dùng XML2)'
 };
 
 let validationSettings = {};
@@ -2081,7 +2081,7 @@ function showRecordDetailModal(record) {
             <div style="overflow-x:auto">
             <table class="results-table" style="font-size:0.85em">
                 <thead><tr>
-                    <th>STT</th><th>Mã thuốc</th><th>Tên thuốc</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền BH</th><th>Ngày y lệnh</th>
+                    <th>STT</th><th>Mã thuốc</th><th>Tên thuốc</th><th>Số lượng</th><th>Đơn giá</th><th>Liều dùng</th><th>Thành tiền BH</th><th>Ngày y lệnh</th>
                 </tr></thead><tbody>`;
         record.drugs.forEach((d, i) => {
             html += `<tr>
@@ -2090,6 +2090,7 @@ function showRecordDetailModal(record) {
                 <td>${d.ten_thuoc || ''}</td>
                 <td>${d.so_luong || ''} ${d.don_vi_tinh || ''}</td>
                 <td>${formatCurrency(d.don_gia)}</td>
+                <td style="color:#0066cc;font-size:0.9em">${d.lieu_dung || '—'}</td>
                 <td><strong>${formatCurrency(d.thanh_tien_bh)}</strong></td>
                 <td>${formatDateTimeForDisplay(d.ngay_yl) || ''}</td>
             </tr>`;
