@@ -124,7 +124,9 @@ const ERROR_TYPES = {
     'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)',
 
     'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
-    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp'
+    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp',
+    'TOA_THUOC_TRUNG_LAP': 'Toa thuốc trùng lặp trên cùng 1 bệnh nhân',
+    'TAI_KHAM_TRUOC_28_NGAY': '⚡ Tái khám & lãnh thuốc khi thuốc cũ chưa hết (< 28 ngày)'
 };
 
 let validationSettings = {};
@@ -906,6 +908,154 @@ function performCrossRecordValidation(records) {
             }
         });
     }
+
+    // ===================================================================
+    // KIỂM TRA TOA THUỐC TRÙNG LẶP TRÊN CÙNG 1 BỆNH NHÂN (CÙNG NGÀY, KHÁC GIỜ)
+    // ===================================================================
+    const ruleKeyToaTrung = 'TOA_THUOC_TRUNG_LAP';
+    if (validationSettings[ruleKeyToaTrung]?.enabled) {
+        // Nhóm theo MÃ BỆNH NHÂN (maBn) — đây là định danh bệnh án
+        const patientRecordsMap = new Map();
+        records.forEach(record => {
+            if (!record.drugs || record.drugs.length === 0) return;
+            const patientKey = (record.maBn || '').trim();
+            if (!patientKey) return;
+            if (!patientRecordsMap.has(patientKey)) {
+                patientRecordsMap.set(patientKey, []);
+            }
+            patientRecordsMap.get(patientKey).push(record);
+        });
+
+        patientRecordsMap.forEach((patientRecords) => {
+            if (patientRecords.length < 2) return;
+
+            // Fingerprint toa thuốc: chuỗi "mã thuốc|số lượng" đã sort → đảm bảo so sánh chính xác
+            const getDrugFingerprint = (record) => {
+                return record.drugs
+                    .map(d => `${(d.ma_thuoc || '').trim()}:${(d.so_luong || '').toString().trim()}`)
+                    .filter(m => m && m !== ':')
+                    .sort()
+                    .join('|');
+            };
+
+            // So sánh từng cặp hồ sơ
+            for (let i = 0; i < patientRecords.length; i++) {
+                for (let j = i + 1; j < patientRecords.length; j++) {
+                    const recA = patientRecords[i];
+                    const recB = patientRecords[j];
+
+                    // ✅ CHỈ cảnh báo khi cùng ngày vào (8 ký tự đầu: YYYYMMDD) — chỉ khác giờ
+                    const dateA = String(recA.ngayVao || '').substring(0, 8);
+                    const dateB = String(recB.ngayVao || '').substring(0, 8);
+                    if (!dateA || !dateB || dateA !== dateB) continue;
+
+                    const fpA = getDrugFingerprint(recA);
+                    const fpB = getDrugFingerprint(recB);
+                    if (!fpA || !fpB || fpA !== fpB) continue;
+
+                    // Toa thuốc giống hệt, cùng ngày vào, chỉ khác giờ
+                    const totalDrugCost = recB.drugs.reduce((sum, d) => sum + (d.thanh_tien_bh || 0), 0);
+                    const drugNames = recB.drugs.slice(0, 3).map(d => d.ten_thuoc || d.ma_thuoc).join(', ');
+                    const moreText = recB.drugs.length > 3 ? ` ... (+${recB.drugs.length - 3} thuốc khác)` : '';
+
+                    const msgA = `Toa thuốc giống hệt hồ sơ LK [${recB.maLk}] cùng ngày [${formatDateTimeForDisplay(recB.ngayVao)}] — chỉ khác giờ. Gồm ${recB.drugs.length} thuốc: ${drugNames}${moreText}.`;
+                    const msgB = `Toa thuốc giống hệt hồ sơ LK [${recA.maLk}] cùng ngày [${formatDateTimeForDisplay(recA.ngayVao)}] — chỉ khác giờ. Gồm ${recA.drugs.length} thuốc: ${drugNames}${moreText}.`;
+
+                    recA.errors.push({
+                        type: ruleKeyToaTrung,
+                        severity: validationSettings[ruleKeyToaTrung].severity,
+                        message: msgA,
+                        cost: costIfCritical(ruleKeyToaTrung, totalDrugCost),
+                        itemName: 'Toa thuốc'
+                    });
+                    recB.errors.push({
+                        type: ruleKeyToaTrung,
+                        severity: validationSettings[ruleKeyToaTrung].severity,
+                        message: msgB,
+                        cost: costIfCritical(ruleKeyToaTrung, totalDrugCost),
+                        itemName: 'Toa thuốc'
+                    });
+                }
+            }
+        });
+    }
+    // ===================================================================
+    // KẾT THÚC: KIỂM TRA TOA THUỐC TRÙNG LẶP
+    // ===================================================================
+
+    // ===================================================================
+    // CẢNH BÁO: TÁI KHÁM TRƯỚC KHI THUỐC CŨ CHƯA HẾT (< 28 NGÀY)
+    // ===================================================================
+    const ruleKeyTaiKham = 'TAI_KHAM_TRUOC_28_NGAY';
+    if (validationSettings[ruleKeyTaiKham]?.enabled) {
+        // Nhóm hồ sơ theo mã bệnh nhân
+        const patientVisitMap = new Map();
+        records.forEach(record => {
+            if (!record.drugs || record.drugs.length === 0) return;
+            const patientKey = (record.maThe || record.maBn || '').trim();
+            if (!patientKey) return;
+            if (!patientVisitMap.has(patientKey)) patientVisitMap.set(patientKey, []);
+            patientVisitMap.get(patientKey).push(record);
+        });
+
+        patientVisitMap.forEach((visits) => {
+            if (visits.length < 2) return;
+
+            // Sắp xếp theo ngày vào tăng dần
+            visits.sort((a, b) => String(a.ngayVao).localeCompare(String(b.ngayVao)));
+
+            const LIMIT_DAYS = 28;
+            const LIMIT_MS = LIMIT_DAYS * 24 * 60 * 60 * 1000;
+
+            // So sánh từng cặp kế tiếp
+            for (let i = 0; i < visits.length - 1; i++) {
+                const older = visits[i];
+                const newer = visits[i + 1];
+
+                // Parse ngày vào dạng YYYYMMDD hoặc YYYYMMDDHHMMSS
+                const parseDate = (s) => {
+                    const str = String(s || '').substring(0, 8);
+                    if (str.length < 8) return null;
+                    return new Date(`${str.substring(0,4)}-${str.substring(4,6)}-${str.substring(6,8)}`);
+                };
+
+                const dateOlder = parseDate(older.ngayVao);
+                const dateNewer = parseDate(newer.ngayVao);
+
+                if (!dateOlder || !dateNewer || isNaN(dateOlder) || isNaN(dateNewer)) continue;
+
+                const diffMs = dateNewer - dateOlder;
+                if (diffMs < 0 || diffMs >= LIMIT_MS) continue; // Không ām, không quá 28 ngày
+
+                const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+                const drugSummaryOlder = older.drugs.slice(0, 3).map(d => d.ten_thuoc || d.ma_thuoc).join(', ');
+                const moreOlder = older.drugs.length > 3 ? ` (+${older.drugs.length - 3} thuốc khác)` : '';
+
+                const msgNewer = `⚡ Bệnh nhân tái khám sau chỉ ${diffDays} ngày (< ${LIMIT_DAYS}), thuốc cũ có thể chưa hết. Hồ sơ cũ LK [${older.maLk}] (Vào: ${formatDateTimeForDisplay(older.ngayVao)}) gồm: ${drugSummaryOlder}${moreOlder}.`;
+                const msgOlder = `⚡ Bệnh nhân tái khám sau chỉ ${diffDays} ngày tại hồ sơ mới LK [${newer.maLk}] (Vào: ${formatDateTimeForDisplay(newer.ngayVao)}), thuốc chưa hết ${LIMIT_DAYS - diffDays} ngày.`;
+
+                const drugCostNewer = newer.drugs.reduce((sum, d) => sum + (d.thanh_tien_bh || 0), 0);
+
+                newer.errors.push({
+                    type: ruleKeyTaiKham,
+                    severity: validationSettings[ruleKeyTaiKham].severity,
+                    message: msgNewer,
+                    cost: costIfCritical(ruleKeyTaiKham, drugCostNewer),
+                    itemName: 'Tái khám sớm'
+                });
+                older.errors.push({
+                    type: ruleKeyTaiKham,
+                    severity: validationSettings[ruleKeyTaiKham].severity,
+                    message: msgOlder,
+                    cost: 0,
+                    itemName: 'Tái khám sớm'
+                });
+            }
+        });
+    }
+    // ===================================================================
+    // KẾT THÚC: CẢNH BÁO TÁI KHÁM SỚM
+    // ===================================================================
 }
 
 // ============================= XML PARSE & VALIDATION PER RECORD =============================
@@ -3106,7 +3256,8 @@ function initializeValidationSettings() {
         'NGAY_TAI_KHAM_NO_XML14',
         'KQ_DVKT_SAU_YL_THUOC', // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
         'THUOC_DVKT_THYL_TRUNG_GIO', // <-- THÊM VÀO ĐÂY
-        'BS_KHAM_VUOT_DINH_MUC', 'THUOC_CHONG_CHI_DINH_ICD'
+        'BS_KHAM_VUOT_DINH_MUC', 'THUOC_CHONG_CHI_DINH_ICD',
+        'TAI_KHAM_TRUOC_28_NGAY'
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
@@ -3122,7 +3273,8 @@ function initializeValidationSettings() {
         'BS_KHAM_TRONG_NGAY_NGHI',
         'NGAY_YL_THUOC_SAU_RA_VIEN', 'NGAY_YL_DVKT_SAU_RA_VIEN', 'NGAY_VAO_SAU_NGAY_RA',
         'THE_BHYT_HET_HAN', 'NGAY_THYL_TRUOC_VAOVIEN', 'NGAY_THYL_SAU_RAVIEN',
-        'MA_MAY_TRUNG_THOI_GIAN', 'XML4_MISSING_MA_BS_DOC_KQ', 'XML4_MISSING_NGAY_KQ'
+        'MA_MAY_TRUNG_THOI_GIAN', 'XML4_MISSING_MA_BS_DOC_KQ', 'XML4_MISSING_NGAY_KQ',
+        'TOA_THUOC_TRUNG_LAP'
     ];
 
     configurableRules.forEach(key => {
@@ -4243,7 +4395,7 @@ async function sendTelegramComparisonReport(message, excelBlob) {
                     <img src="https://raw.githubusercontent.com/lqthai97/lqthai97.github.io/refs/heads/main/anhkhoa.jpg" alt="Avatar" class="profile-avatar">
                     <h2 class="profile-name">Trần Anh Khoa</h2>
                     <p class="profile-role">IT Admin & Developer</p>
-                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Trạm Y tế xã Tân An Hội</p>
+                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Trung tâm Y tế Củ Chi</p>
                     
                     <div class="social-links">
                         <a href="https://zalo.me/0332185388" target="_blank" class="social-btn btn-zalo">Zalo</a>
