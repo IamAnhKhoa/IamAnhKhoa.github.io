@@ -984,15 +984,35 @@ function performCrossRecordValidation(records) {
     // ===================================================================
 
     // ===================================================================
-    // CẢNH BÁO: TÁI KHÁM TRƯỚC KHI THUỐC CŨ CHƯA HẾT (< 28 NGÀY)
+    // CẢNH BÁO: TÁI KHÁM TRƯỚC KHI THUỐC CŨ CHƯA HẾT (theo LIEU_DUNG XML2)
     // ===================================================================
     const ruleKeyTaiKham = 'TAI_KHAM_TRUOC_28_NGAY';
     if (validationSettings[ruleKeyTaiKham]?.enabled) {
+
+        // Hàm trích xuất số ngày từ chuỗi LIEU_DUNG, ví dụ "28 ngày, Sáng 4 Viên" → 28
+        const parseDaysFromLieuDung = (lieuDung) => {
+            if (!lieuDung) return null;
+            const match = lieuDung.match(/(\d+)\s*ng[àa]y/i);
+            return match ? parseInt(match[1], 10) : null;
+        };
+
+        // Hàm lấy số ngày liều dùng lớn nhất trong 1 hồ sơ (fallback 28 nếu không có)
+        const getMaxLieuDungDays = (record) => {
+            let maxDays = null;
+            (record.drugs || []).forEach(d => {
+                const days = parseDaysFromLieuDung(d.lieu_dung);
+                if (days !== null && (maxDays === null || days > maxDays)) {
+                    maxDays = days;
+                }
+            });
+            return maxDays; // null nếu không có lieu_dung nào hợp lệ
+        };
+
         // Nhóm hồ sơ theo mã bệnh nhân
         const patientVisitMap = new Map();
         records.forEach(record => {
             if (!record.drugs || record.drugs.length === 0) return;
-            const patientKey = (record.maThe || record.maBn || '').trim();
+            const patientKey = (record.maBn || '').trim();
             if (!patientKey) return;
             if (!patientVisitMap.has(patientKey)) patientVisitMap.set(patientKey, []);
             patientVisitMap.get(patientKey).push(record);
@@ -1004,35 +1024,48 @@ function performCrossRecordValidation(records) {
             // Sắp xếp theo ngày vào tăng dần
             visits.sort((a, b) => String(a.ngayVao).localeCompare(String(b.ngayVao)));
 
-            const LIMIT_DAYS = 28;
-            const LIMIT_MS = LIMIT_DAYS * 24 * 60 * 60 * 1000;
+            const parseDate = (s) => {
+                const str = String(s || '').substring(0, 8);
+                if (str.length < 8) return null;
+                return new Date(`${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`);
+            };
 
             // So sánh từng cặp kế tiếp
             for (let i = 0; i < visits.length - 1; i++) {
                 const older = visits[i];
                 const newer = visits[i + 1];
 
-                // Parse ngày vào dạng YYYYMMDD hoặc YYYYMMDDHHMMSS
-                const parseDate = (s) => {
-                    const str = String(s || '').substring(0, 8);
-                    if (str.length < 8) return null;
-                    return new Date(`${str.substring(0,4)}-${str.substring(4,6)}-${str.substring(6,8)}`);
-                };
+                // Lấy số ngày liều dùng từ LIEU_DUNG trong toa thuốc cũ
+                const lieuDungDays = getMaxLieuDungDays(older);
+
+                // Nếu không tìm được LIEU_DUNG hợp lệ → bỏ qua, không cảnh báo mù
+                if (lieuDungDays === null) continue;
 
                 const dateOlder = parseDate(older.ngayVao);
                 const dateNewer = parseDate(newer.ngayVao);
-
                 if (!dateOlder || !dateNewer || isNaN(dateOlder) || isNaN(dateNewer)) continue;
 
                 const diffMs = dateNewer - dateOlder;
-                if (diffMs < 0 || diffMs >= LIMIT_MS) continue; // Không ām, không quá 28 ngày
+                if (diffMs < 0) continue; // bỏ qua nếu ngày âm
 
                 const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-                const drugSummaryOlder = older.drugs.slice(0, 3).map(d => d.ten_thuoc || d.ma_thuoc).join(', ');
-                const moreOlder = older.drugs.length > 3 ? ` (+${older.drugs.length - 3} thuốc khác)` : '';
 
-                const msgNewer = `⚡ Bệnh nhân tái khám sau chỉ ${diffDays} ngày (< ${LIMIT_DAYS}), thuốc cũ có thể chưa hết. Hồ sơ cũ LK [${older.maLk}] (Vào: ${formatDateTimeForDisplay(older.ngayVao)}) gồm: ${drugSummaryOlder}${moreOlder}.`;
-                const msgOlder = `⚡ Bệnh nhân tái khám sau chỉ ${diffDays} ngày tại hồ sơ mới LK [${newer.maLk}] (Vào: ${formatDateTimeForDisplay(newer.ngayVao)}), thuốc chưa hết ${LIMIT_DAYS - diffDays} ngày.`;
+                // Chỉ cảnh báo nếu tái khám TRƯỚC khi hết liều dùng
+                if (diffDays >= lieuDungDays) continue;
+
+                const remainDays = lieuDungDays - diffDays;
+
+                // Tạo chi tiết liều dùng từng thuốc trong toa cũ
+                const drugDetail = older.drugs
+                    .filter(d => d.lieu_dung)
+                    .map(d => `• ${d.ten_thuoc || d.ma_thuoc}: <strong>${d.lieu_dung}</strong>`)
+                    .join('<br>');
+
+                const drugSummary = older.drugs.slice(0, 3).map(d => d.ten_thuoc || d.ma_thuoc).join(', ')
+                    + (older.drugs.length > 3 ? ` (+${older.drugs.length - 3} khác)` : '');
+
+                const msgNewer = `⚡ Tái khám sau <strong>${diffDays} ngày</strong>, trong khi toa thuốc cũ còn <strong>${remainDays} ngày</strong> chưa hết (LIEU_DUNG: ${lieuDungDays} ngày).<br>Hồ sơ cũ LK [${older.maLk}] (Vào: ${formatDateTimeForDisplay(older.ngayVao)}), toa: ${drugSummary}.<br>${drugDetail}`;
+                const msgOlder = `⚡ Bệnh nhân tái khám sau <strong>${diffDays} ngày</strong> tại hồ sơ mới LK [${newer.maLk}] (Vào: ${formatDateTimeForDisplay(newer.ngayVao)}). Toa cũ LIEU_DUNG = ${lieuDungDays} ngày, còn thiếu <strong>${remainDays} ngày</strong>.`;
 
                 const drugCostNewer = newer.drugs.reduce((sum, d) => sum + (d.thanh_tien_bh || 0), 0);
 
@@ -1221,7 +1254,8 @@ function validateSingleHoso(hoso) {
                     so_luong: parseFloat(getText(item, 'SO_LUONG') || '0'),
                     don_vi_tinh: getText(item, 'DON_VI_TINH'),
                     ngay_th_yl: ngayThYl,
-                    performer: performer
+                    performer: performer,
+                    lieu_dung: getText(item, 'LIEU_DUNG') || getText(item, 'CACH_DUNG') || ''
                 });
                 if (!record.mainDoctor) {
                     record.mainDoctor = maBacSiStr.split(/[,;]/)[0].trim();
