@@ -102,7 +102,7 @@ const ERROR_TYPES = {
     'NGAY_TTOAN_TRUOC_YL': 'Ngày TT trước Y Lệnh (Thuốc/DVKT)',
     'NGAY_VAO_SAU_NGAY_RA': 'Ngày vào sau ngày ra',
     'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
-    'KHAM_DUOI_5_PHUT': 'Thời gian khám dưới 5 phút',
+    'KHAM_DUOI_8_PHUT': 'Thời gian khám dưới 8 phút',
     'NGAY_THYL_TRUOC_VAOVIEN': 'Ngày THYL trước ngày vào viện',
     'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện',
     'MA_MAY_TRUNG_THOI_GIAN': 'Trùng máy thực hiện cùng thời điểm',
@@ -509,6 +509,14 @@ function handleFileUpload(event, type) {
 function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     console.log("Bắt đầu xử lý nội dung..."); // <-- DÒNG THEO DÕI SỐ 1
     const { records, drugs, services, xml4Details } = validateXmlContent(xmlContent);
+    
+    // Đưa hồ sơ có lỗi (critical -> warning) lên đầu
+    records.sort((a, b) => {
+        const aErrorLevel = a.errors.some(e => e.severity === 'critical') ? 2 : (a.errors.length > 0 ? 1 : 0);
+        const bErrorLevel = b.errors.some(e => e.severity === 'critical') ? 2 : (b.errors.length > 0 ? 1 : 0);
+        return bErrorLevel - aErrorLevel; // Sắp xếp giảm dần theo cấp độ lỗi
+    });
+
     globalData.allRecords = records;
     globalData.allDrugs = drugs;
     globalData.allServices = services;
@@ -543,6 +551,20 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     // === ĐỌC THÔNG TIN TỪ XML ROOT ===
     const xmlRootDoc = new DOMParser().parseFromString(xmlContent, 'text/xml');
     const maCskcb = getText(xmlRootDoc, 'MACSKCB', 'MA_CSKCB');
+    if (maCskcb && !['79764', '79343', '79342'].includes(maCskcb)) {
+        alert("Bản quyền thuộc về Anh Khoa - TYT Tân An Hội . Nhận dịch vụ kiểm soát hồ sơ XML của TYT cơ sở có chi phí, liên hệ qua zalo");
+        if (!document.getElementById('copyright-banner')) {
+            const banner = document.createElement('div');
+            banner.id = 'copyright-banner';
+            banner.innerHTML = `
+                <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; text-align: center; padding: 16px 20px; font-size: 1.1em; font-weight: 800; z-index: 999999; box-shadow: 0 -10px 25px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 1px; border-top: 4px solid #fef08a; animation: pulse 2s infinite;">
+                    ⚠️ Bản quyền thuộc về Anh Khoa - TYT Tân An Hội ⚠️<br>
+                    <span style="font-size: 0.85em; font-weight: 600; color: #fef08a; text-transform: none; letter-spacing: 0;">Nhận dịch vụ kiểm soát hồ sơ XML của TYT cơ sở có chi phí. Liên hệ Zalo: 0332185388</span>
+                </div>
+            `;
+            document.body.appendChild(banner);
+        }
+    }
 
     // Đọc thẻ CHUKYDONVI và lấy inner XML (dùng XMLSerializer để giữ tags)
     const chukyNode = xmlRootDoc.querySelector('CHUKYDONVI');
@@ -1558,7 +1580,7 @@ function validateSingleHoso(hoso) {
     // =================================================================
     // KẾT THÚC: KHỐI KIỂM TRA NGAY_TTOAN
     // =================================================================
-    const ruleKhamNgan = 'KHAM_DUOI_5_PHUT';
+    const ruleKhamNgan = 'KHAM_DUOI_8_PHUT';
     if (validationSettings[ruleKhamNgan]?.enabled && record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
         const dateVao = new Date(
             record.ngayVao.substring(0, 4), record.ngayVao.substring(4, 6) - 1, record.ngayVao.substring(6, 8),
@@ -1569,7 +1591,7 @@ function validateSingleHoso(hoso) {
             record.ngayRa.substring(8, 10), record.ngayRa.substring(10, 12)
         );
         const diffInMinutes = (dateRa - dateVao) / 60000;
-        if (diffInMinutes >= 0 && diffInMinutes < 5) {
+        if (diffInMinutes >= 0 && diffInMinutes < 8) {
             record.errors.push({ type: ruleKhamNgan, severity: validationSettings[ruleKhamNgan].severity, message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
         }
     }
@@ -3305,7 +3327,7 @@ function initializeValidationSettings() {
     // Rules that are always treated as 'warnings' and are NOT configurable
     const fixedWarnings = [
         'NGAY_TTOAN_SAU_RA_VIEN',
-        'KHAM_DUOI_5_PHUT',
+        'KHAM_DUOI_8_PHUT',
         'NGAY_TTOAN_TRUOC_VAO_VIEN',
         'NGAY_TTOAN_TRUOC_YL'
     ];
@@ -4550,3 +4572,49 @@ async function sendTelegramComparisonReport(message, excelBlob) {
 
     });
 })();
+
+// ===================================================================
+// THÔNG BÁO TỰ ĐỘNG CUỐI THÁNG
+// ===================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const currentDate = today.getDate();
+    
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const daysRemaining = lastDayOfMonth - currentDate;
+
+    if (daysRemaining <= 7 && daysRemaining >= 1) { // Trước 1 đến 7 ngày
+        const msgKey = `endOfMonthWarning_${currentMonth}_${currentYear}_${currentDate}`;
+        if (!sessionStorage.getItem(msgKey)) {
+            setTimeout(() => {
+                const alertHtml = `
+                    <style>
+                        @keyframes slideInRight {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                    </style>
+                    <div id="endOfMonthAlert" style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 100000; width: 350px; border-left: 6px solid #b45309; animation: slideInRight 0.5s ease-out;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                            <h3 style="margin: 0; font-size: 1.15em;">🔔 Nhắc nhở cuối tháng!</h3>
+                            <span style="cursor: pointer; font-weight: bold; font-size: 1.2em; opacity: 0.8;" onclick="this.parentElement.parentElement.remove()" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">×</span>
+                        </div>
+                        <p style="margin: 0; font-size: 0.95em; line-height: 1.5;">
+                            Còn <b>${daysRemaining} ngày</b> nữa là hết tháng. Cơ sở vui lòng kiểm tra kĩ hồ sơ để thay thế và chốt số liệu tổng hợp của tháng.
+                        </p>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', alertHtml);
+                sessionStorage.setItem(msgKey, 'true');
+                
+                // Tự động ẩn sau 15 giây
+                setTimeout(() => {
+                    const alertEl = document.getElementById('endOfMonthAlert');
+                    if (alertEl) alertEl.remove();
+                }, 15000);
+            }, 1000); // Hiện sau 1s để trang tải xong
+        }
+    }
+});
