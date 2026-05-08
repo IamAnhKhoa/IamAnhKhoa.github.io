@@ -102,7 +102,7 @@ const ERROR_TYPES = {
     'NGAY_TTOAN_TRUOC_YL': 'Ngày TT trước Y Lệnh (Thuốc/DVKT)',
     'NGAY_VAO_SAU_NGAY_RA': 'Ngày vào sau ngày ra',
     'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
-    'KHAM_DUOI_8_PHUT': 'Thời gian khám dưới 8 phút',
+    'KHAM_DUOI_10_PHUT': 'Thời gian khám dưới 10 phút',
     'NGAY_THYL_TRUOC_VAOVIEN': 'Ngày THYL trước ngày vào viện',
     'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện',
     'MA_MAY_TRUNG_THOI_GIAN': 'Trùng máy thực hiện cùng thời điểm',
@@ -1580,7 +1580,7 @@ function validateSingleHoso(hoso) {
     // =================================================================
     // KẾT THÚC: KHỐI KIỂM TRA NGAY_TTOAN
     // =================================================================
-    const ruleKhamNgan = 'KHAM_DUOI_8_PHUT';
+    const ruleKhamNgan = 'KHAM_DUOI_10_PHUT';
     if (validationSettings[ruleKhamNgan]?.enabled && record.ngayVao.length >= 12 && record.ngayRa.length >= 12) {
         const dateVao = new Date(
             record.ngayVao.substring(0, 4), record.ngayVao.substring(4, 6) - 1, record.ngayVao.substring(6, 8),
@@ -1591,7 +1591,7 @@ function validateSingleHoso(hoso) {
             record.ngayRa.substring(8, 10), record.ngayRa.substring(10, 12)
         );
         const diffInMinutes = (dateRa - dateVao) / 60000;
-        if (diffInMinutes >= 0 && diffInMinutes < 8) {
+        if (diffInMinutes >= 0 && diffInMinutes < 10) {
             record.errors.push({ type: ruleKhamNgan, severity: validationSettings[ruleKhamNgan].severity, message: `Thời gian ĐT: ${diffInMinutes.toFixed(1)} phút` });
         }
     }
@@ -3327,7 +3327,7 @@ function initializeValidationSettings() {
     // Rules that are always treated as 'warnings' and are NOT configurable
     const fixedWarnings = [
         'NGAY_TTOAN_SAU_RA_VIEN',
-        'KHAM_DUOI_8_PHUT',
+        'KHAM_DUOI_10_PHUT',
         'NGAY_TTOAN_TRUOC_VAO_VIEN',
         'NGAY_TTOAN_TRUOC_YL'
     ];
