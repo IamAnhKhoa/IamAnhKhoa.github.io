@@ -1346,9 +1346,185 @@
             }
         }
     </style>
+
+    <!-- ========== FESTIVAL THEME: Giỗ Tổ & 30/4 & 1/5 ========== -->
+    <style>
+        /* ===== HOLIDAY BANNER ===== */
+        .holiday-banner {
+            background: linear-gradient(90deg, #c0392b 0%, #e74c3c 25%, #f39c12 50%, #e74c3c 75%, #c0392b 100%);
+            background-size: 200% 100%;
+            animation: bannerShift 4s linear infinite;
+            color: #fff;
+            text-align: center;
+            padding: 10px 20px;
+            font-size: 0.88em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+            z-index: 200;
+            border-bottom: 3px solid #f39c12;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        @keyframes bannerShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .holiday-banner .banner-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 24px;
+            white-space: nowrap;
+            animation: marqueeBanner 22s linear infinite;
+        }
+        @keyframes marqueeBanner {
+            0%   { transform: translateX(50vw); }
+            100% { transform: translateX(-120%); }
+        }
+        .holiday-banner .sep { opacity: 0.6; }
+        .holiday-banner .star-gold { color: #ffd700; text-shadow: 0 0 6px #ffd700; }
+
+        /* ===== HEADER OVERRIDE KHI LỄ ===== */
+        body.festival-mode .header {
+            background: linear-gradient(135deg, #8b0000 0%, #c0392b 30%, #e74c3c 60%, #b7312a 100%) !important;
+            border-bottom: 3px solid #ffd700;
+            box-shadow: 0 4px 20px rgba(192,57,43,0.5);
+        }
+        body.festival-mode .header::after {
+            content: '';
+            position: absolute;
+            bottom: -3px; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ffd700, transparent);
+            animation: goldGlow 2s ease-in-out infinite;
+        }
+        @keyframes goldGlow {
+            0%,100% { opacity: 0.6; }
+            50% { opacity: 1; box-shadow: 0 0 12px #ffd700; }
+        }
+        body.festival-mode .season-badge {
+            background: rgba(255,215,0,0.2) !important;
+            border-color: rgba(255,215,0,0.5) !important;
+            color: #ffd700 !important;
+            text-shadow: 0 0 8px rgba(255,215,0,0.6);
+        }
+
+        /* ===== CONFETTI CANVAS ===== */
+        /* (removed - no longer used) */
+
+        /* ===== FLOATING STARS ===== */
+        /* (removed - no longer used) */
+
+        /* ===== FIREWORK SPARKS on click ===== */
+        @keyframes spark {
+            0%   { transform: translate(0,0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+        }
+        .spark {
+            position: fixed;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            animation: spark 0.8s ease-out forwards;
+        }
+
+        /* ===== FESTIVAL ACCENT (body var override) ===== */
+        body.festival-mode {
+            --accent: #c0392b;
+            --accent-dark: #8b0000;
+            --accent-light: #fde8e8;
+            --accent-rgb: 192, 57, 43;
+            --header-bg: linear-gradient(135deg, #8b0000 0%, #c0392b 50%, #e74c3c 100%);
+            --season-bg: linear-gradient(135deg, #fff5f5 0%, #fde8e8 50%, #fff0e6 100%);
+        }
+
+        /* ===== FESTIVAL CSS BANNER ===== */
+        .festival-bg-section {
+            display: none;
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            min-height: 180px;
+            background:
+                linear-gradient(135deg, rgba(107,0,0,0.82) 0%, rgba(165,0,0,0.7) 40%, rgba(139,0,0,0.82) 100%),
+                url('festival_bg.png') center center / cover no-repeat;
+            padding: 32px 20px 28px;
+            text-align: center;
+            border-top: 3px solid #ffd700;
+            border-bottom: 3px solid #ffd700;
+        }
+        /* Fallback khi không có ảnh: gradient đẹp */
+        .festival-bg-section::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: 
+                radial-gradient(ellipse 70% 90% at 50% 50%, rgba(255,215,0,0.12) 0%, transparent 65%),
+                radial-gradient(ellipse 25% 50% at 15% 50%, rgba(255,80,0,0.15) 0%, transparent 70%),
+                radial-gradient(ellipse 25% 50% at 85% 50%, rgba(255,80,0,0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .festival-bg-section .fest-title {
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-size: clamp(1.05rem, 2.8vw, 1.75rem);
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 0 24px rgba(255,215,0,0.6), 0 2px 6px rgba(0,0,0,0.7), 0 0 60px rgba(255,160,0,0.3);
+            letter-spacing: 1.5px;
+            line-height: 1.45;
+            position: relative; z-index: 1;
+        }
+        .festival-bg-section .fest-sub {
+            font-size: clamp(0.78rem, 1.8vw, 1rem);
+            color: rgba(255,255,255,0.9);
+            margin-top: 8px;
+            font-weight: 500;
+            letter-spacing: 0.6px;
+            position: relative; z-index: 1;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        }
+        .festival-bg-section .fest-flags {
+            font-size: 1.6rem;
+            margin-bottom: 10px;
+            position: relative; z-index: 1;
+            animation: flagWave 2.5s ease-in-out infinite;
+        }
+        @keyframes flagWave {
+            0%,100% { transform: scale(1) rotate(-1deg); }
+            50% { transform: scale(1.05) rotate(1deg); }
+        }
+        .festival-bg-section .fest-divider {
+            width: 200px; height: 2px; margin: 12px auto 0;
+            background: linear-gradient(90deg, transparent, #ffd700, rgba(255,215,0,0.5), #ffd700, transparent);
+            position: relative; z-index: 1;
+            box-shadow: 0 0 8px rgba(255,215,0,0.4);
+        }
+        body.festival-mode .festival-bg-section {
+            display: block;
+        }
+        @media (max-width: 600px) {
+            .festival-bg-section { padding: 20px 12px 18px; min-height: 130px; }
+        }
+    </style>
 </head>
 
 <body>
+    <!-- ===== HOLIDAY BANNER ===== -->
+    <div class="holiday-banner" id="holidayBanner" style="display:none">
+        <span class="banner-inner" id="bannerInner"></span>
+    </div>
+
+    <!-- ===== FESTIVAL CSS BANNER ===== -->
+    <div class="festival-bg-section" id="festBgSection">
+        <div class="fest-flags">🇻🇳 🇳🇲 🇻🇳</div>
+        <div class="fest-title">
+            ★ CHÀO MỪNG KỶ NIỆM 51 NĂM ★<br>
+            GIẢI PHÓNG MIỀN NAM – THỐNG NHẤT ĐẤT NƯỜC
+        </div>
+        <div class="fest-sub">30/4/1975 – 30/4/2026 &nbsp;✕&nbsp; Uống nước nhớ nguồn – Kính nhớ Giỗ Tổ Hùng Vương</div>
+        <div class="fest-divider"></div>
+    </div>
+
     <div class="container">
         <header class="header">
             <h1 class="header h1" style="font-size:1.6em; font-weight:900; letter-spacing:-0.02em; line-height:1.1;">
@@ -2095,6 +2271,82 @@
             // Expose nhẹ để bạn có thể gọi thủ công trong script gốc nếu muốn
             window.__updateMoneyIconEffect = updateMoneyIconEffect;
         });
+    </script>
+
+    <!-- ========== FESTIVAL: Giỗ Tổ Hùng Vương & 30/4 & 1/5 ========== -->
+    <script>
+    (function festivalTheme() {
+        const today = new Date();
+        const d = today.getDate(), m = today.getMonth() + 1; // month 1-12
+
+        // Định nghĩa các khoảng lễ (dương lịch 2026)
+        // Giỗ Tổ Hùng Vương: 18/4 ÂL ≈ 05/05/2026, nghỉ lễ dịp 18-30/4 và 1/5
+        const festivals = [
+            // Giỗ Tổ: 18 tháng 3 ÂL. Năm 2026 = ngày 5/5. Cộng trước/sau 3 ngày
+            { label: '🏔️ Giỗ Tổ Hùng Vương – 18/3 Âm Lịch', from: [4,18], to: [5,7] },
+            // 30/4 Giải phóng miền Nam
+            { label: '🎆 Kỷ niệm 30/4 – Giải Phóng Miền Nam', from: [4,26], to: [5,2] },
+            // 1/5 Quốc tế lao động
+            { label: '🌟 Ngày Quốc Tế Lao Động 1/5', from: [4,28], to: [5,3] },
+        ];
+
+        function inRange(from, to) {
+            const cur = m * 100 + d;
+            const f = from[0] * 100 + from[1];
+            const t = to[0] * 100 + to[1];
+            return cur >= f && cur <= t;
+        }
+
+        const activeFests = festivals.filter(f => inRange(f.from, f.to));
+        if (activeFests.length === 0) return; // không trong mùa lễ → không làm gì
+
+        // Kích hoạt festival mode
+        document.body.classList.add('festival-mode');
+
+        // Banner nội dung
+        const banner = document.getElementById('holidayBanner');
+        const inner  = document.getElementById('bannerInner');
+        if (banner && inner) {
+            const festTexts = [
+                '<span class="star-gold">⭐</span>',
+                ...activeFests.map(f => `<span>${f.label}</span>`),
+                '<span class="sep">|</span>',
+                '<span>🎉 Chúc mừng Nhân dân Việt Nam – Tự hào non sông gấm vóc!</span>',
+                '<span class="star-gold">⭐</span>',
+                '<span>🏳️ Chào mừng 51 năm Ngày Giải Phóng Miền Nam Thống Nhất Đất Nước (30/4/1975 – 30/4/2026)</span>',
+                '<span class="star-gold">★</span>',
+                '<span>🌺 Uống nước nhớ nguồn – Kính nhớ Giỗ Tổ Hùng Vương</span>',
+            ];
+            inner.innerHTML = festTexts.join(' ');
+            banner.style.display = 'block';
+        }
+
+        // Override season badge text
+        const badge = document.getElementById('seasonBadge');
+        if (badge) {
+            const mainFest = activeFests[0];
+            // Đặt lại sau khi seasons JS chạy
+            setTimeout(() => { badge.innerHTML = '🇻🇳 Mừng Lễ 30/4 – 1/5 – Giỗ Tổ'; }, 50);
+        }
+
+        // ===== FIREWORKS on click =====
+        document.addEventListener('click', function(e) {
+            const colors = ['#ffd700','#e74c3c','#ff6b6b','#ffffff','#f39c12'];
+            for (let i = 0; i < 16; i++) {
+                const spark = document.createElement('div');
+                spark.className = 'spark';
+                const angle = (i / 16) * Math.PI * 2;
+                const dist  = 40 + Math.random() * 60;
+                spark.style.left = e.clientX + 'px';
+                spark.style.top  = e.clientY + 'px';
+                spark.style.background = colors[Math.floor(Math.random() * colors.length)];
+                spark.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+                spark.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+                document.body.appendChild(spark);
+                setTimeout(() => spark.remove(), 900);
+            }
+        });
+    })();
     </script>
 
     <!-- ========== FOUR SEASONS THEME JS ========== -->
