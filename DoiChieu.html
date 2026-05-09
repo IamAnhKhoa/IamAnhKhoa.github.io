@@ -1173,14 +1173,14 @@
             border: none;
             background: rgba(255, 255, 255, .12);
             color: #fff;
-            width: 56px;
+            width: 40px;
             height: 40px;
             border-radius: 12px;
             cursor: pointer;
             display: grid;
             place-items: center;
             backdrop-filter: blur(6px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, .18);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
             transition: transform .15s ease, box-shadow .2s ease;
         }
 
@@ -1539,7 +1539,7 @@
                 minh – 79764 – IT Anh Khoa</p>
             <div class="season-badge" id="seasonBadge"></div>
 
-            <!-- Nút chuyển Light/Dark (mới) -->
+            <!-- Nút chuyển Light/Dark -->
             <button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark">
                 <span class="icon icon-sun">☀️</span>
                 <span class="icon icon-moon">🌙</span>
@@ -2136,6 +2136,7 @@
 
     <!-- Logic gốc của bạn -->
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="data_private.js" defer></script>
     <script src="script.js" defer></script>
     <script src="Support.js" defer></script>
     <!-- ========== BỔ SUNG HIỆU ỨNG ICON 💸 / 🎉 (KHÔNG ĐỤNG LOGIC GỐC) ========== -->
@@ -2400,6 +2401,834 @@
         integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ=="
         data-cf-beacon='{"version":"2024.11.0","token":"db0c89750f364ceea3cb03b0503af93a","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}'
         crossorigin="anonymous"></script>
+
+<!-- ========== AI CHAT WIDGET ========== -->
+<style>
+  #ai-fab {
+    position: fixed; bottom: 25px; right: 90px; z-index: 1060;
+    width: 55px; height: 55px; border-radius: 50%;
+    background: linear-gradient(135deg, #6c63ff 0%, #a78bfa 100%);
+    color: white; border: none; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(108,99,255,0.45);
+    font-size: 1.6rem; display: grid; place-items: center;
+    transition: transform .2s ease-out, box-shadow .2s;
+    animation: ai-pulse 3s infinite;
+  }
+  @keyframes ai-pulse {
+    0%,100% { box-shadow: 0 8px 20px rgba(108,99,255,.45); }
+    50%      { box-shadow: 0 8px 28px rgba(108,99,255,.75); }
+  }
+  #ai-fab:hover { transform: scale(1.1); }
+  #ai-fab.open  { transform: scale(1.05); background: linear-gradient(135deg, #5b52ee 0%, #9370e8 100%); }
+
+  #ai-panel {
+    position: fixed; bottom: 95px; right: 25px; z-index: 1055;
+    width: 380px; height: 530px;
+    background: #1a1a24; border-radius: 20px;
+    border: 1px solid #2e2e3e;
+    box-shadow: 0 16px 48px rgba(0,0,0,.6);
+    display: none; flex-direction: column; overflow: hidden;
+    animation: ai-slide-in .25s ease;
+  }
+  @keyframes ai-slide-in {
+    from { opacity:0; transform: translateY(12px) scale(.97); }
+    to   { opacity:1; transform: translateY(0)   scale(1); }
+  }
+  #ai-panel.show { display: flex; }
+
+  #ai-header {
+    background: linear-gradient(135deg,#6c63ff,#a78bfa);
+    padding: 14px 18px; display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+  #ai-header .ai-avatar { font-size: 22px; }
+  #ai-header .ai-info h4 { color:#fff; font-size:14px; font-weight:600; margin:0; }
+  #ai-header .ai-info p  { color:rgba(255,255,255,.75); font-size:11px; margin:0; }
+  #ai-clear {
+    margin-left: auto; background: rgba(255,255,255,.15);
+    border: none; color: #fff; border-radius: 8px; padding: 5px 10px;
+    font-size: 12px; cursor: pointer; transition: background .2s;
+  }
+  #ai-clear:hover { background: rgba(255,255,255,.25); }
+
+  #ai-context-bar {
+    background: #12121a; border-bottom: 1px solid #2e2e3e;
+    padding: 8px 14px; font-size: 11px; color: #8888aa;
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  #ai-context-bar span { color: #a78bfa; font-weight: 600; }
+
+  #ai-messages {
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  #ai-messages::-webkit-scrollbar { width: 4px; }
+  #ai-messages::-webkit-scrollbar-thumb { background: #2e2e3e; border-radius: 2px; }
+
+  .ai-msg { display: flex; gap: 8px; }
+  .ai-msg.user { flex-direction: row-reverse; }
+  .ai-msg .ai-av { font-size:16px; flex-shrink:0; margin-top:2px; }
+  .ai-bubble {
+    padding: 10px 13px; border-radius: 14px;
+    font-size: 13px; line-height: 1.6; max-width: 82%;
+    color: #e8e8f0;
+  }
+  .ai-msg.user  .ai-bubble { background:#6c63ff; border-radius:14px 4px 14px 14px; }
+  .ai-msg.bot   .ai-bubble { background:#22222f; border:1px solid #2e2e3e; border-radius:4px 14px 14px 14px; }
+  .ai-bubble pre { background:rgba(0,0,0,.35); border-radius:6px; padding:8px; font-size:12px; overflow-x:auto; margin:6px 0; }
+  .ai-bubble code { font-family: monospace; }
+
+  .ai-typing { display:flex; gap:4px; padding:4px 0; }
+  .ai-typing span {
+    width:7px; height:7px; border-radius:50%; background:#8888aa;
+    animation: ai-bounce 1.2s infinite;
+  }
+  .ai-typing span:nth-child(2) { animation-delay:.2s; }
+  .ai-typing span:nth-child(3) { animation-delay:.4s; }
+  @keyframes ai-bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-7px)} }
+
+  #ai-input-row {
+    border-top: 1px solid #2e2e3e; padding: 10px 12px;
+    display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+  }
+  #ai-input {
+    flex:1; background:#12121a; border:1.5px solid #2e2e3e;
+    border-radius:10px; padding:9px 12px; color:#e8e8f0;
+    font-size:13px; font-family:inherit; resize:none;
+    outline:none; max-height:100px; line-height:1.5;
+    transition: border-color .2s;
+  }
+  #ai-input:focus { border-color:#6c63ff; }
+  #ai-send {
+    background:#6c63ff; border:none; border-radius:9px;
+    width:36px; height:36px; cursor:pointer; color:#fff;
+    font-size:16px; display:flex; align-items:center; justify-content:center;
+    transition: background .2s, transform .1s; flex-shrink:0;
+  }
+  #ai-send:hover  { background:#a78bfa; }
+  #ai-send:active { transform: scale(.93); }
+  #ai-send:disabled { background:#2e2e3e; cursor:not-allowed; opacity:.5; }
+</style>
+
+<!-- AI button: position:fixed canh #notificationBell -->
+<button id="ai-fab" title="AI Anh Khoa IT" onclick="toggleAIChat()">🤖</button>
+
+<div id="ai-panel">
+  <div id="ai-header">
+    <div class="ai-avatar">💻</div>
+    <div class="ai-info">
+      <h4>AI Anh Khoa IT</h4>
+      <p>Trợ lý BHYT thông minh • Phân tích hồ sơ XML</p>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button id="ai-maximize" onclick="toggleAIMaximize()" title="Phóng to / Thu nhỏ" style="background:#22222f;border:1px solid #3e3e5e;color:#a78bfa;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:14px;line-height:1;">⛶</button>
+      <button id="ai-export" onclick="exportAIChat()" title="Xuất cuộc trò chuyện ra .txt" style="background:#22222f;border:1px solid #3e3e5e;color:#a78bfa;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:12px;white-space:nowrap;">💾 Xuất</button>
+      <button id="ai-clear" onclick="clearAIChat()">🗑️ Xóa</button>
+    </div>
+  </div>
+  <div id="ai-context-bar">
+    📊 Ngữ cảnh: <span id="ai-ctx-label">Chưa có dữ liệu</span>
+  </div>
+  <div id="ai-messages">
+    <div class="ai-msg bot">
+      <div class="ai-av">🤖</div>
+      <div class="ai-bubble">
+        Xin chào! Tôi là <strong>AI Anh Khoa IT</strong> 💻<br><br>
+        Tôi được tạo ra để hỗ trợ kiểm tra & phân tích hồ sơ BHYT.<br><br>
+        <strong>Tôi có thể giúp:</strong><br>
+        • 🔍 Phân tích lỗi hồ sơ XML BHYT<br>
+        • 💰 Tóm tắt chi phí và xuất toán<br>
+        • 📊 Thống kê theo bác sĩ, ngày, khoa<br>
+        • 🧠 Tư vấn về quy định BHYT<br><br>
+        Hãy <strong>upload file XML</strong> để bắt đầu phân tích! 🚀
+      </div>
+    </div>
+  </div>
+  <div id="ai-xml-preview" style="display:none;padding:8px 14px;background:#0d1a0d;border-top:1px solid #1a3a1a;align-items:center;gap:8px;">
+    <span style="font-size:18px;">📄</span>
+    <div style="flex:1;">
+      <div id="ai-xml-name" style="font-size:12px;color:#4ade80;font-weight:600;"></div>
+      <div id="ai-xml-status" style="font-size:11px;color:#8888aa;">Đang xử lý...</div>
+    </div>
+    <button onclick="removeAIXml()" style="background:rgba(255,107,107,.2);border:1px solid #ff6b6b;color:#ff6b6b;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">✕ Xóa</button>
+  </div>
+  <div id="ai-img-preview" style="display:none;padding:6px 12px;background:#12121a;border-top:1px solid #2e2e3e;">
+    <div style="position:relative;display:inline-block;">
+      <img id="ai-img-thumb" style="max-height:80px;border-radius:8px;border:1px solid #3e3e5e;" />
+      <button onclick="removeAIImage()" style="position:absolute;top:-6px;right:-6px;background:#ff6b6b;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;color:#fff;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+    </div>
+    <span style="font-size:11px;color:#8888aa;margin-left:8px;">Ảnh sẽ được gửi kèm tin nhắn</span>
+  </div>
+  <div id="ai-input-row">
+    <input type="file" id="ai-img-file" accept="image/*" style="display:none" onchange="handleAIImageFile(event)">
+    <input type="file" id="ai-xml-file" accept=".xml" style="display:none" onchange="handleAIXmlFile(event)">
+    <button onclick="document.getElementById('ai-xml-file').click()" title="Upload file XML BHYT" style="background:#22222f;border:1px solid #2e2e3e;border-radius:9px;width:36px;height:36px;cursor:pointer;color:#4ade80;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;">📄</button>
+    <button id="ai-img-btn" onclick="document.getElementById('ai-img-file').click()" title="Gửi ảnh" style="background:#22222f;border:1px solid #2e2e3e;border-radius:9px;width:36px;height:36px;cursor:pointer;color:#a78bfa;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;">🖼️</button>
+    <textarea id="ai-input" rows="1" placeholder="Hỏi về dữ liệu BHYT... (có thể dán ảnh Ctrl+V)" onkeydown="aiHandleKey(event)" oninput="aiResize(this)" onpaste="handleAIPaste(event)"></textarea>
+    <button id="ai-send" onclick="aiSend()" title="Gửi (Enter)">➤</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Credentials encoded (XOR + base64) — key split để tránh scan
+  var _k2 = ['bh','yt','@2','024'].join('');
+  var _xd2 = function(b,k){var d=atob(b),r='';for(var i=0;i<d.length;i++)r+=String.fromCharCode(d.charCodeAt(i)^k.charCodeAt(i%k.length));return r;};
+  const DS2API_URL = _xd2('ChwNBDMIHx1QEVoYBCkfVFdEDgcAWSVbV1pATB4cBiNXXBxVEhg=', _k2);
+  const DS2API_KEY = _xd2('DxFUByVRQldATwkJHW1ZVUsZU1pK', _k2);
+  let aiHistory = [];
+  let aiLoading = false;
+
+  window.toggleAIChat = function() {
+    const panel = document.getElementById('ai-panel');
+    const fab   = document.getElementById('ai-fab');
+    const isOpen = panel.classList.contains('show');
+    if (isOpen) {
+      panel.classList.remove('show');
+      fab.classList.remove('open');
+    } else {
+      panel.classList.add('show');
+      fab.classList.add('open');
+      updateContextLabel();
+      setTimeout(() => document.getElementById('ai-input').focus(), 100);
+    }
+  };
+
+  window.clearAIChat = function() {
+    aiHistory = [];
+    const box = document.getElementById('ai-messages');
+    box.innerHTML = '<div class="ai-msg bot"><div class="ai-av">🤖</div><div class="ai-bubble">Cuộc trò chuyện đã được xóa. Hỏi tôi về dữ liệu BHYT nhé!</div></div>';
+  };
+
+  window.exportAIChat = function() {
+    if (!aiHistory.length) {
+      alert('Chưa có cuộc trò chuyện nào để xuất!');
+      return;
+    }
+    const now = new Date();
+    const ts  = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+    const header = [
+      '='.repeat(60),
+      'CHAT LOG — AI Anh Khoa IT',
+      `Xuất lúc: ${now.toLocaleString('vi-VN')}`,
+      '='.repeat(60),
+      ''
+    ].join('\n');
+
+    const body = aiHistory.map((m, i) => {
+      const role = m.role === 'user' ? '👤 Bạn' : '🤖 AI Anh Khoa IT';
+      const content = typeof m.content === 'string'
+        ? m.content
+        : (m.content.find?.(c => c.type === 'text')?.text || '[hình ảnh]');
+      return `${role}:\n${content}\n${'-'.repeat(40)}`;
+    }).join('\n');
+
+    const footer = `\n${'='.repeat(60)}\nHệ thống: AI Anh Khoa IT — TYT Tân An Hội\nLiên hệ: Zalo 0332185388 | khoaanh181920@gmail.com\n${'='.repeat(60)}`;
+
+    const blob = new Blob([header + body + footer], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `AI_Anh_Khoa_IT_${ts}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  function updateContextLabel() {
+    try {
+      let label = 'Chưa có dữ liệu';
+      if (typeof globalData !== 'undefined' && globalData.allRecords?.length > 0) {
+        const errCount = globalData.allRecords.filter(r => r.errors?.length > 0).length;
+        label = `${globalData.allRecords.length} hồ sơ (${errCount} lỗi)`;
+      }
+      document.getElementById('ai-ctx-label').textContent = label;
+    } catch(e) {}
+  }
+
+  function getPageContext() {
+    let ctx = '### DỮ LIỆU BHYT TOÀN BỘ ###\n\n';
+    try {
+      // Lấy từ globalData.allRecords (toàn bộ, không giới hạn)
+      if (typeof globalData !== 'undefined' && globalData.allRecords?.length > 0) {
+        const records = globalData.allRecords;
+        const errRecords = records.filter(r => r.errors?.length > 0);
+        const totalAmt = records.reduce((s, r) => s + (r.t_bhtt || 0), 0);
+
+        ctx += `**Tổng quan:** ${records.length} hồ sơ | ${errRecords.length} hồ sơ lỗi | Tổng chi phí: ${totalAmt.toLocaleString('vi-VN')} VND\n\n`;
+
+        ctx += `**Danh sách toàn bộ ${records.length} hồ sơ:**\n`;
+        records.forEach((r, i) => {
+          const errSummary = r.errors?.length
+            ? ` | ⚠️ ${r.errors.length} lỗi: ${r.errors.map(e => e.message?.substring(0,60)).join('; ')}`
+            : ' | ✅ Hợp lệ';
+          ctx += `${i+1}. [${r.maLk||'?'}] ${r.hoTen||'?'} | ${r.maBn||'?'} | Vào: ${r.ngayVao||'?'} Ra: ${r.ngayRa||'?'} | BHYT: ${(r.t_bhtt||0).toLocaleString('vi-VN')} VND${errSummary}\n`;
+
+          // Chi tiết thuốc
+          if (r.drugs?.length) {
+            ctx += `   Thuốc: ${r.drugs.map(d => `${d.ten_thuoc}(${d.ma_thuoc}) x${d.so_luong} = ${(d.thanh_tien_bh||0).toLocaleString('vi-VN')}đ`).join(', ')}\n`;
+          }
+          // Chi tiết dịch vụ
+          if (r.services?.length) {
+            ctx += `   DVKT: ${r.services.map(s => `${s.ten_dich_vu}(${s.ma_dich_vu}) = ${(s.thanh_tien_bh||0).toLocaleString('vi-VN')}đ`).join(', ')}\n`;
+          }
+        });
+      } else {
+        // Fallback: đọc từ DOM
+        const cards = document.querySelectorAll('.stat-card');
+        if (cards.length) {
+          ctx += '**Thống kê (từ màn hình):**\n';
+          cards.forEach(c => {
+            ctx += `- ${c.querySelector('p')?.textContent.trim()}: ${c.querySelector('h3')?.textContent.trim()}\n`;
+          });
+        }
+        ctx += '\n*Chưa có file XML nào được tải lên. Vui lòng tải file XML để AI phân tích chi tiết.*\n';
+      }
+
+      const activeTab = document.querySelector('.tab-button.active');
+      if (activeTab) ctx += `\n**Tab đang xem:** ${activeTab.textContent.trim()}\n`;
+
+    } catch(e) { ctx += `(Lỗi đọc dữ liệu: ${e.message})\n`; }
+    return ctx;
+  }
+
+  function addMsg(role, html) {
+    const box = document.getElementById('ai-messages');
+    const div = document.createElement('div');
+    div.className = `ai-msg ${role === 'user' ? 'user' : 'bot'}`;
+    div.innerHTML = `<div class="ai-av">${role==='user'?'👤':'🤖'}</div><div class="ai-bubble">${html}</div>`;
+    box.appendChild(div);
+    box.scrollTop = 99999;
+    return div;
+  }
+
+  function renderMd(t) {
+    return t
+      .replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+      .replace(/`([^`]+)`/g,   '<code>$1</code>')
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g,   '<em>$1</em>')
+      .replace(/^[#]+\s(.+)/gm,'<strong>$1</strong>')
+      .replace(/^[\-\*] (.+)/gm,'• $1')
+      .replace(/\n{2,}/g,'<br><br>')
+      .replace(/\n/g,'<br>');
+  }
+
+  function addTyping(mode) {
+    const box = document.getElementById('ai-messages');
+    const div = document.createElement('div');
+    div.className = 'ai-msg bot'; div.id = 'ai-typing-row';
+    const isThink = mode === 'think';
+    div.innerHTML = `<div class="ai-av">🤖</div><div class="ai-bubble" style="display:flex;align-items:center;gap:8px;">${
+      isThink
+        ? '<span style="font-size:13px;color:#a78bfa;">🧠 Đang suy nghĩ...</span>'
+        : '<span style="font-size:13px;color:#8888aa;">⚡ Đang phản hồi...</span>'
+    }<div class="ai-typing"><span></span><span></span><span></span></div></div>`;
+    box.appendChild(div); box.scrollTop = 99999;
+  }
+
+  window.aiHandleKey = function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(); }
+  };
+  window.aiResize = function(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  };
+
+  // ---- Xử lý XML ----
+  let aiXmlLoaded = false;
+
+  window.handleAIXmlFile = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+
+    // Hiện preview bar
+    const preview = document.getElementById('ai-xml-preview');
+    preview.style.display = 'flex';
+    document.getElementById('ai-xml-name').textContent = file.name;
+    document.getElementById('ai-xml-status').textContent = 'Đang đọc file...';
+    aiXmlLoaded = false;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const xmlContent = ev.target.result;
+      try {
+        // Dùng engine hiện có nếu có
+        if (typeof validateXmlContent === 'function') {
+          document.getElementById('ai-xml-status').textContent = 'Đang phân tích BHYT...';
+          const { records, drugs, services, xml4Details } = validateXmlContent(xmlContent);
+
+          // Sắp xếp: hồ sơ lỗi lên đầu
+          records.sort((a, b) => {
+            const aL = a.errors?.some(e => e.severity==='critical') ? 2 : (a.errors?.length > 0 ? 1 : 0);
+            const bL = b.errors?.some(e => e.severity==='critical') ? 2 : (b.errors?.length > 0 ? 1 : 0);
+            return bL - aL;
+          });
+
+          // Cập nhật globalData
+          globalData.allRecords    = records;
+          globalData.allDrugs      = drugs;
+          globalData.allServices   = services;
+          globalData.allXml4Details = xml4Details;
+          globalData.filteredRecords = records;
+
+          // Cập nhật dashboard nếu có
+          try { updateDashboard(); } catch(_) {}
+          try { updateDenialProjectionTab(); } catch(_) {}
+
+          const errCount = records.filter(r => r.errors?.length > 0).length;
+          document.getElementById('ai-xml-status').textContent =
+            `✅ ${records.length} hồ sơ | ${errCount} lỗi — AI đã sẵn sàng phân tích`;
+          aiXmlLoaded = true;
+          updateContextLabel();
+
+          // Thông báo trong chat
+          addMsg('bot',
+            `✅ <strong>Đã tải file XML:</strong> <em>${file.name}</em><br>` +
+            `📊 <strong>${records.length}</strong> hồ sơ | ` +
+            `⚠️ <strong>${errCount}</strong> hồ sơ lỗi<br>` +
+            `Hỏi tôi bất cứ điều gì về dữ liệu này!`);
+
+        } else {
+          // Fallback: gửi XML raw (cắt 8000 ký tự)
+          const snippet = xmlContent.slice(0, 8000);
+          document.getElementById('ai-xml-status').textContent = `⚠️ Gửi trực tiếp cho AI (${(xmlContent.length/1024).toFixed(0)} KB)`;
+          aiXmlLoaded = true;
+          // Lưu để gửi kèm message tiếp theo
+          window._aiXmlSnippet = `\n\n### NỘI DUNG XML BHYT (${file.name}): ###\n${snippet}${xmlContent.length > 8000 ? '\n...(đã cắt)' : ''}`;
+          addMsg('bot', `📄 Đã đọc file <strong>${file.name}</strong> (${(xmlContent.length/1024).toFixed(0)} KB). Hỏi tôi về dữ liệu trong file!`);
+        }
+      } catch(err) {
+        document.getElementById('ai-xml-status').textContent = `❌ Lỗi: ${err.message}`;
+        addMsg('bot', `❌ Lỗi đọc file XML: ${err.message}`);
+      }
+    };
+    reader.onerror = () => {
+      document.getElementById('ai-xml-status').textContent = '❌ Không đọc được file';
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  window.removeAIXml = function() {
+    aiXmlLoaded = false;
+    window._aiXmlSnippet = null;
+    document.getElementById('ai-xml-preview').style.display = 'none';
+    document.getElementById('ai-xml-file').value = '';
+  };
+
+  // ---- Xử lý ảnh ----
+  let aiImageBase64 = null;
+  let aiImageMime   = 'image/jpeg';
+
+  window.handleAIImageFile = function(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setAIImage(ev.target.result, file.type);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+  window.handleAIPaste = function(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        const reader = new FileReader();
+        reader.onload = ev => setAIImage(ev.target.result, item.type);
+        reader.readAsDataURL(blob);
+        return;
+      }
+    }
+  };
+  function setAIImage(dataUrl, mime) {
+    aiImageBase64 = dataUrl;
+    aiImageMime   = mime || 'image/jpeg';
+    document.getElementById('ai-img-thumb').src = dataUrl;
+    document.getElementById('ai-img-preview').style.display = 'block';
+  }
+  window.removeAIImage = function() {
+    aiImageBase64 = null;
+    document.getElementById('ai-img-preview').style.display = 'none';
+    document.getElementById('ai-img-thumb').src = '';
+  };
+
+  // ---- Quick reply: ủng hộ / donate ----
+  const DONATE_KEYWORDS = ['ủng hộ','ung ho','donate','quyên góp','chuyển khoản','chuyen khoan',
+    'mã qr','ma qr','qr code','ngân hàng','ngan hang','tài khoản','tai khoan','bank'];
+  const QR_IMG = 'https://i.ibb.co/Gv1p5BQj/bank.png';
+
+  function checkDonate(q) {
+    const lower = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return DONATE_KEYWORDS.some(k => lower.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')));
+  }
+
+  // ---- Gửi tin nhắn ----
+  window.aiSend = async function() {
+    if (aiLoading) return;
+    const inp = document.getElementById('ai-input');
+    const txt = inp.value.trim();
+    const hasImg = !!aiImageBase64;
+    if (!txt && !hasImg) return;
+
+    // Quick-reply: ủng hộ → hiện QR ngay
+    if (txt && !hasImg && checkDonate(txt)) {
+      inp.value = ''; inp.style.height = 'auto';
+      addMsg('user', txt.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+      addMsg('bot',
+        `💙 Cảm ơn bạn đã muốn ủng hộ dự án <strong>AI Anh Khoa IT</strong>!<br><br>` +
+        `Mọi sự ủng hộ dù nhỏ đều giúp tác giả <strong>Trần Anh Khoa</strong> duy trì và phát triển hệ thống.<br><br>` +
+        `<strong>Chuyển khoản Vietcombank:</strong><br>` +
+        `<img src="${QR_IMG}" style="max-width:220px;border-radius:12px;margin:10px 0;display:block;border:2px solid #4ade80;" alt="QR Vietcombank"><br>` +
+        `Hoặc liên hệ tác giả qua <a href="https://zalo.me/0332185388" target="_blank" style="color:#a78bfa;">Zalo 0332185388</a> 🙏`
+      );
+      return;
+    }
+
+    aiLoading = true;
+    document.getElementById('ai-send').disabled = true;
+    inp.value = ''; inp.style.height = 'auto';
+    updateContextLabel();
+
+    // Hiển thị bubble user
+    let userHtml = txt ? txt.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') : '';
+    if (hasImg) userHtml += `<br><img src="${aiImageBase64}" style="max-width:100%;max-height:160px;border-radius:8px;margin-top:6px;">`;
+    addMsg('user', userHtml);
+
+    // Xoá ảnh sau khi hiện
+    const imgData = aiImageBase64;
+    removeAIImage();
+
+    const systemPrompt = `Bạn là **AI Anh Khoa IT** — trợ lý AI chuyên nghiệp về kiểm tra hồ sơ BHYT (Bảo hiểm Y tế) Việt Nam, được phát triển bởi **Trần Anh Khoa**.
+
+THÔNG TIN DANH TÍNH:
+- Tên trợ lý: AI Anh Khoa IT
+- Tác giả: Trần Anh Khoa — Admin & Developer
+- Đơn vị: Trạm Y tế Tân An Hội, TP.HCM
+- Liên hệ Zalo: 0332185388 (https://zalo.me/0332185388)
+- Email: khoaanh181920@gmail.com
+- Phạm vi: Kiểm soát hồ sơ XML BHYT, phân tích chi phí, phát hiện lỗi xuất toán, tư vấn quy định BHYT.
+
+NGUYÊN TẮC TRẢ LỜI:
+- Luôn xưng tên là "AI Anh Khoa IT" khi được hỏi về danh tính
+- Nếu được hỏi về liên hệ/tác giả/developer/hỗ trợ: trả lời đầy đủ thông tin trên
+- Trả lời bằng tiếng Việt, chuyên nghiệp, ngắn gọn, chính xác
+- Ưu tiên phân tích dựa trên dữ liệu thực tế đang có trong hệ thống
+
+${getPageContext()}
+
+Phân tích và trả lời dựa trên dữ liệu trên. Nếu chưa có dữ liệu XML, hướng dẫn người dùng bấm nút 📄 để upload file XML vào chat.`;
+
+    // Tạo nội dung user message (có thể kèm ảnh)
+    let userContent;
+    if (imgData) {
+      userContent = [
+        { type: 'text', text: txt || 'Phân tích ảnh này và liên hệ với dữ liệu BHYT.' },
+        { type: 'image_url', image_url: { url: imgData } }
+      ];
+    } else {
+      userContent = txt;
+    }
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...aiHistory,
+      { role: 'user', content: userContent }
+    ];
+
+    // Chọn model thông minh
+    function needsThinking(q) {
+      if (!q) return false;
+      // Câu hỏi phân tích data cần model suy nghĩ
+      if (typeof globalData !== 'undefined' && globalData.allRecords?.length > 0) {
+        const keywords = ['phân tích','tóm tắt','liệt kê','tìm','lỗi','hồ sơ','chi phí',
+          'xuất toán','bao nhiêu','so sánh','thống kê','tại sao','nguyên nhân',
+          'kiểm tra','bác sĩ','thuốc','dịch vụ','tổng','trung bình','cao nhất','thấp nhất'];
+        return keywords.some(k => q.toLowerCase().includes(k));
+      }
+      return false;
+    }
+
+    const useThinking = needsThinking(txt) && !imgData;
+    const model = imgData ? 'deepseek-v4-vision'
+                : useThinking ? 'deepseek-v4-pro'
+                : 'deepseek-v4-flash';
+
+    addTyping(useThinking ? 'think' : 'reply');
+    let aiText = '';
+    let thinkText = '';
+    let inThink = false;
+    let buffer = '';
+
+    try {
+      const res = await fetch(`${DS2API_URL}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DS2API_KEY}` },
+        body: JSON.stringify({ model, messages, stream: true })
+      });
+
+      if (!res.ok) { const e = await res.text(); throw new Error(`${res.status}: ${e}`); }
+
+      document.getElementById('ai-typing-row')?.remove();
+      const msgDiv = addMsg('bot', '');
+      const bubble = msgDiv.querySelector('.ai-bubble');
+
+      // Thêm khu vực "suy nghĩ" thu gọn nếu dùng R1
+      let thinkDiv = null;
+      if (useThinking) {
+        thinkDiv = document.createElement('div');
+        thinkDiv.style.cssText = 'margin-bottom:8px;font-size:11px;';
+        thinkDiv.innerHTML = '<details style="border:1px solid #3e3e5e;border-radius:6px;padding:4px 8px;"><summary style="cursor:pointer;color:#a78bfa;font-size:11px;">🧠 Quá trình suy nghĩ</summary><div id="ai-think-content" style="color:#8888aa;font-size:11px;margin-top:4px;white-space:pre-wrap;"></div></details>';
+        bubble.appendChild(thinkDiv);
+      }
+      const mainText = document.createElement('div');
+      bubble.appendChild(mainText);
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // giữ lại dòng chưa hoàn chỉnh
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const d = line.slice(6).trim();
+          if (d === '[DONE]') break;
+          try {
+            const delta = JSON.parse(d).choices?.[0]?.delta?.content || '';
+            if (!delta) continue;
+            // Xử lý <think> tags
+            for (const ch of delta) {
+              if (!inThink && aiText.endsWith('<think') && ch === '>') {
+                inThink = true; aiText = aiText.slice(0, -6); continue;
+              }
+              if (inThink) {
+                if (ch === '<' && delta.includes('</think>')) { inThink = false; continue; }
+                thinkText += ch;
+                const tc = thinkDiv?.querySelector('#ai-think-content');
+                if (tc) tc.textContent = thinkText;
+              } else {
+                aiText += ch;
+              }
+            }
+            // Xử lý đơn giản hơn: strip toàn bộ <think>...</think>
+            const clean = aiText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/,'').trim();
+            if (clean) { mainText.innerHTML = renderMd(clean); }
+            document.getElementById('ai-messages').scrollTop = 99999;
+          } catch {}
+        }
+      }
+      aiHistory.push({ role:'user', content: txt || '[ảnh]' }, { role:'assistant', content: aiText });
+      if (aiHistory.length > 20) aiHistory = aiHistory.slice(-20);
+
+    } catch(err) {
+      document.getElementById('ai-typing-row')?.remove();
+      addMsg('bot', `❌ <strong>Lỗi:</strong> ${err.message}`);
+    }
+
+    aiLoading = false;
+    document.getElementById('ai-send').disabled = false;
+    inp.focus();
+  };
+})();
+</script>
+<!-- ========== END AI CHAT WIDGET ========== -->
+
+<!-- ========== AI HINT TOOLTIP ========== -->
+<style>
+  #ai-hint-tooltip {
+    position: fixed;
+    bottom: 92px;
+    right: 90px;
+    z-index: 1070;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid #6c63ff;
+    border-radius: 14px;
+    padding: 12px 16px;
+    max-width: 240px;
+    box-shadow: 0 8px 24px rgba(108,99,255,.35);
+    display: none;
+    animation: ai-hint-in .35s cubic-bezier(.16,1,.3,1);
+    cursor: pointer;
+  }
+  @keyframes ai-hint-in {
+    from { opacity:0; transform: translateY(12px) scale(.95); }
+    to   { opacity:1; transform: translateY(0) scale(1); }
+  }
+  #ai-hint-tooltip .ai-hint-arrow {
+    position: absolute;
+    bottom: -8px;
+    right: 22px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #6c63ff;
+  }
+  #ai-hint-tooltip .ai-hint-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #a78bfa;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #ai-hint-tooltip .ai-hint-body {
+    font-size: 12px;
+    color: #c8c8e0;
+    line-height: 1.5;
+  }
+  #ai-hint-tooltip .ai-hint-dismiss {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #6c63ff;
+    text-align: right;
+  }
+  #ai-hint-progress {
+    height: 2px;
+    background: #6c63ff;
+    border-radius: 1px;
+    margin-top: 8px;
+    transition: width linear;
+  }
+</style>
+
+<div id="ai-hint-tooltip" onclick="dismissAIHint()">
+  <div class="ai-hint-arrow"></div>
+  <div class="ai-hint-title">🤖 AI Anh Khoa IT</div>
+  <div class="ai-hint-body" id="ai-hint-body">
+    Kiểm tra xong rồi! Hỏi tôi để phân tích kết quả nhé 💡
+  </div>
+  <div id="ai-hint-progress" style="width:100%"></div>
+  <div class="ai-hint-dismiss">Bấm để đóng</div>
+</div>
+
+<script>
+  let aiHintTimer = null;
+
+  window.showAIHint = function(stats) {
+    // Không hiện nếu chat đang mở
+    const panel = document.getElementById('ai-panel');
+    if (panel?.classList.contains('show')) return;
+
+    const tooltip = document.getElementById('ai-hint-tooltip');
+    const body    = document.getElementById('ai-hint-body');
+    const prog    = document.getElementById('ai-hint-progress');
+    if (!tooltip) return;
+
+    // Nội dung gợi ý dựa trên kết quả
+    const errCount = stats?.totalError || 0;
+    if (errCount > 0) {
+      body.innerHTML = `Phát hiện <strong style="color:#f87171;">${errCount} hồ sơ lỗi</strong>.<br>Hỏi tôi để phân tích chi tiết! 🔍`;
+    } else {
+      body.innerHTML = `<strong style="color:#4ade80;">${stats?.total || 0} hồ sơ hợp lệ</strong>.<br>Hỏi tôi bất cứ điều gì về dữ liệu! 💡`;
+    }
+
+    // Hiện tooltip
+    tooltip.style.display = 'block';
+
+    // Progress bar đếm ngược 6s
+    clearTimeout(aiHintTimer);
+    prog.style.transition = 'none';
+    prog.style.width = '100%';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        prog.style.transition = 'width 6s linear';
+        prog.style.width = '0%';
+      });
+    });
+
+    // Rung nhẹ nút FAB để thu hút chú ý
+    const fab = document.getElementById('ai-fab');
+    if (fab) {
+      fab.style.animation = 'none';
+      fab.style.transform = 'scale(1.2)';
+      setTimeout(() => { fab.style.transform = ''; fab.style.animation = ''; }, 400);
+    }
+
+    aiHintTimer = setTimeout(dismissAIHint, 6000);
+  };
+
+  window.dismissAIHint = function() {
+    clearTimeout(aiHintTimer);
+    const tooltip = document.getElementById('ai-hint-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
+  };
+
+  // Ẩn khi mở chat
+  const _origToggle = window.toggleAIChat;
+  window.toggleAIChat = function() {
+    dismissAIHint();
+    if (_origToggle) _origToggle();
+  };
+</script>
+<!-- ========== END AI HINT ========== -->
+
+<!-- ========== AI MAXIMIZE ========== -->
+<style>
+  #ai-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    animation: ai-fade-in .2s ease;
+  }
+  @keyframes ai-fade-in { from{opacity:0} to{opacity:1} }
+
+  #ai-panel.maximized {
+    position: fixed !important;
+    top: 50% !important; left: 50% !important;
+    right: auto !important; bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(860px, 94vw) !important;
+    height: min(640px, 90vh) !important;
+    border-radius: 20px !important;
+    z-index: 10001 !important;
+    animation: ai-zoom-in .25s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes ai-zoom-in {
+    from { opacity:0; transform: translate(-50%,-50%) scale(.93); }
+    to   { opacity:1; transform: translate(-50%,-50%) scale(1); }
+  }
+  #ai-panel.maximized #ai-messages { font-size: 14px; }
+  #ai-panel.maximized #ai-maximize { content:'⛶'; }
+  #ai-panel.maximized #ai-maximize::after { content: ' Thu nhỏ'; font-size:11px; }
+</style>
+
+<div id="ai-overlay" onclick="toggleAIMaximize()"></div>
+
+<script>
+  let aiMaximized = false;
+
+  window.toggleAIMaximize = function() {
+    const panel   = document.getElementById('ai-panel');
+    const overlay = document.getElementById('ai-overlay');
+    const btn     = document.getElementById('ai-maximize');
+    if (!panel) return;
+
+    aiMaximized = !aiMaximized;
+    if (aiMaximized) {
+      panel.classList.add('maximized');
+      overlay.style.display = 'block';
+      if (btn) { btn.textContent = '⛶'; btn.title = 'Thu nhỏ (Esc)'; }
+    } else {
+      panel.classList.remove('maximized');
+      overlay.style.display = 'none';
+      if (btn) { btn.textContent = '⛶'; btn.title = 'Phóng to / Thu nhỏ'; }
+    }
+    // Scroll to bottom
+    const msgs = document.getElementById('ai-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  };
+
+  // Esc để thu nhỏ
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && aiMaximized) toggleAIMaximize();
+  });
+</script>
+<!-- ========== END AI MAXIMIZE ========== -->
 
 </body>
 

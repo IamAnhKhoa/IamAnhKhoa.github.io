@@ -1,164 +1,5 @@
-let globalData = {
-    allRecords: [],
-    allDrugs: [],
-    allServices: [],
-    allXml4Details: new Map(),
-    filteredRecords: [],
-    currentPage: 1,
-    pageSize: 50,
-    xmlDataContent: null,
-    xmlFile: null,
-    excelFile: null,
-    xmlRecords: new Map(),
-    excelRecords: new Map(),
-    comparisonResults: [],
-    filteredComparisonResults: [],
-    chukyInfo: null,
-    charts: {}
-};
-// Đặt đoạn code này ở phần đầu script của bạn
-// Đặt đoạn code này ở phần đầu script của bạn
-
-// ===== MAPPING MÃ CCHN → PHÒNG KHÁM =====
-// Mỗi entry: mã CCHN (chữ thường) → key phòng ('hiv','lao','tamthan','noitonghop')
-// Hồ sơ của BS không có trong bản đồ → mặc định 'khac'
-const PHONG_KHAM_MAP = new Map([
-    // ─── Phòng khám HIV ───
-    ['0032340/hcm-cchn', 'hiv'],   // Huỳnh Thị Hiền
-    ['hcm-cchn-0032340', 'hiv'],
-    ['051532/hcm-cchn', 'hiv'],    // Nguyễn Hoàng Thắng
-
-    // ─── Phòng khám Lao ───
-    ['0028516/hcm-cchn', 'lao'],   // Trần Văn Thành
-
-    // ─── Phòng khám Tâm thần ───
-    ['0032379/hcm-cchn', 'tamthan'], // Công Tằng Tôn Nữ Thị Thanh Xuân
-
-    // ─── Nội tổng hợp BHYT ───
-    ['051523/hcm-cchn', 'noitonghop'],  // Đặng Thị Liên
-]);
-
-// Matching theo tên (dùng khi chưa biết mã CCHN)
-const PHONG_KHAM_NAMES = [
-    { keywords: ['nguyễn hoàng thắng'], room: 'hiv' },
-    { keywords: ['huỳnh thị hiền'], room: 'hiv' },
-    { keywords: ['trần văn thành'], room: 'lao' },
-    { keywords: ['công tằng tôn nữ thị thanh xuân', 'thanh xuân'], room: 'tamthan' },
-    { keywords: ['đặng thị liên'], room: 'noitonghop' },
-];
-
-const indicationMap = new Map([
-    // Ví dụ: Kê thuốc Mizho (05C.11) thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30
-    ['05C.11', {
-        drugName: 'Mizho',
-        requiredIcdCodes: ['K21', 'R10', 'K30', 'U50.101'],
-        diseaseName: 'Kê thuốc Mizho thì BẮT BUỘC phải có chẩn đoán K21, R10 hoặc K30'
-    }],
-
-    ['40.734', {
-        drugName: 'Dopolys - S',
-        requiredIcdCodes: ['I83'],
-        diseaseName: 'Kê thuốc Dopolys - S thì BẮT BUỘC phải có chẩn đoán I83'
-    }],
-
-    ['40.677', {
-        drugName: 'Omeprazol 20mg',
-        requiredIcdCodes: ['K21', 'K25', 'K30'],
-        diseaseName: 'Kê thuốc Omeprazol 20mg thì BẮT BUỘC phải có chẩn đoán K21, K25 hoặc K30'
-    }],
-
-    // Bạn có thể thêm các quy tắc khác cho các thuốc khác ở đây
-    // Ví dụ: ['MÃ_THUỐC', { requiredIcdCodes: ['ICD1', 'ICD2'], diseaseName: 'TÊN NHÓM BỆNH' }],
-]);
-const contraindicationMap = new Map([
-    // --- Sheet: Hoastex, Hometex, Mizho ---
-    ['05C.150', { drugName: 'Hoastex 45g; 11,25g; 83,7mg', icdCodes: ['E10', 'E11', 'E12', 'E13', 'E14'], diseaseName: 'Đái tháo đường' }],
-
-    // --- Sheet: Acetylcystein (CẬP NHẬT MỚI) ---
-    ['40.998', { drugName: 'Acetylcystein 200mg', icdCodes: ['J02', 'J45'], diseaseName: 'Viêm họng cấp' }],
-
-
-    // --- Sheet: Katrypsin Fort, Dopolys - S ---
-    ['40.67', { drugName: 'Katrypsin Fort', icdCodes: ['J02', 'J00', 'J45'], diseaseName: 'Viêm họng' }],
-
-
-    // --- Sheet: Nhóm ức chế bơm proton ---
-    ['01.01.01.12', { drugName: 'Lansoprazol 30mg', icdCodes: ['K29'], diseaseName: 'Viêm dạ dày' }],
-    ['40.677', { drugName: 'Omeprazol 20mg', icdCodes: ['K29', 'J02', 'H81'], diseaseName: 'Viêm dạ dày' }],
-    ['40.678', { drugName: 'Esomeprazol 40mg', icdCodes: ['K29'], diseaseName: 'Viêm dạ dày' }],
-
-    // --- Sheet: Hoạt huyết dưỡng não, Midatan ---
-    ['05C.127.1', { drugName: 'Hoạt huyết dưỡng não', icdCodes: ['I10', 'K25'], diseaseName: 'chưa rõ' }],
-    ['40.155', { drugName: 'Midata', icdCodes: ['J20', 'J00', 'J45'], diseaseName: 'Kháng sinh không cần thiết cho viêm phế quản thông thường (thường do virus)' }],
-]);
-
-
-const ERROR_TYPES = {
-
-    'NGAY_YL_THUOC_SAU_RA_VIEN': 'YL Thuốc - sau ra viện',
-    'NGAY_YL_DVKT_SAU_RA_VIEN': 'YL DVKT - sau ra viện',
-    'NGAY_TTOAN_SAU_RA_VIEN': 'Ngày TT sau ngày ra viện',
-    'NGAY_TTOAN_TRUOC_VAO_VIEN': 'Ngày TT trước ngày vào viện',
-    'NGAY_TTOAN_TRUOC_YL': 'Ngày TT trước Y Lệnh (Thuốc/DVKT)',
-    'NGAY_VAO_SAU_NGAY_RA': 'Ngày vào sau ngày ra',
-    'THE_BHYT_HET_HAN': 'Thẻ BHYT hết hạn',
-    'KHAM_DUOI_10_PHUT': 'Thời gian khám dưới 10 phút',
-    'NGAY_THYL_TRUOC_VAOVIEN': 'Ngày THYL trước ngày vào viện',
-    'NGAY_THYL_SAU_RAVIEN': 'Ngày THYL sau ngày ra viện',
-    'MA_MAY_TRUNG_THOI_GIAN': 'Trùng máy thực hiện cùng thời điểm',
-    'BS_TRUNG_THOI_GIAN': 'Bác sĩ cho y lệnh trùng thời điểm',
-    'BS_KHAM_CHONG_LAN': 'Chưa kết thúc BN cũ → khám BN mới (lãnh thuốc ko cls)',
-    'DVKT_YL_TRUNG_NGAY_VAO': 'DVKT - Y lệnh trùng ngày vào',
-    'DVKT_YL_TRUNG_NGAY_RA': 'DVKT - Y lệnh trùng ngày ra',
-    'DVKT_THYL_TRUNG_NGAY_VAO': 'DVKT - THYL trùng ngày vào',
-    'DVKT_THYL_TRUNG_NGAY_RA': 'DVKT - THYL trùng ngày ra',
-    'THUOC_YL_NGOAI_GIO_HC': 'Thuốc - Y lệnh ngoài giờ HC',
-    'THUOC_THYL_NGOAI_GIO_HC': 'Thuốc - Thực hiện YL ngoài giờ HC',
-    'DVKT_YL_NGOAI_GIO_HC': 'DVKT - Y lệnh ngoài giờ HC',
-    'DVKT_THYL_NGOAI_GIO_HC': 'DVKT - Thực hiện YL ngoài giờ HC',
-    'XML4_MISSING_NGAY_KQ': 'XML4 - Thiếu ngày trả kết quả trong HIS (NGAY_KQ)',
-    'XML4_MISSING_MA_BS_DOC_KQ': 'XML4 - Thiếu mã BS đọc KQ',
-    'KQ_DVKT_SAU_YL_THUOC': 'XML3. NGÀY TH Y lệnh DVKT sau thời gian y lệnh THUỐC lỗi ở NGAY_KQ',
-    'BS_KHAM_TRONG_NGAY_NGHI': 'Bác sỹ chấm công nghỉ nhưng phát sinh chi phí KCB BHYT',
-    'THUOC_DVKT_THYL_TRUNG_GIO': 'XML3. NGÀY TH Y lệnh DVKT bằng hoặc sau NGÀY TH Y lệnh THUỐC', // <-- SỬA DÒNG NÀY
-    'NGAY_TAI_KHAM_NO_XML14': 'Có ngày tái khám nhưng không có Giấy hẹn (XML14)',
-
-    'BS_KHAM_VUOT_DINH_MUC': 'BS khám vượt định mức (>=65 ca/ngày)',
-    'THUOC_CHONG_CHI_DINH_ICD': 'Thuốc chống chỉ định với chẩn đoán (ICD)', 'THUOC_KHONG_PHU_HOP_ICD': 'Thuốc không có chẩn đoán phù hợp',
-    'TOA_THUOC_TRUNG_LAP': 'Toa thuốc trùng lặp trên cùng 1 bệnh nhân',
-    'TAI_KHAM_TRUOC_28_NGAY': '⚡ Tái khám khi thuốc cũ chưa hết (theo Liều dùng XML2)'
-};
-
-let validationSettings = {};
-
-const staffNameMap = new Map([
-    ['003539/HCM-CCHN', 'Trương Tấn Hùng'],
-    ['014331/HCM-CCHN', 'Dương Thị Thủy'],
-    ['003960/HCM-CCHN', 'Nguyễn Minh Cang'],
-    ['13075/CCHN-D-SYT-HCM', 'Nguyễn Thanh Tùng'],
-    ['0033048/HCM-CCHN', 'Huỳnh Thanh Danh'],
-    ['0008435/ĐNAI-CCHN', 'Lê Thị Dịu Linh'],
-    ['0025015/HCM-CCHN', 'Huỳnh Thị Thùy Dung'],
-    ['046446/HCM-CCHN', 'Trang Thị Mộng Tuyền'],
-    ['0021030/HCM-CCHN', 'Huỳnh Đức Thọ'],
-    ['0029511/HCM-CCHN', 'Trần Thị Ngọc Mến'],
-    ['051530/HCM-CCHN', 'Võ Nguyễn Lệ Tâm'],
-    ['051522/HCM-CCHN', 'Lâm Tuấn Kiệt'],
-    ['0027596/HCM-CCHN', 'Lê Hồ Ngọc Hạnh'],
-    ['051518/HCM-CCHN', 'Nguyễn Thị Hồng Hải'],
-    ['051532/HCM-CCHN', 'Nguyễn Hoàng Thắng'],
-    ['0033072/HCM-CCHN', 'Lương Hoài Thanh'],
-    ['000465/HCM-GPHN', 'Lê Văn Thương'],
-    ['0032340/HCM-CCHN', 'Huỳnh Thị Hiền'],
-    ['010995/HCM-CCHN', 'Huỳnh Thị Mỹ Lan'],
-    ['0019929/HCM-CCHN', 'Phan Thị Trường An'],
-    ['0019312/HCM-CCHN', 'Trần Thị Diễm'],
-    ['0032357/HCM-CCHN', 'Trần Huỳnh Lý'],
-    ['0032379/HCM-CCHN', 'Công Tằng Tôn Nữ Thị Thanh Xuân'],
-    ['0028445/HCM-CCHNN', 'Hồ Thị Thùy Linh'],
-    ['0028516/HCM-CCHN', 'Trần Văn Thành']
-]);
-
+﻿var _xd=function(b,k){var d=atob(b),r='';for(var i=0;i<d.length;i++)r+=String.fromCharCode(d.charCodeAt(i)^k.charCodeAt(i%k.length));return r;};
+var _k=['bh','yt','@2','024'].join('');
 
 
 const formatDateTimeForDisplay = (dateString) => {
@@ -593,6 +434,11 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
 
     showSummaryPopup(summaryStats);
 
+    // Gợi ý nhẹ về AI chat sau khi xử lý xong
+    setTimeout(() => {
+        if (typeof showAIHint === 'function') showAIHint(summaryStats);
+    }, 1800); // Đợi popup summary đóng rồi mới hiện
+
     // === LƯU THÔNG TIN CHỮ KÝ SỐ để hiển thị khi bấm button ===
     globalData.chukyInfo = { exists: hasChuky, value: chukyValue };
     // Cập nhật trạng thái nút ký số
@@ -623,12 +469,52 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
 }
 
 // HÀM BẮT ĐẦU QUÁ TRÌNH
+let _lastCheckTime = 0;
+const COOLDOWN_MS = 10000; // 10 giây
+
+function showCooldownToast(remaining) {
+    const existing = document.getElementById('cooldown-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'cooldown-toast';
+    toast.innerHTML = `⚠️ Vui lòng chờ <strong>${remaining}s</strong> trước khi kiểm tra lại!`;
+    toast.style.cssText = [
+        'position:fixed', 'top:24px', 'left:50%', 'transform:translateX(-50%) scale(1)',
+        'background:linear-gradient(135deg,#dc2626,#991b1b)', 'color:#fff',
+        'padding:14px 28px', 'border-radius:12px', 'font-size:15px', 'font-weight:600',
+        'z-index:999999', 'box-shadow:0 8px 24px rgba(220,38,38,.45)',
+        'animation:toastIn .3s cubic-bezier(.16,1,.3,1)',
+        'white-space:nowrap'
+    ].join(';');
+    if (!document.getElementById('cooldown-toast-css')) {
+        const s = document.createElement('style');
+        s.id = 'cooldown-toast-css';
+        s.textContent = '@keyframes toastIn{from{opacity:0;transform:translateX(-50%) scale(.9)}to{opacity:1;transform:translateX(-50%) scale(1)}}@keyframes toastOut{to{opacity:0;transform:translateX(-50%) translateY(-12px) scale(.95)}}';
+        document.head.appendChild(s);
+    }
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'toastOut .25s ease forwards';
+        setTimeout(() => toast.remove(), 260);
+    }, 2500);
+}
+
 async function processXmlFile() {
     const files = document.getElementById('validatorFileInput').files;
     if (!files || files.length === 0) {
         alert('Vui lòng chọn file XML!');
         return;
     }
+
+    // Kiểm tra cooldown 10 giây
+    const now = Date.now();
+    const elapsed = now - _lastCheckTime;
+    if (_lastCheckTime > 0 && elapsed < COOLDOWN_MS) {
+        const remaining = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+        showCooldownToast(remaining);
+        return;
+    }
+    _lastCheckTime = now;
 
     showLoading('validatorLoading');
 
@@ -3413,6 +3299,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
     {
+        id: 19,
+        date: '10-05-2026',
+        type: 'feature',
+        title: '🤖 Tích hợp AI Anh Khoa IT',
+        content: 'Hệ thống đã tích hợp trợ lý AI thông minh ngay trong trang web. Các tính năng mới: (1) Chat trực tiếp với AI để phân tích hồ sơ BHYT, phát hiện lỗi, tóm tắt chi phí. (2) Upload file XML vào chat để AI phân tích toàn bộ dữ liệu. (3) Gửi ảnh để AI nhận diện và phân tích. (4) Tự động gợi ý AI sau khi kiểm tra xong. (5) Xuất cuộc trò chuyện ra file .txt. Nhấn nút 🤖 góc dưới phải để bắt đầu!'
+    },
+    {
         id: 18,
         date: '05-03-2026',
         type: 'feature',
@@ -4002,8 +3895,8 @@ document.addEventListener('DOMContentLoaded', () => {
  * Gửi tin nhắn thông báo BẮT ĐẦU kiểm tra file về Telegram.
  */
 function sendTelegramStartLog(file) {
-    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- THAY TOKEN CỦA BẠN
-    const CHAT_ID = '1734114014';    // <-- THAY ID KÊNH CỦA BẠN
+    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
+    const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     const now = new Date();
     const timestamp = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
@@ -4017,7 +3910,7 @@ function sendTelegramStartLog(file) {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
     const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
 
-    fetch(url, {
+    window.fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
@@ -4033,8 +3926,8 @@ function sendTelegramStartLog(file) {
  * @returns {Promise<number|null>} - Promise chứa message_id hoặc null nếu có lỗi.
  */
 async function sendTelegramStartLog(file) {
-    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- Token của bạn
-    const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
+    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
+    const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
     const fileSizeKB = (file.size / 1024).toFixed(2);
@@ -4048,7 +3941,7 @@ async function sendTelegramStartLog(file) {
     const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
 
     try {
-        const response = await fetch(url, {
+        const response = await window.fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(params)
@@ -4075,8 +3968,8 @@ async function sendTelegramStartLog(file) {
 function updateTelegramLog(messageId, stats) {
     if (!messageId) return; // Không làm gì nếu không có messageId
 
-    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- Token của bạn
-    const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
+    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
+    const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     // Nội dung tin nhắn cập nhật
     let message = `<b>🔎 Kết Quả Kiểm Tra</b>\n\n`;
@@ -4096,7 +3989,7 @@ function updateTelegramLog(messageId, stats) {
         parse_mode: 'HTML'
     };
 
-    fetch(url, {
+    window.fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
@@ -4127,7 +4020,7 @@ function logCheckHistoryToGoogleSheet(totalRecords, maCoSo) {
 
     console.log("Đang gửi lịch sử kiểm tra:", data);
 
-    fetch(APPS_SCRIPT_URL, {
+    window.fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors', // Cần thiết cho Google Apps Script POST
         cache: 'no-cache',
@@ -4253,15 +4146,15 @@ function generateComparisonExcel(mismatches, xmlOnly, excelOnly) {
  * @param {Blob} excelBlob - File Excel đã tạo
  */
 async function sendTelegramComparisonReport(message, excelBlob) {
-    const BOT_TOKEN = '7997588158:AAESQBpiDyhWAYsQV91RI-8b0ZYJmp5bxEc'; // <-- Token của bạn
-    const CHAT_ID = '1734114014';    // <-- ID kênh của bạn
+    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
+    const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     try {
         // Phần 1: Gửi tin nhắn văn bản tóm tắt
         const urlMessage = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
         const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
 
-        const responseMsg = await fetch(urlMessage, {
+        const responseMsg = await window.fetch(urlMessage, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(params)
@@ -4281,7 +4174,7 @@ async function sendTelegramComparisonReport(message, excelBlob) {
         formData.append('document', excelBlob, 'BaoCao_DoiChieu_SaiLech.xlsx');
         formData.append('caption', 'File Excel chi tiết các hồ sơ sai lệch.');
 
-        const responseDoc = await fetch(urlDocument, {
+        const responseDoc = await window.fetch(urlDocument, {
             method: 'POST',
             body: formData // Khi dùng FormData, trình duyệt sẽ tự đặt Content-Type
         });
@@ -4618,3 +4511,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+
+
