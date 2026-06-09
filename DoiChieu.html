@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -9,7 +10,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
-    <script type="text/javascript"
+    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=rhta6LhGkt8QOrEWmXD-2JGdNAlu3PJGnYnqicpiNRMAKYhfO6P0-XJtZFNBUVs6" charset="UTF-8"></script><script type="text/javascript"
         src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=B6RbtCtuIiYPlqTmsbNYXTul70u1Zg4_qGpgCTN1ijc7cwxUQonR9TAWPhCtcMNn"
         charset="UTF-8"></script>
     <script type="text/javascript"
@@ -613,6 +614,14 @@
             background: #fef9c3;
             color: #854d0e;
             border: 1px solid #fef08a;
+        }
+
+        /* Cảnh báo nhẹ - chưa áp dụng chính thức (ICD 3 ký tự trước 01/07/2026) */
+        .status-pre-warn {
+            background: #fefce8;
+            color: #a16207;
+            border: 1px solid #fde68a;
+            opacity: 0.85;
         }
 
         .status-error,
@@ -1226,6 +1235,15 @@
 
         .results-table tr:has(.status-badge.status-warning):hover td:first-child {
             border-left-color: #d97706;
+        }
+
+        /* Pre-warn (chưa áp dụng): nền rất nhạt, border vàng ẩn */
+        .results-table tr:has(.status-badge.status-pre-warn):hover td {
+            background: #fffef0 !important;
+        }
+
+        .results-table tr:has(.status-badge.status-pre-warn):hover td:first-child {
+            border-left-color: #d4b84a;
         }
 
         /* Fallback class từ JS */
@@ -2121,9 +2139,10 @@
                 if (tbody) {
                     const markRows = () => {
                         tbody.querySelectorAll('tr').forEach(tr => {
-                            tr.classList.remove('row-errorish', 'row-warningish');
+                            tr.classList.remove('row-errorish', 'row-warningish', 'row-prewarning');
                             if (tr.querySelector('.status-badge.status-error')) tr.classList.add('row-errorish');
                             else if (tr.querySelector('.status-badge.status-warning')) tr.classList.add('row-warningish');
+                            else if (tr.querySelector('.status-badge.status-pre-warn')) tr.classList.add('row-prewarning');
                         });
                     };
                     const mo = new MutationObserver(markRows);
@@ -2136,9 +2155,10 @@
 
     <!-- Logic gốc của bạn -->
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="data_private.js" defer></script>
-    <script src="script.js" defer></script>
-    <script src="Support.js" defer></script>
+    <script src="data_private.js" defer charset="UTF-8"></script>
+    <script src="data_icd.js" defer charset="UTF-8"></script>
+    <script src="script.js" defer charset="UTF-8"></script>
+    <script src="Support.js" defer charset="UTF-8"></script>
     <!-- ========== BỔ SUNG HIỆU ỨNG ICON 💸 / 🎉 (KHÔNG ĐỤNG LOGIC GỐC) ========== -->
     <style>
         /* Chuẩn bị cho icon animation */
@@ -2421,6 +2441,22 @@
   #ai-fab:hover { transform: scale(1.1); }
   #ai-fab.open  { transform: scale(1.05); background: linear-gradient(135deg, #5b52ee 0%, #9370e8 100%); }
 
+  #icd-fab {
+    position: fixed; bottom: 25px; right: 155px; z-index: 1060;
+    width: 55px; height: 55px; border-radius: 50%;
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white; border: none; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(142,68,173,0.45);
+    font-size: 1.6rem; display: grid; place-items: center;
+    transition: transform .2s ease-out, box-shadow .2s;
+    animation: icd-pulse 3s infinite;
+  }
+  #icd-fab:hover { transform: scale(1.1); }
+  @keyframes icd-pulse {
+    0%,100% { box-shadow: 0 8px 20px rgba(142,68,173,.45); }
+    50%      { box-shadow: 0 8px 28px rgba(142,68,173,.75); }
+  }
+
   #ai-panel {
     position: fixed; bottom: 95px; right: 25px; z-index: 1055;
     width: 380px; height: 530px;
@@ -2461,6 +2497,7 @@
   #ai-messages {
     flex: 1; overflow-y: auto; padding: 14px;
     display: flex; flex-direction: column; gap: 12px;
+    min-height: 0;
   }
   #ai-messages::-webkit-scrollbar { width: 4px; }
   #ai-messages::-webkit-scrollbar-thumb { background: #2e2e3e; border-radius: 2px; }
@@ -2493,10 +2530,11 @@
   }
   #ai-input {
     flex:1; background:#12121a; border:1.5px solid #2e2e3e;
-    border-radius:10px; padding:9px 12px; color:#e8e8f0;
+    border-radius:10px; padding:7px 12px; color:#e8e8f0;
     font-size:13px; font-family:inherit; resize:none;
-    outline:none; max-height:100px; line-height:1.5;
-    transition: border-color .2s;
+    outline:none; height:36px; max-height:100px; line-height:1.5;
+    transition: border-color .2s; overflow-y: hidden;
+    box-sizing: border-box;
   }
   #ai-input:focus { border-color:#6c63ff; }
   #ai-send {
@@ -2510,7 +2548,8 @@
   #ai-send:disabled { background:#2e2e3e; cursor:not-allowed; opacity:.5; }
 </style>
 
-<!-- AI button: position:fixed canh #notificationBell -->
+<!-- AI and ICD floating buttons -->
+<button id="icd-fab" title="Tra cứu ICD-10" onclick="toggleIcdLookup()">🔍</button>
 <button id="ai-fab" title="AI Anh Khoa IT" onclick="toggleAIChat()">🤖</button>
 
 <div id="ai-panel">
@@ -2564,8 +2603,317 @@
     <input type="file" id="ai-xml-file" accept=".xml" style="display:none" onchange="handleAIXmlFile(event)">
     <button onclick="document.getElementById('ai-xml-file').click()" title="Upload file XML BHYT" style="background:#22222f;border:1px solid #2e2e3e;border-radius:9px;width:36px;height:36px;cursor:pointer;color:#4ade80;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;">📄</button>
     <button id="ai-img-btn" onclick="document.getElementById('ai-img-file').click()" title="Gửi ảnh" style="background:#22222f;border:1px solid #2e2e3e;border-radius:9px;width:36px;height:36px;cursor:pointer;color:#a78bfa;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;">🖼️</button>
+    <button onclick="toggleIcdLookup()" title="Tra cứu ICD-10" style="background:#22222f;border:1px solid #2e2e3e;border-radius:9px;width:36px;height:36px;cursor:pointer;color:#9b59b6;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;">🔍</button>
     <textarea id="ai-input" rows="1" placeholder="Hỏi về dữ liệu BHYT... (có thể dán ảnh Ctrl+V)" onkeydown="aiHandleKey(event)" oninput="aiResize(this)" onpaste="handleAIPaste(event)"></textarea>
     <button id="ai-send" onclick="aiSend()" title="Gửi (Enter)">➤</button>
+  </div>
+</div>
+
+<!-- ICD-10 Lookup Overlay + Modal -->
+<style>
+  /* ── ICD MODAL OVERLAY ── */
+  #icd-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10500;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    animation: icd-fade-in .2s ease;
+  }
+  #icd-overlay.show { display: flex; }
+  @keyframes icd-fade-in { from{opacity:0} to{opacity:1} }
+
+  /* ── ICD MODAL BOX ── */
+  #icd-panel {
+    position: relative;
+    width: min(640px, 100%);
+    height: min(680px, 90vh);
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(155,89,182,.35);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.05),
+      0 32px 80px rgba(0,0,0,.7),
+      0 0 60px rgba(155,89,182,.18) inset;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: icd-zoom-in .28s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes icd-zoom-in {
+    from { opacity:0; transform: scale(.93) translateY(14px); }
+    to   { opacity:1; transform: scale(1)   translateY(0); }
+  }
+
+  /* ── HEADER ── */
+  #icd-modal-header {
+    background: linear-gradient(135deg, #9b59b6 0%, #6c3483 60%, #4a235a 100%);
+    padding: 20px 24px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  #icd-modal-header::before {
+    content: '';
+    position: absolute; top: -40%; right: -5%;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,.06);
+    border-radius: 50%;
+  }
+  #icd-modal-header::after {
+    content: '';
+    position: absolute; bottom: -60%; left: 30%;
+    width: 150px; height: 150px;
+    background: rgba(255,255,255,.04);
+    border-radius: 50%;
+  }
+  .icd-modal-title {
+    display: flex; align-items: center; gap: 10px;
+    position: relative; z-index: 1;
+  }
+  .icd-modal-icon {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,.15);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .icd-modal-title h3 {
+    color: #fff;
+    font-size: 17px; font-weight: 700;
+    margin: 0; letter-spacing: -.3px;
+  }
+  .icd-modal-title p {
+    color: rgba(255,255,255,.7);
+    font-size: 12px; margin: 2px 0 0;
+  }
+  #icd-modal-close {
+    position: relative; z-index: 1;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff; border-radius: 10px;
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    font-size: 16px; cursor: pointer;
+    transition: background .2s, transform .15s;
+    backdrop-filter: blur(4px);
+  }
+  #icd-modal-close:hover { background: rgba(255,255,255,.28); transform: scale(1.1); }
+
+  /* ── SEARCH BAR ── */
+  #icd-search-wrap {
+    padding: 18px 20px 14px;
+    flex-shrink: 0;
+    background: rgba(0,0,0,.25);
+    border-bottom: 1px solid rgba(155,89,182,.2);
+  }
+  .icd-search-box {
+    position: relative;
+    display: flex; align-items: center;
+  }
+  .icd-search-icon {
+    position: absolute; left: 14px;
+    color: #9b59b6; font-size: 16px; pointer-events: none;
+    z-index: 1;
+  }
+  #ai-icd-search-input {
+    width: 100%; padding: 12px 14px 12px 42px;
+    background: rgba(255,255,255,.06);
+    border: 1.5px solid rgba(155,89,182,.3);
+    border-radius: 14px;
+    color: #e8e8ff;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .25s, background .25s, box-shadow .25s;
+  }
+  #ai-icd-search-input:focus {
+    border-color: #9b59b6;
+    background: rgba(155,89,182,.1);
+    box-shadow: 0 0 0 3px rgba(155,89,182,.2);
+  }
+  #ai-icd-search-input::placeholder { color: rgba(255,255,255,.35); }
+  #icd-search-clear {
+    position: absolute; right: 12px;
+    background: none; border: none;
+    color: rgba(255,255,255,.4); font-size: 18px;
+    cursor: pointer; padding: 4px;
+    line-height: 1; display: none;
+    transition: color .2s;
+  }
+  #icd-search-clear:hover { color: #e74c3c; }
+
+  /* ── RESULTS ── */
+  #icd-stats-bar {
+    padding: 8px 20px;
+    font-size: 11px; color: rgba(255,255,255,.45);
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    display: none;
+  }
+  #ai-icd-search-results {
+    flex: 1; overflow-y: auto;
+    padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #ai-icd-search-results::-webkit-scrollbar { width: 5px; }
+  #ai-icd-search-results::-webkit-scrollbar-track { background: transparent; }
+  #ai-icd-search-results::-webkit-scrollbar-thumb {
+    background: rgba(155,89,182,.4);
+    border-radius: 3px;
+  }
+
+  .icd-result-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px;
+    transition: background .18s, border-color .18s, transform .15s;
+    cursor: default;
+  }
+  .icd-result-card:hover {
+    background: rgba(155,89,182,.12);
+    border-color: rgba(155,89,182,.35);
+    transform: translateX(3px);
+  }
+  .icd-result-code {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 13px; font-weight: 700;
+    color: #c39bd3;
+    background: rgba(155,89,182,.18);
+    border: 1px solid rgba(155,89,182,.3);
+    border-radius: 8px;
+    padding: 4px 9px;
+    min-width: 52px; text-align: center;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+    flex-shrink: 0;
+  }
+  .icd-result-code:hover {
+    background: rgba(155,89,182,.45);
+    color: #fff;
+  }
+  .icd-result-name {
+    flex: 1; font-size: 13px;
+    color: #ddd; line-height: 1.45;
+  }
+  .icd-result-actions {
+    display: flex; gap: 6px; flex-shrink: 0;
+  }
+  .icd-btn-copy {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    color: #a78bfa; border-radius: 8px;
+    padding: 5px 9px; font-size: 11px;
+    cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+  }
+  .icd-btn-copy:hover { background: rgba(167,139,250,.2); border-color: #a78bfa; }
+  .icd-btn-insert {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+    border: none; color: #fff;
+    border-radius: 8px; padding: 5px 11px;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(39,174,96,.3);
+  }
+  .icd-btn-insert:hover {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 4px 12px rgba(39,174,96,.45);
+    transform: translateY(-1px);
+  }
+
+  /* Flag badges */
+  .icd-flag {
+    font-size: 10px; padding: 2px 6px;
+    border-radius: 6px; font-weight: 600;
+    flex-shrink: 0; letter-spacing: .3px;
+  }
+  .icd-flag-P { background: rgba(231,76,60,.2); color: #e74c3c; border: 1px solid rgba(231,76,60,.3); }
+  .icd-flag-S { background: rgba(243,156,18,.2); color: #f39c12; border: 1px solid rgba(243,156,18,.3); }
+  .icd-flag-F { background: rgba(52,152,219,.2); color: #3498db; border: 1px solid rgba(52,152,219,.3); }
+  .icd-flag-G { background: rgba(46,204,113,.2); color: #2ecc71; border: 1px solid rgba(46,204,113,.3); }
+
+  /* Empty / loading state */
+  .icd-empty-state {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; flex: 1;
+    padding: 40px 20px; text-align: center;
+    color: rgba(255,255,255,.35);
+  }
+  .icd-empty-icon { font-size: 48px; opacity: .5; }
+  .icd-empty-text { font-size: 13px; line-height: 1.6; }
+
+  /* Copied toast */
+  #icd-copy-toast {
+    position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(39,174,96,.9); color: #fff;
+    padding: 8px 20px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+    white-space: nowrap; z-index: 10;
+    box-shadow: 0 4px 16px rgba(39,174,96,.4);
+  }
+  #icd-copy-toast.show { opacity: 1; }
+</style>
+
+<!-- ICD Modal Overlay -->
+<div id="icd-overlay" onclick="if(event.target===this)toggleIcdLookup(false)">
+  <div id="icd-panel">
+    <!-- Copied toast -->
+    <div id="icd-copy-toast">✓ Đã copy!</div>
+
+    <!-- Header -->
+    <div id="icd-modal-header">
+      <div class="icd-modal-title">
+        <div class="icd-modal-icon">🔍</div>
+        <div>
+          <h3>Tra cứu mã ICD-10</h3>
+          <p>Bộ phân loại bệnh quốc tế phiên bản 10</p>
+        </div>
+      </div>
+      <button id="icd-modal-close" onclick="toggleIcdLookup(false)" title="Đóng (Esc)">✕</button>
+    </div>
+
+    <!-- Search -->
+    <div id="icd-search-wrap">
+      <div class="icd-search-box">
+        <span class="icd-search-icon">🔍</span>
+        <input type="text" id="ai-icd-search-input"
+          placeholder="Nhập mã ICD (vd: B20) hoặc tên bệnh..."
+          oninput="searchIcdCodes(this.value); document.getElementById('icd-search-clear').style.display = this.value ? 'block' : 'none';"
+          onkeydown="if(event.key==='Escape') toggleIcdLookup(false)">
+        <button id="icd-search-clear" onclick="document.getElementById('ai-icd-search-input').value=''; document.getElementById('icd-search-clear').style.display='none'; searchIcdCodes('');">×</button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div id="icd-stats-bar"></div>
+
+    <!-- Results -->
+    <div id="ai-icd-search-results">
+      <div class="icd-empty-state">
+        <div class="icd-empty-icon">💊</div>
+        <div class="icd-empty-text">
+          Nhập mã ICD hoặc tên bệnh để tra cứu<br>
+          <span style="font-size:11px; opacity:.6;">Ví dụ: <em>B20</em>, <em>tả</em>, <em>hiv</em>, <em>tiểu đường</em></span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2579,6 +2927,15 @@
   let aiHistory = [];
   let aiLoading = false;
 
+  window.adjustPanelPositions = function() {
+    // ICD is now a centered overlay modal — no positional adjustment needed
+  };
+
+
+  window.addEventListener('resize', () => {
+    if (typeof adjustPanelPositions === 'function') adjustPanelPositions();
+  });
+
   window.toggleAIChat = function() {
     const panel = document.getElementById('ai-panel');
     const fab   = document.getElementById('ai-fab');
@@ -2590,8 +2947,15 @@
       panel.classList.add('show');
       fab.classList.add('open');
       updateContextLabel();
-      setTimeout(() => document.getElementById('ai-input').focus(), 100);
+      setTimeout(() => {
+        const inp = document.getElementById('ai-input');
+        if (inp) {
+          inp.focus();
+          aiResize(inp);
+        }
+      }, 100);
     }
+    if (typeof adjustPanelPositions === 'function') adjustPanelPositions();
   };
 
   window.clearAIChat = function() {
@@ -2729,8 +3093,14 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(); }
   };
   window.aiResize = function(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+    el.style.height = '36px';
+    const newHeight = Math.max(36, el.scrollHeight + 3);
+    el.style.height = Math.min(newHeight, 100) + 'px';
+    if (newHeight > 100) {
+      el.style.overflowY = 'auto';
+    } else {
+      el.style.overflowY = 'hidden';
+    }
   };
 
   // ---- Xử lý XML ----
@@ -2872,7 +3242,7 @@
 
     // Quick-reply: ủng hộ → hiện QR ngay
     if (txt && !hasImg && checkDonate(txt)) {
-      inp.value = ''; inp.style.height = 'auto';
+      inp.value = ''; aiResize(inp);
       addMsg('user', txt.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
       addMsg('bot',
         `💙 Cảm ơn bạn đã muốn ủng hộ dự án <strong>AI Anh Khoa IT</strong>!<br><br>` +
@@ -2886,7 +3256,7 @@
 
     aiLoading = true;
     document.getElementById('ai-send').disabled = true;
-    inp.value = ''; inp.style.height = 'auto';
+    inp.value = ''; aiResize(inp);
     updateContextLabel();
 
     // Hiển thị bubble user
@@ -3230,6 +3600,7 @@ Phân tích và trả lời dựa trên dữ liệu trên. Nếu chưa có dữ 
 </script>
 <!-- ========== END AI MAXIMIZE ========== -->
 
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"db0c89750f364ceea3cb03b0503af93a","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 
 </html>

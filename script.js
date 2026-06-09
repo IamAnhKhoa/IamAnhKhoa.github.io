@@ -1,5 +1,39 @@
-﻿var _xd=function(b,k){var d=atob(b),r='';for(var i=0;i<d.length;i++)r+=String.fromCharCode(d.charCodeAt(i)^k.charCodeAt(i%k.length));return r;};
+var _xd=function(b,k){var d=atob(b),r='';for(var i=0;i<d.length;i++)r+=String.fromCharCode(d.charCodeAt(i)^k.charCodeAt(i%k.length));return r;};
 var _k=['bh','yt','@2','024'].join('');
+
+// Global fallbacks for variables defined in data_private.js (in case it fails to load or is missing)
+if (typeof validationSettings === 'undefined') window.validationSettings = {};
+if (typeof ERROR_TYPES === 'undefined') window.ERROR_TYPES = {};
+if (typeof globalData === 'undefined') window.globalData = { allRecords: [], filteredRecords: [], currentPage: 1, pageSize: 10, charts: {} };
+if (typeof staffNameMap === 'undefined') window.staffNameMap = new Map();
+if (typeof PHONG_KHAM_MAP === 'undefined') window.PHONG_KHAM_MAP = new Map();
+if (typeof PHONG_KHAM_NAMES === 'undefined') window.PHONG_KHAM_NAMES = [];
+if (typeof contraindicationMap === 'undefined') window.contraindicationMap = new Map();
+if (typeof indicationMap === 'undefined') window.indicationMap = new Map();
+if (typeof ICD_NAMES === 'undefined') window.ICD_NAMES = {};
+
+// Fallbacks for ICD dataset
+if (typeof _F_P === 'undefined') window._F_P = new Set();
+if (typeof _F_R === 'undefined') window._F_R = new Set();
+if (typeof _F_S === 'undefined') window._F_S = new Set();
+if (typeof _F_M === 'undefined') window._F_M = new Set();
+if (typeof _F_F === 'undefined') window._F_F = new Set();
+if (typeof _F_G === 'undefined') window._F_G = new Set();
+if (typeof _ALL_CODES === 'undefined') window._ALL_CODES = [];
+
+let PREFIX_INDEX = null;
+function initIcdPrefixIndex() {
+    if (PREFIX_INDEX) return;
+    PREFIX_INDEX = new Set();
+    if (typeof _ALL_CODES !== 'undefined') {
+        _ALL_CODES.forEach(c => {
+            const clean = String(c).toUpperCase().replace(/[†*\/\s]/g, '').replace(/\./g, '');
+            if (clean.length >= 4) {
+                PREFIX_INDEX.add(clean.substring(0, 3));
+            }
+        });
+    }
+}
 
 
 const formatDateTimeForDisplay = (dateString) => {
@@ -351,12 +385,17 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     console.log("Bắt đầu xử lý nội dung..."); // <-- DÒNG THEO DÕI SỐ 1
     const { records, drugs, services, xml4Details } = validateXmlContent(xmlContent);
     
-    // Đưa hồ sơ có lỗi (critical -> warning) lên đầu
-    records.sort((a, b) => {
-        const aErrorLevel = a.errors.some(e => e.severity === 'critical') ? 2 : (a.errors.length > 0 ? 1 : 0);
-        const bErrorLevel = b.errors.some(e => e.severity === 'critical') ? 2 : (b.errors.length > 0 ? 1 : 0);
-        return bErrorLevel - aErrorLevel; // Sắp xếp giảm dần theo cấp độ lỗi
-    });
+    // Đưa hồ sơ có lỗi lên đầu: critical(3) > warning(2) > pre-warn(1) > sạch(0)
+    const severityRank = (r) => {
+        if (r.errors.some(e => e.severity === 'critical')) return 3;
+        if (r.errors.some(e => e.severity === 'warning'))  return 2;
+        if (r.errors.some(e => e.severity === 'pre-warn')) return 1;
+        return 0;
+    };
+    records.sort((a, b) => severityRank(b) - severityRank(a));
+    // Sắp xếp lỗi trong từng hồ sơ: critical > warning > pre-warn
+    const errorRank = (e) => e.severity === 'critical' ? 3 : (e.severity === 'warning' ? 2 : 1);
+    records.forEach(r => r.errors.sort((a, b) => errorRank(b) - errorRank(a)));
 
     globalData.allRecords = records;
     globalData.allDrugs = drugs;
@@ -382,6 +421,7 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     let totalDenialAmount = 0;
     globalData.allRecords.forEach(r => {
         if (r.errors.length > 0) {
+            // pre-warn không tính vào critical
             if (r.errors.some(e => e.severity === 'critical')) criticalErrorRecords++;
             r.errors.forEach(e => {
                 if (e.severity === 'critical' && e.cost > 0) totalDenialAmount += e.cost;
@@ -1592,7 +1632,157 @@ function validateSingleHoso(hoso) {
         }
     }
     // =================================================================
-    // KẾT THÚC
+    // BẮT ĐẦU: KIỂM TRA TOÀN DIỆN MÃ ICD VÀ GỢI Ý MÃ CON
+    // =================================================================
+    initIcdPrefixIndex();
+    const primaryIcd = (record.chanDoan || '').trim().toUpperCase();
+    const secondaryIcds = [
+        ...(record.maBenhKemTheo || '').split(/[;,]/),
+        ...(record.maBenhYHCT || '').split(/[;,]/)
+    ].map(d => d.trim().toUpperCase()).filter(Boolean);
+
+    const genderVal = record.gioiTinh;
+    const genderStr = (genderVal === '1') ? 'M' : (genderVal === '2' ? 'F' : null);
+
+    const checkedIcdKeys = new Set();
+
+    const checkSingleIcd = (code, isPrimary) => {
+        if (!code) return;
+        const key = code.replace(/\./g, '').trim().toUpperCase();
+        if (checkedIcdKeys.has(key)) return;
+        checkedIcdKeys.add(key);
+
+        const is3Char = /^[A-Z]\d{2}$/.test(key);
+
+        // 1. Kiểm tra mã chưa cụ thể (cần chọn mã 4/5 ký tự)
+        const ruleKeyIcd3 = 'ICD_MA_3_KY_TU';
+        if (validationSettings[ruleKeyIcd3]?.enabled) {
+            const needsMoreSpecific = _F_S.has(key) || (is3Char && PREFIX_INDEX && PREFIX_INDEX.has(key));
+            if (needsMoreSpecific) {
+                const isEnforced = record.ngayVao && record.ngayVao.substring(0, 8) >= '20260701';
+                // pre-warn = cảnh báo nhẹ, chưa áp dụng chính thức (hiện cuối, màu vàng nhạt)
+                // warning  = cảnh báo thông thường
+                // critical = lỗi nghiêm trọng (từ 01/07/2026)
+                const severity = isEnforced ? 'critical' : 'pre-warn';
+                const cost = isEnforced ? record.t_bhtt : 0;
+
+                const _fsNote = isEnforced
+                    ? '⛔ Lỗi có hiệu lực từ 01/07/2026 — bị TRỪ TIỀN XML BHYT (trừ tiền công khám, thuốc, cận lâm sàng)'
+                    : '📅 Chưa áp dụng chính thức. Từ 01/07/2026 sẽ là lỗi nghiêm trọng — bị TRỪ TIỀN BHYT.';
+
+                const msg = isEnforced
+                    ? `Lỗi nghiêm trọng: Mã ICD [${code}] chưa cụ thể (cần chọn mã 4 hoặc 5 ký tự). Hiệu lực áp dụng xuất toán từ ngày 01/07/2026.`
+                    : `Sắp áp dụng: Mã ICD [${code}] chưa cụ thể (cần chọn mã 4 hoặc 5 ký tự). Từ 01/07/2026 sẽ bị trừ tiền BHYT — khuyến khích chọn mã con cụ thể hơn.`;
+
+                // Build suggestions
+                const suggestions = [];
+                const parentKey = key;
+                const parentName = ICD_NAMES[parentKey] || ICD_NAMES[code] || '';
+                const children = [];
+
+                if (typeof _ALL_CODES !== 'undefined') {
+                    _ALL_CODES.forEach(c => {
+                        const cleanC = c.replace(/\./g, '').trim().toUpperCase();
+                        if (cleanC.startsWith(parentKey) && cleanC.length > parentKey.length) {
+                            const formatted = c.length > 3 ? c.substring(0, 3) + '.' + c.substring(3) : c;
+                            children.push({
+                                code: formatted,
+                                name: ICD_NAMES[c] || ICD_NAMES[cleanC] || ''
+                            });
+                        }
+                    });
+                }
+
+                if (children.length > 0) {
+                    suggestions.push({
+                        parentCode: code,
+                        parentName: parentName,
+                        children: children
+                    });
+                }
+
+                record.errors.push({
+                    type: ruleKeyIcd3,
+                    severity: severity,
+                    message: msg + ' ' + _fsNote,
+                    cost: cost,
+                    itemName: `Mã bệnh: ${code}`,
+                    suggestions: suggestions
+                });
+            }
+        }
+
+        // 2. Mã không được dùng làm bệnh chính
+        const ruleKeyNotPrimary = 'ICD_NOT_PRIMARY';
+        if (validationSettings[ruleKeyNotPrimary]?.enabled && isPrimary && _F_P.has(key)) {
+            record.errors.push({
+                type: ruleKeyNotPrimary,
+                severity: validationSettings[ruleKeyNotPrimary].severity || 'critical',
+                message: `Lỗi: Mã ICD [${code}] không được phép dùng làm bệnh chính. Vui lòng đổi sang mã phù hợp.`,
+                cost: costIfCritical(ruleKeyNotPrimary, record.t_bhtt),
+                itemName: `Bệnh chính: ${code}`
+            });
+        }
+
+        // 3. Mã không khuyến khích làm bệnh chính
+        const ruleKeyNotRec = 'ICD_NOT_RECOMMENDED';
+        if (validationSettings[ruleKeyNotRec]?.enabled && isPrimary && _F_R.has(key)) {
+            record.errors.push({
+                type: ruleKeyNotRec,
+                severity: validationSettings[ruleKeyNotRec].severity || 'warning',
+                message: `Cảnh báo: Mã ICD [${code}] không khuyến khích sử dụng làm bệnh chính.`,
+                cost: costIfCritical(ruleKeyNotRec, record.t_bhtt),
+                itemName: `Bệnh chính: ${code}`
+            });
+        }
+
+        // 4. Chỉ dùng cho nguyên nhân tử vong
+        const ruleKeyMortality = 'ICD_MORTALITY_ONLY';
+        if (validationSettings[ruleKeyMortality]?.enabled && _F_M.has(key)) {
+            record.errors.push({
+                type: ruleKeyMortality,
+                severity: validationSettings[ruleKeyMortality].severity || 'critical',
+                message: `Lỗi: Mã ICD [${code}] chỉ dùng cho mã hóa nguyên nhân tử vong, không dùng cho chẩn đoán lâm sàng.`,
+                cost: costIfCritical(ruleKeyMortality, record.t_bhtt),
+                itemName: `Mã bệnh: ${code}`
+            });
+        }
+
+        // 5. Chỉ dành cho Nữ giới
+        const ruleKeyFemaleOnly = 'ICD_FEMALE_ONLY';
+        if (validationSettings[ruleKeyFemaleOnly]?.enabled && genderStr === 'M' && _F_F.has(key)) {
+            record.errors.push({
+                type: ruleKeyFemaleOnly,
+                severity: validationSettings[ruleKeyFemaleOnly].severity || 'critical',
+                message: `Lỗi: Mã ICD [${code}] chỉ/chủ yếu dành cho Nữ giới, bệnh nhân hiện tại là Nam.`,
+                cost: costIfCritical(ruleKeyFemaleOnly, record.t_bhtt),
+                itemName: `Mã bệnh: ${code}`
+            });
+        }
+
+        // 6. Chỉ dành cho Nam giới
+        const ruleKeyMaleOnly = 'ICD_MALE_ONLY';
+        if (validationSettings[ruleKeyMaleOnly]?.enabled && genderStr === 'F' && _F_G.has(key)) {
+            record.errors.push({
+                type: ruleKeyMaleOnly,
+                severity: validationSettings[ruleKeyMaleOnly].severity || 'critical',
+                message: `Lỗi: Mã ICD [${code}] chỉ/chủ yếu dành cho Nam giới, bệnh nhân hiện tại là Nữ.`,
+                cost: costIfCritical(ruleKeyMaleOnly, record.t_bhtt),
+                itemName: `Mã bệnh: ${code}`
+            });
+        }
+    };
+
+    // Check primary code
+    if (primaryIcd) {
+        checkSingleIcd(primaryIcd, true);
+    }
+    // Check secondary codes
+    secondaryIcds.forEach(code => {
+        checkSingleIcd(code, false);
+    });
+    // =================================================================
+    // KẾT THÚC: KIỂM TRA TOÀN DIỆN MÃ ICD VÀ GỢI Ý MÃ CON
     // =================================================================
 
     const isSimple = record.t_thuoc > 0 &&
@@ -1976,14 +2166,63 @@ function showRecordDetailModal(record) {
             <h4 class="rdetail-section-title">⚠️ Danh sách lỗi / cảnh báo (${record.errors.length})</h4>
             <div style="display:flex; flex-direction:column; gap:6px;">`;
         record.errors.forEach(e => {
-            const badgeClass = e.severity === 'critical' ? 'status-error' : 'status-warning';
-            const icon = e.severity === 'critical' ? '🔴' : '🟡';
-            html += `<div style="padding:10px 14px; background:${e.severity === 'critical' ? '#fff0f0' : '#fffbea'}; border-radius:8px; border-left:4px solid ${e.severity === 'critical' ? '#e53e3e' : '#d69e2e'}">
+            const badgeClass = e.severity === 'critical' ? 'status-error'
+                             : e.severity === 'pre-warn'  ? 'status-pre-warn'
+                             : 'status-warning';
+            const icon = e.severity === 'critical' ? '🔴'
+                       : e.severity === 'pre-warn'  ? '🔔'
+                       : '🟡';
+            
+            // Build suggestions UI if suggestions exist
+            let suggestionsHtml = '';
+            if (e.suggestions && e.suggestions.length > 0) {
+                suggestionsHtml = `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0; font-size:0.95em;">`;
+                e.suggestions.forEach(s => {
+                    suggestionsHtml += `
+                    <div style="margin-bottom:12px;">
+                        <span style="font-weight:700; color:#742a2a; font-size:11px; display:block; margin-bottom:4px; letter-spacing:0.5px;">CHẨN ĐOÁN CHÍNH</span>
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                            <span style="display:inline-block; background:#c53030; color:#fff; font-weight:bold; padding:2px 8px; border-radius:6px; font-size:12px; font-family:monospace;">${s.parentCode}</span>
+                            <strong style="color:#2d3748; font-size:13px;">${s.parentCode}-${s.parentName}</strong>
+                        </div>
+                        <ul style="margin: 6px 0 0 16px; padding:0; list-style-type:disc; color:#9b2c2c; font-size:12.5px;">
+                            <li style="margin-bottom:6px; line-height:1.5;">
+                                <strong style="color:#9b2c2c;">Cần chọn mã 4 hoặc 5 ký tự cụ thể hơn</strong>
+                                <div style="color:#4a5568; margin-top:2px; font-weight:normal;">
+                                    &rarr; Chọn mã con cụ thể hơn. 📅 Từ 01/07/2026 sẽ là lỗi nghiêm trọng &mdash; bị TRỪ TIỀN XML BHYT (trừ tiền công khám, thuốc, cận lâm sàng)
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px; max-height:200px; overflow-y:auto; padding-right:4px; border:1px solid #e2e8f0; border-radius:8px; padding:8px; background:#fafafa;">`;
+                    s.children.forEach(c => {
+                        suggestionsHtml += `
+                                    <div style="display:flex; align-items:baseline; gap:8px; font-size:12px;">
+                                        <span style="display:inline-block; background:#3182ce; color:#fff; font-weight:bold; padding:1px 6px; border-radius:4px; font-size:11px; cursor:pointer; font-family:monospace; flex-shrink:0;" onclick="navigator.clipboard.writeText('${c.code}').then(() => alert('Đã copy: ${c.code}'))" title="Click để copy">${c.code}</span>
+                                        <span style="color:#2d3748; line-height:1.4;">${c.name}</span>
+                                    </div>`;
+                    });
+                    suggestionsHtml += `
+                                </div>
+                            </li>
+                        </ul>
+                    </div>`;
+                });
+                suggestionsHtml += `</div>`;
+            }
+
+            // Màu nền và border theo severity
+            const _bg  = e.severity === 'critical' ? '#fff0f0'
+                       : e.severity === 'pre-warn'  ? '#fffef5'
+                       : '#fffbea';
+            const _bdr = e.severity === 'critical' ? '#e53e3e'
+                       : e.severity === 'pre-warn'  ? '#d4b84a'
+                       : '#d69e2e';
+            html += `<div style="padding:10px 14px; background:${_bg}; border-radius:8px; border-left:4px solid ${_bdr}; ${e.severity === 'pre-warn' ? 'opacity:0.82;' : ''}">
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
                     <span class="status-badge ${badgeClass}">${icon} ${ERROR_TYPES[e.type] || e.type}</span>
                     ${e.cost > 0 ? `<span style="color:#e53e3e; font-weight:600; font-size:0.85em;">💸 ${formatCurrency(e.cost)}</span>` : ''}
+                    ${e.severity === 'pre-warn' ? `<span style="font-size:10px; color:#b7791f; background:#fef3c7; border:1px solid #d4b84a; border-radius:10px; padding:1px 7px; font-weight:600;">⏳ Chưa áp dụng</span>` : ''}
                 </div>
-                <small style="color:#555">${e.message}</small>
+                <small style="color:#555; display:block; margin-bottom:4px;">${e.message}</small>
+                ${suggestionsHtml}
             </div>`;
         });
         html += `</div></div>`;
@@ -3195,6 +3434,16 @@ function exportDoctorAnalysis() {
 
 // ============================= INITIALIZATION (UPDATED) =============================
 function initializeValidationSettings() {
+    // Register ICD_MA_3_KY_TU and other ICD flags in global ERROR_TYPES if it exists
+    if (typeof ERROR_TYPES !== 'undefined') {
+        ERROR_TYPES['ICD_MA_3_KY_TU'] = 'Mã ICD chưa cụ thể (3 ký tự)';
+        ERROR_TYPES['ICD_NOT_PRIMARY'] = 'Mã ICD không được làm bệnh chính';
+        ERROR_TYPES['ICD_NOT_RECOMMENDED'] = 'Mã ICD không khuyến khích làm bệnh chính';
+        ERROR_TYPES['ICD_MORTALITY_ONLY'] = 'Mã ICD chỉ dùng cho tử vong';
+        ERROR_TYPES['ICD_FEMALE_ONLY'] = 'Mã ICD chỉ dành cho Nữ giới';
+        ERROR_TYPES['ICD_MALE_ONLY'] = 'Mã ICD chỉ dành cho Nam giới';
+    }
+
     // Rules that users can configure (enable/disable, change severity)
     const configurableRules = [
         'BS_TRUNG_THOI_GIAN',
@@ -3207,7 +3456,13 @@ function initializeValidationSettings() {
         'KQ_DVKT_SAU_YL_THUOC', // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
         'THUOC_DVKT_THYL_TRUNG_GIO', // <-- THÊM VÀO ĐÂY
         'BS_KHAM_VUOT_DINH_MUC', 'THUOC_CHONG_CHI_DINH_ICD',
-        'TAI_KHAM_TRUOC_28_NGAY'
+        'TAI_KHAM_TRUOC_28_NGAY',
+        'ICD_MA_3_KY_TU',
+        'ICD_NOT_PRIMARY',
+        'ICD_NOT_RECOMMENDED',
+        'ICD_MORTALITY_ONLY',
+        'ICD_FEMALE_ONLY',
+        'ICD_MALE_ONLY'
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
@@ -3298,6 +3553,13 @@ const hideLoading = (id) => document.getElementById(id).classList.remove('show')
 
 // ========== DỮ LIỆU CHO TÍNH NĂNG THÔNG BÁO ==========
 const notifications = [
+    {
+        id: 20,
+        date: '09-06-2026',
+        type: 'announcement',
+        title: '📅 Sắp áp dụng: Mã ICD-10 phải dùng 4-5 ký tự từ 01/07/2026',
+        content: 'Từ ngày 01/07/2026, hồ sơ XML BHYT có mã ICD-10 chưa cụ thể (chỉ dùng 3 ký tự dạng A00, B20...) sẽ bị từ chối thanh toán — trừ tiền công khám, thuốc, cận lâm sàng. Hiện tại hệ thống đang cảnh báo TRƯỚC (màu vàng nhạt ⏳) để bạn kịp chỉnh sửa trước thời hạn. Sau 01/07/2026 sẽ chuyển thành lỗi nghiêm trọng 🔴. Hướng dẫn: Bấm vào hồ sơ có cảnh báo → xem gợi ý mã con cụ thể hơn → chọn mã 4-5 ký tự thay thế.'
+    },
     {
         id: 19,
         date: '10-05-2026',
@@ -4361,37 +4623,20 @@ async function sendTelegramComparisonReport(message, excelBlob) {
                 </div>
 
                 <div class="profile-content">
-                    <div class="section-title">Giới thiệu</div>
+                    <div class="section-title">Gioi thieu</div>
                     <p class="profile-bio">
-                        Chào bạn, tôi chuyên phát triển các giải pháp <strong>Tự động hóa quy trình Y tế</strong>, giúp tối ưu hóa thời gian và giảm thiểu sai sót. Mục tiêu của tôi là mang công nghệ dữ liệu áp dụng thực tiễn vào công việc quản lý KCB BHYT.
+                        Chao ban, toi chuyen phat trien cac giai phap <strong>Tu dong hoa quy trinh Y te</strong>.
                     </p>
-
-                    <div class="section-title">Dự án nổi bật</div>
+                    <div class="section-title">Du an noi bat</div>
                     <div class="project-grid">
-                        <div class="project-card">
-                            <h4>🛡️ Giám sát BHYT</h4>
-                            <p>Phát hiện lỗi XML, cảnh báo xuất toán trước khi gửi giám định.</p>
-                        </div>
-                        <div class="project-card">
-                            <h4>📊 Dashboard NCT</h4>
-                            <p>Hệ thống báo cáo, quản lý lịch khám sức khỏe người cao tuổi.</p>
-                        </div>
-                        <div class="project-card">
-                            <h4>⚡ Auto Utilities</h4>
-                            <p>Script xử lý dữ liệu, chuẩn hóa danh sách tự động.</p>
-                        </div>
-                        <div class="project-card">
-                            <h4>📂 File Manager 2.0</h4>
-                            <p>Số hóa văn bản, quản lý hồ sơ tập trung.</p>
-                        </div>
+                        <div class="project-card"><h4>Shield Giam sat BHYT</h4><p>Phat hien loi XML, canh bao xuat toan.</p></div>
+                        <div class="project-card"><h4>Dashboard NCT</h4><p>He thong bao cao, quan ly lich kham.</p></div>
+                        <div class="project-card"><h4>Auto Utilities</h4><p>Script xu ly du lieu tu dong.</p></div>
+                        <div class="project-card"><h4>File Manager 2.0</h4><p>So hoa van ban, quan ly ho so.</p></div>
                     </div>
-
                     <div class="donate-box">
-                        <img src="https://i.ibb.co/Gv1p5BQj/bank.png" class="donate-qr-thumb" id="qr-thumb" title="Click để phóng to">
-                        <div>
-                            <strong style="color:#d97706">Ủng hộ tác giả</strong>
-                            <p style="margin:0; font-size:0.85rem; color:#78350f">Mọi sự đóng góp là động lực để duy trì Server và phát triển tính năng mới.</p>
-                        </div>
+                        <img src="https://i.ibb.co/Gv1p5BQj/bank.png" class="donate-qr-thumb" id="qr-thumb" title="Click de phong to">
+                        <div><strong style="color:#d97706">Ung ho tac gia</strong><p style="margin:0;font-size:0.85rem;color:#78350f">Moi su dong gop la dong luc phat trien tinh nang moi.</p></div>
                     </div>
                 </div>
             </div>
@@ -4406,7 +4651,6 @@ async function sendTelegramComparisonReport(message, excelBlob) {
         // ===================================================================
         // 3. TÌM MENU VÀ CHÈN NÚT
         // ===================================================================
-        // Tìm thanh menu dựa trên class phổ biến (dựa trên ảnh bạn gửi)
         const navBar = document.querySelector('.tab-nav') ||
             document.querySelector('.nav-tabs') ||
             document.querySelector('#nav') ||
@@ -4414,7 +4658,6 @@ async function sendTelegramComparisonReport(message, excelBlob) {
 
         const btn = document.createElement('div');
         btn.className = 'tab-button profile-btn';
-        // Icon User và Text
         btn.innerHTML = `
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             <span>Tác giả</span>
@@ -4466,7 +4709,7 @@ async function sendTelegramComparisonReport(message, excelBlob) {
     });
 })();
 
-// ===================================================================
+
 // THÔNG BÁO TỰ ĐỘNG CUỐI THÁNG
 // ===================================================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -4512,5 +4755,159 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// ===================================================================
+// ICD LOOKUP FEATURE FOR AI PANEL
+// ===================================================================
+function removeDiacritics(str) {
+    if (!str) return '';
+    return str.normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd')
+              .replace(/Đ/g, 'D');
+}
 
+window.toggleIcdLookup = function(show) {
+    const overlay = document.getElementById('icd-overlay');
+    if (!overlay) return;
+
+    if (show === undefined) {
+        show = !overlay.classList.contains('show');
+    }
+
+    if (show) {
+        overlay.classList.add('show');
+        const input = document.getElementById('ai-icd-search-input');
+        const clearBtn = document.getElementById('icd-search-clear');
+        if (input) {
+            input.value = '';
+            if (clearBtn) clearBtn.style.display = 'none';
+            setTimeout(() => input.focus(), 60);
+        }
+        const results = document.getElementById('ai-icd-search-results');
+        if (results) {
+            results.innerHTML = `<div class="icd-empty-state">
+                <div class="icd-empty-icon">💊</div>
+                <div class="icd-empty-text">
+                    Nhập mã ICD hoặc tên bệnh để tra cứu<br>
+                    <span style="font-size:11px; opacity:.6;">Ví dụ: <em>B20</em>, <em>tả</em>, <em>hiv</em>, <em>tiểu đường</em></span>
+                </div>
+            </div>`;
+        }
+        const statsBar = document.getElementById('icd-stats-bar');
+        if (statsBar) statsBar.style.display = 'none';
+        document._icdEscHandler = (e) => { if (e.key === 'Escape') toggleIcdLookup(false); };
+        document.addEventListener('keydown', document._icdEscHandler);
+    } else {
+        overlay.classList.remove('show');
+        if (document._icdEscHandler) {
+            document.removeEventListener('keydown', document._icdEscHandler);
+            document._icdEscHandler = null;
+        }
+    }
+};
+
+let _icdSearchTimer = null;
+window.searchIcdCodes = function(query) {
+    clearTimeout(_icdSearchTimer);
+    _icdSearchTimer = setTimeout(() => {
+        const resultsContainer = document.getElementById('ai-icd-search-results');
+        const statsBar = document.getElementById('icd-stats-bar');
+        if (!resultsContainer) return;
+
+        if (typeof ICD_NAMES === 'undefined') {
+            resultsContainer.innerHTML = `<div class="icd-empty-state"><div class="icd-empty-icon">⚠️</div><div class="icd-empty-text">Không tìm thấy cơ sở dữ liệu ICD_NAMES</div></div>`;
+            return;
+        }
+
+        const q = removeDiacritics((query || '').trim().toLowerCase());
+        if (!q) {
+            resultsContainer.innerHTML = `<div class="icd-empty-state"><div class="icd-empty-icon">💊</div><div class="icd-empty-text">Nhập mã ICD hoặc tên bệnh để tra cứu<br><span style="font-size:11px;opacity:.6">Ví dụ: <em>B20</em>, <em>hiv</em>, <em>tiểu đường</em></span></div></div>`;
+            if (statsBar) statsBar.style.display = 'none';
+            return;
+        }
+
+        const exactFirst = [], startsWith = [], contains = [];
+        for (const [code, name] of Object.entries(ICD_NAMES)) {
+            const cleanCode = code.toLowerCase();
+            const cleanName = removeDiacritics(name.toLowerCase());
+            if (cleanCode === q) {
+                exactFirst.push({ code, name });
+            } else if (cleanCode.startsWith(q) || cleanName.startsWith(q)) {
+                startsWith.push({ code, name });
+            } else if (cleanCode.includes(q) || cleanName.includes(q)) {
+                contains.push({ code, name });
+            }
+            if (exactFirst.length + startsWith.length + contains.length >= 200) break;
+        }
+        const allMatches = [...exactFirst, ...startsWith, ...contains].slice(0, 50);
+
+        if (statsBar) {
+            const total = exactFirst.length + startsWith.length + contains.length;
+            statsBar.style.display = 'block';
+            statsBar.textContent = `Tìm thấy ${total > 50 ? '50+' : total} kết quả cho "${query}"`;
+        }
+
+        if (allMatches.length === 0) {
+            resultsContainer.innerHTML = `<div class="icd-empty-state"><div class="icd-empty-icon">🔎</div><div class="icd-empty-text">Không tìm thấy kết quả phù hợp với "<strong style="color:#c39bd3">${query}</strong>"</div></div>`;
+            return;
+        }
+
+        function hlText(text, rawQ) {
+            if (!rawQ) return text;
+            const escaped = rawQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(' + escaped + ')', 'gi');
+            return text.replace(regex, '<mark style="background:rgba(155,89,182,.4);color:#fff;border-radius:3px;padding:0 2px;">$1</mark>');
+        }
+
+        // Format mã ICD để hiển thị: B200 → B20.0, B2009 → B20.09
+        function formatIcdDisplay(code) {
+            const c = code.replace(/\./g, ''); // bỏ dấu chấm cũ nếu có
+            return c.length > 3 ? c.substring(0, 3) + '.' + c.substring(3) : c;
+        }
+
+        resultsContainer.innerHTML = allMatches.map(m => {
+            const displayCode = formatIcdDisplay(m.code);
+            const codeHL = hlText(displayCode, query);
+            const nameHL = hlText(m.name, query);
+            return `<div class="icd-result-card">
+                <span class="icd-result-code" onclick="copyIcdCode('${displayCode}')" title="Click để copy mã">${codeHL}</span>
+                <div class="icd-result-name">${nameHL}</div>
+                <button class="icd-btn-copy" onclick="copyIcdCode('${displayCode}')">📋 Copy</button>
+            </div>`;
+        }).join('');
+
+    }, 120);
+};
+
+let _icdToastTimer = null;
+window.copyIcdCode = function(code) {
+    const showToast = () => {
+        const toast = document.getElementById('icd-copy-toast');
+        if (toast) {
+            toast.textContent = '✓ Đã copy: ' + code;
+            toast.classList.add('show');
+            clearTimeout(_icdToastTimer);
+            _icdToastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+        }
+    };
+    navigator.clipboard.writeText(code).then(showToast).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(e){}
+        document.body.removeChild(ta);
+        showToast();
+    });
+};
+
+window.insertIcdToChat = function(code) {
+    const chatInput = document.getElementById('ai-input');
+    if (chatInput) {
+        const startSpace = (chatInput.value.length > 0 && !chatInput.value.endsWith(' ')) ? ' ' : '';
+        chatInput.value += startSpace + code;
+        chatInput.focus();
+        if (typeof aiResize === 'function') aiResize(chatInput);
+    }
+    toggleIcdLookup(false);
+};
 
