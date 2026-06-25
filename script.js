@@ -3874,7 +3874,7 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
     const oldThemeToggle = document.getElementById('themeToggle'); const header = document.querySelector('.header'); if (oldThemeToggle && header) { oldThemeToggle.remove(); const headerActions = document.createElement('div'); headerActions.className = 'header-actions'; headerActions.innerHTML = `<button id="zaloConfigBtn" class="theme-toggle" title="Cấu hình Zalo Group ID" style="margin-right: 8px;">💬</button><button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark"><span class="icon icon-sun">☀️</span><span class="icon icon-moon">🌙</span></button>`; header.appendChild(headerActions); document.getElementById('themeToggle').addEventListener('click', () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); }); document.getElementById('zaloConfigBtn').addEventListener('click', () => { const currentId = localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k); const newId = prompt('Nhập mã nhóm Zalo nhận thông báo mới:', currentId); if (newId !== null) { const trimmed = newId.trim(); if (trimmed) { localStorage.setItem('zalo_chat_id', trimmed); alert(`Đã cập nhật mã nhóm Zalo nhận thông báo: ${trimmed}`); } else { localStorage.removeItem('zalo_chat_id'); alert('Đã khôi phục mã nhóm Zalo mặc định.'); } } }); }
     const bellButtonHTML = `<button id="notificationBell" title="Thông báo & Cập nhật">🔔</button>`; document.body.insertAdjacentHTML('beforeend', bellButtonHTML);
     const notificationPanelHTML = `<div id="notificationPanel"><div class="notification-header"><h3>Thông báo & Cập nhật</h3></div><div class="notification-list"></div></div>`; document.body.insertAdjacentHTML('beforeend', notificationPanelHTML);
-    const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
+    const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button><button class="btn btn-primary" id="zaloModalSendBtn" onclick="sendZaloMessageFromModal()" style="margin-left: 8px;">✈️ Gửi lên Zalo</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
     const updateModalHTML = `<div id="updateNoticeModal" class="modal"><div class="modal-content update-modal-content"><div class="modal-header"><h2 id="updateModalTitle">🔔 Có gì mới trong phiên bản này?</h2><span class="close-button" onclick="closeUpdateModal()">&times;</span></div><div id="updateModalBody" class="update-modal-body"></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeUpdateModal()">Đã hiểu</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', updateModalHTML);
     // === THÊM MỚI: Tạo DOM cho tóm tắt đối chiếu ===
     const comparatorInfo = document.getElementById('comparatorResultsInfo');
@@ -3990,12 +3990,38 @@ function generateBulkZaloMessage(records, errorType) {
     });
 
     message += `\n--------------------------------\n_Vui lòng kiểm tra và xử lý hàng loạt các hồ sơ trên._`;
-    return message;
+    return maskAllNamesInText(message);
 }
-function generateSingleZaloMessage(record) { const cleanMessage = (msg) => msg.replace(/<br>/g, '\n').replace(/<strong>(.*?)<\/strong>/g, '*$1*'); let message = `*[CSKCB] THÔNG BÁO KẾT QUẢ KIỂM TRA HỒ SƠ BHYT*\n--------------------------------\n`; message += `▪️ *Bệnh nhân:* ${record.hoTen}\n`; message += `▪️ *Mã LK:* ${record.maLk}\n`; message += `▪️ *Thời gian ĐT:* ${formatDateTimeForDisplay(record.ngayVao)} - ${formatDateTimeForDisplay(record.ngayRa)}\n`; message += `▪️ *Tổng chi phí:* ${formatCurrency(record.t_bhtt)}\n\n`; const criticalErrors = record.errors.filter(e => e.severity === 'critical'); const warnings = record.errors.filter(e => e.severity === 'warning'); if (criticalErrors.length > 0) { message += `*🔴 LỖI NGHIÊM TRỌNG (Dự kiến xuất toán):*\n`; criticalErrors.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; let costInfo = err.cost > 0 ? ` (${formatCurrency(err.cost)})` : ''; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}${costInfo}\n`; }); message += `\n`; } if (warnings.length > 0) { message += `*🟡 CẢNH BÁO (Kiểm tra lại):*\n`; warnings.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}\n`; }); message += `\n`; } message += `--------------------------------\n_Vui lòng kiểm tra và xử lý theo quy định._`; return message; }
+function generateSingleZaloMessage(record) { const cleanMessage = (msg) => msg.replace(/<br>/g, '\n').replace(/<strong>(.*?)<\/strong>/g, '*$1*'); let message = `*[CSKCB] THÔNG BÁO KẾT QUẢ KIỂM TRA HỒ SƠ BHYT*\n--------------------------------\n`; message += `▪️ *Bệnh nhân:* ${record.hoTen}\n`; message += `▪️ *Mã LK:* ${record.maLk}\n`; message += `▪️ *Thời gian ĐT:* ${formatDateTimeForDisplay(record.ngayVao)} - ${formatDateTimeForDisplay(record.ngayRa)}\n`; message += `▪️ *Tổng chi phí:* ${formatCurrency(record.t_bhtt)}\n\n`; const criticalErrors = record.errors.filter(e => e.severity === 'critical'); const warnings = record.errors.filter(e => e.severity === 'warning'); if (criticalErrors.length > 0) { message += `*🔴 LỖI NGHIÊM TRỌNG (Dự kiến xuất toán):*\n`; criticalErrors.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; let costInfo = err.cost > 0 ? ` (${formatCurrency(err.cost)})` : ''; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}${costInfo}\n`; }); message += `\n`; } if (warnings.length > 0) { message += `*🟡 CẢNH BÁO (Kiểm tra lại):*\n`; warnings.forEach((err, i) => { const errorDesc = ERROR_TYPES[err.type] || err.type; message += `${i + 1}. *${errorDesc}:* ${cleanMessage(err.message)}\n`; }); message += `\n`; } message += `--------------------------------\n_Vui lòng kiểm tra và xử lý theo quy định._`; return maskAllNamesInText(message); }
 function openZaloModal(data, isBulk = false, errorType = '') { const message = isBulk ? generateBulkZaloMessage(data, errorType) : generateSingleZaloMessage(data); document.getElementById('zaloMessageTextarea').value = message; document.getElementById('zaloMessageModal').style.display = 'block'; }
 function closeZaloModal() { document.getElementById('zaloMessageModal').style.display = 'none'; }
 function copyZaloMessage() { const textarea = document.getElementById('zaloMessageTextarea'); textarea.select(); textarea.setSelectionRange(0, 99999); try { navigator.clipboard.writeText(textarea.value); alert('Đã sao chép nội dung vào clipboard!'); } catch (err) { alert('Sao chép thất bại. Vui lòng thử lại.'); console.error('Lỗi sao chép: ', err); } }
+async function sendZaloMessageFromModal() {
+    const textarea = document.getElementById('zaloMessageTextarea');
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (!text) {
+        alert('Nội dung tin nhắn trống!');
+        return;
+    }
+    const sendBtn = document.getElementById('zaloModalSendBtn');
+    const originalText = sendBtn.textContent;
+    sendBtn.disabled = true;
+    sendBtn.textContent = '⏳ Đang gửi...';
+    
+    // Gửi riêng cho ID Chat Anh Khoa (mã hóa là 'AVgbQXMDCVcCUQxKTCEKVFYHAVo=')
+    const userChatId = _xd('AVgbQXMDCVcCUQxKTCEKVFYHAVo=', _k);
+    const success = await sendZaloMessage(text, userChatId);
+    
+    sendBtn.disabled = false;
+    sendBtn.textContent = originalText;
+    if (success) {
+        alert('Đã gửi tin nhắn riêng cho Anh Khoa thành công!');
+        closeZaloModal();
+    } else {
+        alert('Gửi tin nhắn riêng thất bại. Vui lòng kiểm tra cấu hình hoặc Console.');
+    }
+}
 function exportDashboardToExcel() {
     if (!globalData || globalData.allRecords.length === 0) {
         alert('Chưa có dữ liệu để xuất. Vui lòng xử lý một file XML trước.');
@@ -4263,6 +4289,22 @@ function maskPatientName(name) {
     return parts.join(' ');
 }
 
+function maskAllNamesInText(text) {
+    if (!text || typeof text !== 'string') return text;
+    let result = text;
+    if (globalData && globalData.allRecords) {
+        const names = globalData.allRecords.map(r => r.hoTen).filter(Boolean);
+        const uniqueNames = Array.from(new Set(names)).sort((a, b) => b.length - a.length);
+        uniqueNames.forEach(name => {
+            const masked = maskPatientName(name);
+            const escapedName = name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(escapedName, 'g');
+            result = result.replace(regex, masked);
+        });
+    }
+    return result;
+}
+
 function formatZaloMessage(htmlText) {
     if (!htmlText) return '';
     return htmlText
@@ -4272,10 +4314,10 @@ function formatZaloMessage(htmlText) {
         .replace(/<[^>]+>/g, '');
 }
 
-async function sendZaloMessage(text) {
+async function sendZaloMessage(text, customChatId = null) {
     const proxyUrl = _xd('ChwNBDMIHx1XCgkNFi9GHV5dDgkaWSJXRFMaFA0LFyVeHlNEEkcYBCkdR1dWCgcWH29IUV5b', _k);
     const secretKey = _xd('AQAYACJdRAAEUF4KESNAVUY=', _k);
-    const chatId = localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
+    const chatId = customChatId || localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
 
     const params = {
         action: 'send',
