@@ -1618,15 +1618,26 @@
             <div class="upload-area" id="validatorUploadArea">
                 <h2>📁 Tải lên file XML BHYT</h2>
                 <p>Kéo thả file XML vào đây hoặc click để chọn file (có thể chọn nhiều file)</p>
-                <div class="file-input-wrapper">
-                    <input type="file" class="file-input" id="validatorFileInput" accept=".xml" multiple>
-                    <button class="file-button">Chọn file XML</button>
+                <!-- Highlighted Zalo Checkbox (Placed ABOVE the buttons) -->
+                <div style="margin-top: 20px; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 8px; background: rgba(var(--accent-rgb, 79, 70, 229), 0.15); border: 1px solid rgba(var(--accent-rgb, 79, 70, 229), 0.35); padding: 8px 16px; border-radius: 20px; box-shadow: 0 4px 12px rgba(var(--accent-rgb, 79, 70, 229), 0.1); transition: all 0.3s ease;">
+                    <input type="checkbox" id="sendZaloCheckbox" checked style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);">
+                    <label for="sendZaloCheckbox" style="font-size: 14px; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;">
+                        💬 Gửi thông báo Zalo
+                    </label>
                 </div>
+
+                <!-- Flex Container for the 2 Buttons side-by-side -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                    <div class="file-input-wrapper" style="margin: 0;">
+                        <input type="file" class="file-input" id="validatorFileInput" accept=".xml" multiple>
+                        <button class="file-button">Chọn file XML</button>
+                    </div>
+                    <button class="btn btn-primary" id="validatorProcessButton" style="margin: 0;" disabled>🚀 Bắt đầu kiểm tra</button>
+                </div>
+
                 <div id="validatorFileInfo"
                     style="display:none; margin-top: 15px; padding: 15px; background: rgba(40, 167, 69, 0.1); border-radius: 8px;">
                 </div>
-                <button class="btn btn-primary" id="validatorProcessButton" style="margin-top: 20px;" disabled>🚀 Bắt
-                    đầu kiểm tra</button>
             </div>
 
             <div class="loading" id="validatorLoading">
@@ -1807,7 +1818,14 @@
                         <div id="excelStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
                     </div>
                 </div>
-                <div style="text-align: center; margin-top: 30px;">
+                <div style="text-align: center; margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                    <!-- Highlighted Zalo Checkbox for Comparison -->
+                    <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(var(--accent-rgb, 79, 70, 229), 0.15); border: 1px solid rgba(var(--accent-rgb, 79, 70, 229), 0.35); padding: 8px 16px; border-radius: 20px; box-shadow: 0 4px 12px rgba(var(--accent-rgb, 79, 70, 229), 0.1); transition: all 0.3s ease;">
+                        <input type="checkbox" id="sendZaloCompareCheckbox" checked style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);">
+                        <label for="sendZaloCompareCheckbox" style="font-size: 14px; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;">
+                            💬 Gửi thông báo Zalo
+                        </label>
+                    </div>
                     <button class="btn btn-primary" id="compareButton" disabled>⚡ Bắt đầu đối chiếu</button>
                 </div>
             </div>
