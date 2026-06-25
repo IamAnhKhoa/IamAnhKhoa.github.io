@@ -4252,6 +4252,17 @@ document.addEventListener('DOMContentLoaded', () => {
  * ===================================================================
  */
 
+function maskPatientName(name) {
+    if (!name) return '';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0) return '';
+    const lastWord = parts[parts.length - 1];
+    if (lastWord.length > 0) {
+        parts[parts.length - 1] = lastWord.charAt(0) + '*****';
+    }
+    return parts.join(' ');
+}
+
 function formatZaloMessage(htmlText) {
     if (!htmlText) return '';
     return htmlText
@@ -4330,7 +4341,7 @@ async function sendZaloEndLog(stats, records = []) {
         for (let i = 0; i < Math.min(criticalRecords.length, limit); i++) {
             const r = criticalRecords[i];
             const timeStr = `${formatDateTimeForDisplay(r.ngayVao)} - ${formatDateTimeForDisplay(r.ngayRa)}`;
-            message += `\n${i + 1}. *${r.hoTen}* (LK: ${r.maLk}) - ĐT: ${timeStr}\n`;
+            message += `\n${i + 1}. *${maskPatientName(r.hoTen)}* (LK: ${r.maLk}) - ĐT: ${timeStr}\n`;
             
             const criticalErrors = r.errors.filter(e => e.severity === 'critical');
             criticalErrors.forEach(err => {
