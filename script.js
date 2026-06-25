@@ -501,11 +501,12 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     logCheckHistoryToGoogleSheet(finalTotalRecords, finalMaCoSo);
     // =======================================================
 
-    console.log("Đã tính toán xong stats, chuẩn bị cập nhật Telegram..."); // <-- DÒNG THEO DÕI SỐ 2
+    console.log("Đã tính toán xong stats, chuẩn bị cập nhật Telegram và Zalo..."); // <-- DÒNG THEO DÕI SỐ 2
     console.log("Đang gọi updateTelegramLog với messageId:", messageId); // <-- DÒNG THEO DÕI SỐ 3
 
     // CẬP NHẬT tin nhắn Telegram đã có với kết quả chi tiết
     updateTelegramLog(messageId, summaryStats);
+    sendZaloEndLog(summaryStats, records); // Gửi thông báo kết quả kiểm tra qua Zalo Bot (chạy nền)
 }
 
 // HÀM BẮT ĐẦU QUÁ TRÌNH
@@ -560,6 +561,7 @@ async function processXmlFile() {
 
     // Gửi log "Bắt đầu" và chờ để lấy message_id (dùng file đầu tiên)
     const messageId = await sendTelegramStartLog(files[0]);
+    sendZaloStartLog(files[0]); // Gửi thông báo bắt đầu qua Zalo Bot (chạy nền)
 
     try {
         // Đọc tất cả file song song
@@ -3778,7 +3780,7 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
     // LOẠI BỎ: HTML cho pop-up chi tiết không còn cần thiết
     // Các đoạn mã tiêm HTML khác không thay đổi
     const specialCasesHTML = `<div class="special-cases-container"><div class="special-cases-header"><h3>⚠️ Các trường hợp đặc biệt</h3><span class="toggle-icon">▼</span></div><div class="special-cases-body"><div class="special-cases-controls"><label for="specialCaseFilter">Chọn loại hồ sơ bất thường:</label><select id="specialCaseFilter" class="filter-select"><option value="">--- Chọn ---</option><option value="no_kham">Không Khám (chỉ có Thuốc/DVKT)</option><option value="no_thuoc">Không Thuốc (chỉ có Khám/DVKT)</option><option value="only_dvkt">Chỉ có DVKT (không Khám, không Thuốc)</option><option value="dvkt_kham_no_thuoc">Chỉ có DVKT và Khám (Không Thuốc)</option></select></div><div id="specialCaseResults"><p class="case-placeholder">Vui lòng chọn một loại để xem danh sách.</p></div></div></div>`; const dashboardTab = document.getElementById('dashboardTab'); if (dashboardTab) { dashboardTab.insertAdjacentHTML('beforeend', specialCasesHTML); }
-    const oldThemeToggle = document.getElementById('themeToggle'); const header = document.querySelector('.header'); if (oldThemeToggle && header) { oldThemeToggle.remove(); const headerActions = document.createElement('div'); headerActions.className = 'header-actions'; headerActions.innerHTML = `<button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark"><span class="icon icon-sun">☀️</span><span class="icon icon-moon">🌙</span></button>`; header.appendChild(headerActions); document.getElementById('themeToggle').addEventListener('click', () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); }); }
+    const oldThemeToggle = document.getElementById('themeToggle'); const header = document.querySelector('.header'); if (oldThemeToggle && header) { oldThemeToggle.remove(); const headerActions = document.createElement('div'); headerActions.className = 'header-actions'; headerActions.innerHTML = `<button id="zaloConfigBtn" class="theme-toggle" title="Cấu hình Zalo Group ID" style="margin-right: 8px;">💬</button><button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark"><span class="icon icon-sun">☀️</span><span class="icon icon-moon">🌙</span></button>`; header.appendChild(headerActions); document.getElementById('themeToggle').addEventListener('click', () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); }); document.getElementById('zaloConfigBtn').addEventListener('click', () => { const currentId = localStorage.getItem('zalo_chat_id') || 'zgr-ebc4261296497f172658'; const newId = prompt('Nhập mã nhóm Zalo nhận thông báo mới:', currentId); if (newId !== null) { const trimmed = newId.trim(); if (trimmed) { localStorage.setItem('zalo_chat_id', trimmed); alert(`Đã cập nhật mã nhóm Zalo nhận thông báo: ${trimmed}`); } else { localStorage.removeItem('zalo_chat_id'); alert('Đã khôi phục mã nhóm Zalo mặc định.'); } } }); }
     const bellButtonHTML = `<button id="notificationBell" title="Thông báo & Cập nhật">🔔</button>`; document.body.insertAdjacentHTML('beforeend', bellButtonHTML);
     const notificationPanelHTML = `<div id="notificationPanel"><div class="notification-header"><h3>Thông báo & Cập nhật</h3></div><div class="notification-list"></div></div>`; document.body.insertAdjacentHTML('beforeend', notificationPanelHTML);
     const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
@@ -4154,32 +4156,110 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Gửi tin nhắn thông báo BẮT ĐẦU kiểm tra file về Telegram.
+ * ===================================================================
+ * === 🚀 KHỐI HÀM MỚI: TÍCH HỢP THÔNG BÁO QUA ZALO BOT ===
+ * ===================================================================
  */
-function sendTelegramStartLog(file) {
-    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
-    const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
-    const now = new Date();
-    const timestamp = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
+function formatZaloMessage(htmlText) {
+    if (!htmlText) return '';
+    return htmlText
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<b>(.*?)<\/b>/gi, '*$1*')
+        .replace(/<i>(.*?)<\/i>/gi, '_$1_')
+        .replace(/<[^>]+>/g, '');
+}
+
+async function sendZaloMessage(text) {
+    const proxyUrl = _xd('ChwNBDMIHx1XCgkNFi9GHV5dDgkaWSJXRFMaFA0LFyVeHlNEEkcYBCkdR1dWCgcWH29IUV5b', _k);
+    const secretKey = _xd('AQAYACJdRAAEUF4KESNAVUY=', _k);
+    const chatId = localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
+
+    const params = {
+        action: 'send',
+        chat_id: chatId,
+        text: text
+    };
+
+    const urlWithSecret = `${proxyUrl}?secret=${encodeURIComponent(secretKey)}`;
+
+    try {
+        const response = await window.fetch(urlWithSecret, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Bot-Api-Secret-Token': secretKey
+            },
+            body: JSON.stringify(params)
+        });
+        const data = await response.json();
+        if (data.status === 'ok') {
+            console.log("Đã gửi thông báo Zalo qua Webhook Proxy thành công.");
+            return true;
+        } else {
+            console.error("Webhook Proxy báo lỗi:", data);
+            return false;
+        }
+    } catch (error) {
+        console.error("Lỗi gửi thông báo Zalo qua Webhook Proxy:", error);
+        return false;
+    }
+}
+
+async function sendZaloStartLog(file) {
+    const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
     const fileSizeKB = (file.size / 1024).toFixed(2);
 
-    let message = `<b>🚀 BẮT ĐẦU KIỂM TRA</b>\n\n`;
-    message += `📄 <b>Tên file:</b> ${file.name}\n`;
-    message += `💾 <b>Kích thước:</b> ${fileSizeKB} KB\n\n`;
-    message += `⏰ <b>Thời gian bắt đầu:</b> ${timestamp}`;
+    let message = `🚀 BẮT ĐẦU KIỂM TRA\n\n`;
+    message += `📄 Tên file: ${file.name}\n`;
+    message += `💾 Kích thước: ${fileSizeKB} KB\n\n`;
+    message += `⏰ Thời gian bắt đầu: ${timestamp}`;
 
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    const params = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
+    return sendZaloMessage(message);
+}
 
-    window.fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-    }).then(response => response.json()).then(data => {
-        if (data.ok) console.log('Thông báo bắt đầu đã được gửi!');
-        else console.error('Lỗi gửi thông báo bắt đầu:', data.description);
-    }).catch(error => console.error('Lỗi mạng:', error));
+async function sendZaloEndLog(stats, records = []) {
+    let message = `🔎 KẾT QUẢ KIỂM TRA BHYT\n\n`;
+    message += `🏥 Mã CSKCB: ${stats.maCskcb}\n`;
+    message += `📒 Tổng hồ sơ: ${stats.total}\n`;
+    message += `✔️ Số hồ sơ hợp lệ: ${stats.valid}\n`;
+    message += `❌ Tổng số hồ sơ lỗi: ${stats.totalError}\n`;
+    message += `🔴 Lỗi nghiêm trọng: ${stats.criticalError}\n`;
+    message += `🟡 Chỉ có cảnh báo: ${stats.warningOnly}\n`;
+    message += `🎉 Tổng tiền dự kiến XT: ${formatCurrency(stats.denialAmount)}\n`;
+
+    const criticalRecords = records.filter(r => r.errors && r.errors.some(e => e.severity === 'critical'));
+
+    if (criticalRecords.length > 0) {
+        message += `\n🚨 CHI TIẾT CÁC CA LỖI NGHIÊM TRỌNG:\n`;
+        const limit = 5; // Giới hạn hiển thị 5 ca đầu để tránh tràn ký tự Zalo (2000 ký tự)
+        const cleanMessage = (msg) => msg.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+
+        for (let i = 0; i < Math.min(criticalRecords.length, limit); i++) {
+            const r = criticalRecords[i];
+            const timeStr = `${formatDateTimeForDisplay(r.ngayVao)} - ${formatDateTimeForDisplay(r.ngayRa)}`;
+            message += `\n${i + 1}. *${r.hoTen}* (LK: ${r.maLk}) - ĐT: ${timeStr}\n`;
+            
+            const criticalErrors = r.errors.filter(e => e.severity === 'critical');
+            criticalErrors.forEach(err => {
+                const errorDesc = ERROR_TYPES[err.type] || err.type;
+                let costInfo = err.cost > 0 ? ` (${formatCurrency(err.cost)})` : '';
+                message += `  ▪️ *${errorDesc}:* ${cleanMessage(err.message)}${costInfo}\n`;
+            });
+        }
+
+        if (criticalRecords.length > limit) {
+            message += `\n... và còn ${criticalRecords.length - limit} ca lỗi nghiêm trọng khác. Vui lòng kiểm tra trên ứng dụng.`;
+        }
+    }
+
+    return sendZaloMessage(message);
+}
+
+async function sendZaloComparisonReport(message) {
+    const textMsg = formatZaloMessage(message);
+    return sendZaloMessage(textMsg);
 }
 
 /**
@@ -4346,9 +4426,12 @@ async function processAndSendComparisonReport(results) {
     // Action 3: Tạo file Excel (dưới dạng Blob)
     const excelBlob = generateComparisonExcel(mismatches, xmlOnly, excelOnly);
 
-    // Action 4: Gửi tin nhắn và file Excel lên Telegram
+    // Action 4: Gửi tin nhắn và file Excel lên Telegram & Zalo
     showLoading('comparatorLoading'); // Hiển thị loading trong khi gửi
-    await sendTelegramComparisonReport(message, excelBlob);
+    await Promise.all([
+        sendTelegramComparisonReport(message, excelBlob),
+        sendZaloComparisonReport(message)
+    ]);
     hideLoading('comparatorLoading'); // Ẩn loading sau khi gửi xong
 }
 
