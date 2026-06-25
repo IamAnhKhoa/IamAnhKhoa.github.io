@@ -506,7 +506,10 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
 
     // CẬP NHẬT tin nhắn Telegram đã có với kết quả chi tiết
     updateTelegramLog(messageId, summaryStats);
-    sendZaloEndLog(summaryStats, records); // Gửi thông báo kết quả kiểm tra qua Zalo Bot (chạy nền)
+    const allowedZaloCskcb = ['79342', '79343', '79764'];
+    if (summaryStats.maCskcb && allowedZaloCskcb.includes(summaryStats.maCskcb)) {
+        sendZaloEndLog(summaryStats, records); // Gửi thông báo kết quả kiểm tra qua Zalo Bot (chạy nền)
+    }
 }
 
 // HÀM BẮT ĐẦU QUÁ TRÌNH
@@ -540,6 +543,20 @@ function showCooldownToast(remaining) {
     }, 2500);
 }
 
+function detectMaCskcb(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        const slice = file.slice(0, 50000);
+        reader.onload = (e) => {
+            const text = e.target.result;
+            const match = text.match(/<(?:MA_CSKCB|MACSKCB)>([^<]+)<\/(?:MA_CSKCB|MACSKCB)>/i);
+            resolve(match ? match[1].trim() : null);
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsText(slice, 'UTF-8');
+    });
+}
+
 async function processXmlFile() {
     const files = document.getElementById('validatorFileInput').files;
     if (!files || files.length === 0) {
@@ -561,7 +578,12 @@ async function processXmlFile() {
 
     // Gửi log "Bắt đầu" và chờ để lấy message_id (dùng file đầu tiên)
     const messageId = await sendTelegramStartLog(files[0]);
-    sendZaloStartLog(files[0]); // Gửi thông báo bắt đầu qua Zalo Bot (chạy nền)
+    detectMaCskcb(files[0]).then(maCskcb => {
+        const allowedZaloCskcb = ['79342', '79343', '79764'];
+        if (maCskcb && allowedZaloCskcb.includes(maCskcb)) {
+            sendZaloStartLog(files[0]); // Gửi thông báo bắt đầu qua Zalo Bot (chạy nền)
+        }
+    });
 
     try {
         // Đọc tất cả file song song
@@ -3780,7 +3802,7 @@ body.dark .comparator-summary-container .summary-item strong.total { color: #e5e
     // LOẠI BỎ: HTML cho pop-up chi tiết không còn cần thiết
     // Các đoạn mã tiêm HTML khác không thay đổi
     const specialCasesHTML = `<div class="special-cases-container"><div class="special-cases-header"><h3>⚠️ Các trường hợp đặc biệt</h3><span class="toggle-icon">▼</span></div><div class="special-cases-body"><div class="special-cases-controls"><label for="specialCaseFilter">Chọn loại hồ sơ bất thường:</label><select id="specialCaseFilter" class="filter-select"><option value="">--- Chọn ---</option><option value="no_kham">Không Khám (chỉ có Thuốc/DVKT)</option><option value="no_thuoc">Không Thuốc (chỉ có Khám/DVKT)</option><option value="only_dvkt">Chỉ có DVKT (không Khám, không Thuốc)</option><option value="dvkt_kham_no_thuoc">Chỉ có DVKT và Khám (Không Thuốc)</option></select></div><div id="specialCaseResults"><p class="case-placeholder">Vui lòng chọn một loại để xem danh sách.</p></div></div></div>`; const dashboardTab = document.getElementById('dashboardTab'); if (dashboardTab) { dashboardTab.insertAdjacentHTML('beforeend', specialCasesHTML); }
-    const oldThemeToggle = document.getElementById('themeToggle'); const header = document.querySelector('.header'); if (oldThemeToggle && header) { oldThemeToggle.remove(); const headerActions = document.createElement('div'); headerActions.className = 'header-actions'; headerActions.innerHTML = `<button id="zaloConfigBtn" class="theme-toggle" title="Cấu hình Zalo Group ID" style="margin-right: 8px;">💬</button><button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark"><span class="icon icon-sun">☀️</span><span class="icon icon-moon">🌙</span></button>`; header.appendChild(headerActions); document.getElementById('themeToggle').addEventListener('click', () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); }); document.getElementById('zaloConfigBtn').addEventListener('click', () => { const currentId = localStorage.getItem('zalo_chat_id') || 'zgr-ebc4261296497f172658'; const newId = prompt('Nhập mã nhóm Zalo nhận thông báo mới:', currentId); if (newId !== null) { const trimmed = newId.trim(); if (trimmed) { localStorage.setItem('zalo_chat_id', trimmed); alert(`Đã cập nhật mã nhóm Zalo nhận thông báo: ${trimmed}`); } else { localStorage.removeItem('zalo_chat_id'); alert('Đã khôi phục mã nhóm Zalo mặc định.'); } } }); }
+    const oldThemeToggle = document.getElementById('themeToggle'); const header = document.querySelector('.header'); if (oldThemeToggle && header) { oldThemeToggle.remove(); const headerActions = document.createElement('div'); headerActions.className = 'header-actions'; headerActions.innerHTML = `<button id="zaloConfigBtn" class="theme-toggle" title="Cấu hình Zalo Group ID" style="margin-right: 8px;">💬</button><button id="themeToggle" class="theme-toggle" aria-label="Chuyển Light/Dark"><span class="icon icon-sun">☀️</span><span class="icon icon-moon">🌙</span></button>`; header.appendChild(headerActions); document.getElementById('themeToggle').addEventListener('click', () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); }); document.getElementById('zaloConfigBtn').addEventListener('click', () => { const currentId = localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k); const newId = prompt('Nhập mã nhóm Zalo nhận thông báo mới:', currentId); if (newId !== null) { const trimmed = newId.trim(); if (trimmed) { localStorage.setItem('zalo_chat_id', trimmed); alert(`Đã cập nhật mã nhóm Zalo nhận thông báo: ${trimmed}`); } else { localStorage.removeItem('zalo_chat_id'); alert('Đã khôi phục mã nhóm Zalo mặc định.'); } } }); }
     const bellButtonHTML = `<button id="notificationBell" title="Thông báo & Cập nhật">🔔</button>`; document.body.insertAdjacentHTML('beforeend', bellButtonHTML);
     const notificationPanelHTML = `<div id="notificationPanel"><div class="notification-header"><h3>Thông báo & Cập nhật</h3></div><div class="notification-list"></div></div>`; document.body.insertAdjacentHTML('beforeend', notificationPanelHTML);
     const zaloModalHTML = `<div id="zaloMessageModal" class="zalo-modal"><div class="zalo-modal-content"><div class="modal-header"><h2>Soạn tin nhắn gửi Zalo</h2><span class="close-button" onclick="closeZaloModal()">&times;</span></div><p>Nội dung dưới đây đã được định dạng sẵn, bạn chỉ cần sao chép và gửi đi.</p><textarea id="zaloMessageTextarea" class="zalo-modal-textarea"></textarea><div class="modal-footer"><button class="btn btn-warning" onclick="closeZaloModal()">Đóng</button><button class="btn btn-success" onclick="copyZaloMessage()">📋 Sao chép nội dung</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', zaloModalHTML);
@@ -4428,10 +4450,28 @@ async function processAndSendComparisonReport(results) {
 
     // Action 4: Gửi tin nhắn và file Excel lên Telegram & Zalo
     showLoading('comparatorLoading'); // Hiển thị loading trong khi gửi
-    await Promise.all([
-        sendTelegramComparisonReport(message, excelBlob),
-        sendZaloComparisonReport(message)
-    ]);
+    
+    let maCskcb = null;
+    try {
+        if (globalData.xmlFile) {
+            const xmlContent = await globalData.xmlFile.text();
+            const xmlRootDoc = new DOMParser().parseFromString(xmlContent, 'text/xml');
+            maCskcb = getText(xmlRootDoc, 'MACSKCB', 'MA_CSKCB');
+        }
+    } catch (e) {
+        console.error("Lỗi đọc mã cơ sở khi gửi báo cáo Zalo:", e);
+    }
+
+    const sendPromises = [
+        sendTelegramComparisonReport(message, excelBlob)
+    ];
+
+    const allowedZaloCskcb = ['79342', '79343', '79764'];
+    if (maCskcb && allowedZaloCskcb.includes(maCskcb)) {
+        sendPromises.push(sendZaloComparisonReport(message));
+    }
+
+    await Promise.all(sendPromises);
     hideLoading('comparatorLoading'); // Ẩn loading sau khi gửi xong
 }
 
@@ -4993,4 +5033,3 @@ window.insertIcdToChat = function(code) {
     }
     toggleIcdLookup(false);
 };
-
