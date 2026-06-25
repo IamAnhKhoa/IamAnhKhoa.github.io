@@ -5,6 +5,8 @@ var _k=['bh','yt','@2','024'].join('');
 if (typeof validationSettings === 'undefined') window.validationSettings = {};
 if (typeof ERROR_TYPES === 'undefined') window.ERROR_TYPES = {};
 if (typeof globalData === 'undefined') window.globalData = { allRecords: [], filteredRecords: [], currentPage: 1, pageSize: 10, charts: {} };
+globalData.lastZaloLog = globalData.lastZaloLog || { timestamp: 0, fileName: '', totalError: 0, criticalError: 0 };
+globalData.lastZaloCompareLog = globalData.lastZaloCompareLog || { timestamp: 0, hash: '' };
 if (typeof staffNameMap === 'undefined') window.staffNameMap = new Map();
 if (typeof PHONG_KHAM_MAP === 'undefined') window.PHONG_KHAM_MAP = new Map();
 if (typeof PHONG_KHAM_NAMES === 'undefined') window.PHONG_KHAM_NAMES = [];
@@ -507,8 +509,35 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     // CẬP NHẬT tin nhắn Telegram đã có với kết quả chi tiết
     updateTelegramLog(messageId, summaryStats);
     const allowedZaloCskcb = ['79342', '79343', '79764'];
-    if (summaryStats.maCskcb && allowedZaloCskcb.includes(summaryStats.maCskcb)) {
-        sendZaloEndLog(summaryStats, records); // Gửi thông báo kết quả kiểm tra qua Zalo Bot (chạy nền)
+    const sendZaloCheckbox = document.getElementById('sendZaloCheckbox');
+    const shouldSendZalo = !sendZaloCheckbox || sendZaloCheckbox.checked;
+
+    if (shouldSendZalo && summaryStats.maCskcb && allowedZaloCskcb.includes(summaryStats.maCskcb)) {
+        const currentFile = document.getElementById('validatorFileInput').files[0];
+        const fileName = currentFile ? currentFile.name : '';
+
+        const isSameFile = (globalData.lastZaloLog.fileName === fileName);
+        const timeSinceLastLog = Date.now() - globalData.lastZaloLog.timestamp;
+        const isUnderCooldown = isSameFile && (timeSinceLastLog < 180000);
+        const isDuplicateResult = isSameFile &&
+            (globalData.lastZaloLog.totalError === summaryStats.totalError) &&
+            (globalData.lastZaloLog.criticalError === summaryStats.criticalError);
+
+        if (isUnderCooldown) {
+            console.log("Bỏ qua Zalo End Log vì cùng file đang trong thời gian giãn cách 3 phút.");
+            showZaloToast("Đã bỏ qua gửi Zalo (giãn cách 3 phút)");
+        } else if (isDuplicateResult) {
+            console.log("Bỏ qua Zalo End Log vì kết quả giống hệt lần kiểm tra trước.");
+            showZaloToast("Đã bỏ qua gửi Zalo (kết quả không thay đổi)");
+        } else {
+            globalData.lastZaloLog = {
+                timestamp: Date.now(),
+                fileName: fileName,
+                totalError: summaryStats.totalError,
+                criticalError: summaryStats.criticalError
+            };
+            sendZaloEndLog(summaryStats, records); // Gửi thông báo kết quả kiểm tra qua Zalo Bot (chạy nền)
+        }
     }
 }
 
@@ -541,6 +570,33 @@ function showCooldownToast(remaining) {
         toast.style.animation = 'toastOut .25s ease forwards';
         setTimeout(() => toast.remove(), 260);
     }, 2500);
+}
+
+function showZaloToast(message) {
+    const existing = document.getElementById('zalo-cooldown-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'zalo-cooldown-toast';
+    toast.innerHTML = `💬 <strong>Zalo Bot:</strong> ${message}`;
+    toast.style.cssText = [
+        'position:fixed', 'bottom:24px', 'right:24px',
+        'background:linear-gradient(135deg,#1e3a8a,#3b82f6)', 'color:#fff',
+        'padding:12px 24px', 'border-radius:10px', 'font-size:14px', 'font-weight:500',
+        'z-index:999999', 'box-shadow:0 6px 20px rgba(59,130,246,.35)',
+        'animation:zaloToastIn .3s ease forwards',
+        'white-space:nowrap'
+    ].join(';');
+    if (!document.getElementById('zalo-toast-css')) {
+        const s = document.createElement('style');
+        s.id = 'zalo-toast-css';
+        s.textContent = '@keyframes zaloToastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes zaloToastOut{to{opacity:0;transform:translateY(10px)}}';
+        document.head.appendChild(s);
+    }
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'zaloToastOut .25s ease forwards';
+        setTimeout(() => toast.remove(), 260);
+    }, 3500);
 }
 
 function detectMaCskcb(file) {
@@ -578,12 +634,25 @@ async function processXmlFile() {
 
     // Gửi log "Bắt đầu" và chờ để lấy message_id (dùng file đầu tiên)
     const messageId = await sendTelegramStartLog(files[0]);
-    detectMaCskcb(files[0]).then(maCskcb => {
-        const allowedZaloCskcb = ['79342', '79343', '79764'];
-        if (maCskcb && allowedZaloCskcb.includes(maCskcb)) {
-            sendZaloStartLog(files[0]); // Gửi thông báo bắt đầu qua Zalo Bot (chạy nền)
-        }
-    });
+    const sendZaloCheckbox = document.getElementById('sendZaloCheckbox');
+    const shouldSendZalo = !sendZaloCheckbox || sendZaloCheckbox.checked;
+
+    if (shouldSendZalo) {
+        detectMaCskcb(files[0]).then(maCskcb => {
+            const allowedZaloCskcb = ['79342', '79343', '79764'];
+            if (maCskcb && allowedZaloCskcb.includes(maCskcb)) {
+                const isSameFile = (globalData.lastZaloLog.fileName === files[0].name);
+                const timeSinceLastLog = Date.now() - globalData.lastZaloLog.timestamp;
+                const isUnderCooldown = isSameFile && (timeSinceLastLog < 180000);
+
+                if (!isUnderCooldown) {
+                    sendZaloStartLog(files[0]); // Gửi thông báo bắt đầu qua Zalo Bot (chạy nền)
+                } else {
+                    console.log("Bỏ qua Zalo Start Log vì cùng file đang trong thời gian giãn cách 3 phút.");
+                }
+            }
+        });
+    }
 
     try {
         // Đọc tất cả file song song
@@ -4466,9 +4535,25 @@ async function processAndSendComparisonReport(results) {
         sendTelegramComparisonReport(message, excelBlob)
     ];
 
+    const sendZaloCompareCheckbox = document.getElementById('sendZaloCompareCheckbox');
+    const shouldSendZalo = !sendZaloCompareCheckbox || sendZaloCompareCheckbox.checked;
+
     const allowedZaloCskcb = ['79342', '79343', '79764'];
-    if (maCskcb && allowedZaloCskcb.includes(maCskcb)) {
-        sendPromises.push(sendZaloComparisonReport(message));
+    if (shouldSendZalo && maCskcb && allowedZaloCskcb.includes(maCskcb)) {
+        const compareHash = `${globalData.xmlFile ? globalData.xmlFile.name : ''}_${globalData.excelFile ? globalData.excelFile.name : ''}_${mismatches.length}_${xmlOnly.length}_${excelOnly.length}`;
+        const timeSinceLastLog = Date.now() - globalData.lastZaloCompareLog.timestamp;
+        const isUnderCooldown = (globalData.lastZaloCompareLog.hash === compareHash) && (timeSinceLastLog < 180000);
+
+        if (isUnderCooldown) {
+            console.log("Bỏ qua Zalo Comparison Report do đang trong thời gian giãn cách 3 phút với cùng kết quả.");
+            showZaloToast("Đã bỏ qua gửi Zalo (giãn cách đối chiếu)");
+        } else {
+            globalData.lastZaloCompareLog = {
+                timestamp: Date.now(),
+                hash: compareHash
+            };
+            sendPromises.push(sendZaloComparisonReport(message));
+        }
     }
 
     await Promise.all(sendPromises);
@@ -5033,3 +5118,4 @@ window.insertIcdToChat = function(code) {
     }
     toggleIcdLookup(false);
 };
+
