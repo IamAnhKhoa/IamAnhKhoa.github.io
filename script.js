@@ -10,6 +10,58 @@ globalData.lastZaloCompareLog = globalData.lastZaloCompareLog || { timestamp: 0,
 if (typeof staffNameMap === 'undefined') window.staffNameMap = new Map();
 if (typeof PHONG_KHAM_MAP === 'undefined') window.PHONG_KHAM_MAP = new Map();
 if (typeof PHONG_KHAM_NAMES === 'undefined') window.PHONG_KHAM_NAMES = [];
+
+function getPhongByCodeAndDate(code, dateStr) {
+    if (!code) return null;
+    const cleanCode = code.toLowerCase().trim();
+    if (cleanCode === '051523/hcm-cchn') {
+        if (dateStr) {
+            const dateStrClean = String(dateStr).trim();
+            if (dateStrClean.length >= 8) {
+                const ymd = dateStrClean.substring(0, 8);
+                if (ymd >= '20260625') {
+                    return 'lao';
+                } else {
+                    return 'noitonghop';
+                }
+            }
+        }
+        return 'lao';
+    }
+    if (cleanCode === '005316/hcm-cchn') {
+        return 'noitonghop';
+    }
+    return PHONG_KHAM_MAP.get(cleanCode) || null;
+}
+
+function getPhongByNameAndDate(name, dateStr) {
+    if (!name) return null;
+    const cleanName = name.toLowerCase().trim();
+    if (cleanName.includes('đặng thị liên') || cleanName.includes('dang thi lien')) {
+        if (dateStr) {
+            const dateStrClean = String(dateStr).trim();
+            if (dateStrClean.length >= 8) {
+                const ymd = dateStrClean.substring(0, 8);
+                if (ymd >= '20260625') {
+                    return 'lao';
+                } else {
+                    return 'noitonghop';
+                }
+            }
+        }
+        return 'lao';
+    }
+    if (cleanName.includes('nguyễn thị thanh') || cleanName.includes('nguyen thi thanh')) {
+        return 'noitonghop';
+    }
+    for (const entry of PHONG_KHAM_NAMES) {
+        if (entry.keywords.some(k => cleanName.includes(k))) {
+            return entry.room;
+        }
+    }
+    return null;
+}
+
 if (typeof contraindicationMap === 'undefined') window.contraindicationMap = new Map();
 if (typeof indicationMap === 'undefined') window.indicationMap = new Map();
 if (typeof ICD_NAMES === 'undefined') window.ICD_NAMES = {};
@@ -1084,7 +1136,7 @@ function performCrossRecordValidation(records) {
 
                 // ✅ Chỉ cảnh báo khi 2 hồ sơ cùng PHÒNG KHÁM (dựa theo PHONG_KHAM_MAP từ mainDoctor)
                 // Các bác sĩ không có trong map (chưa được phân phòng) → bỏ qua
-                const getPhong = (rec) => PHONG_KHAM_MAP.get((rec.mainDoctor || '').toLowerCase().trim());
+                const getPhong = (rec) => getPhongByCodeAndDate(rec.mainDoctor, rec.ngayVao);
                 const phongOlder = getPhong(older);
                 const phongNewer = getPhong(newer);
                 if (!phongOlder || !phongNewer || phongOlder !== phongNewer) continue;
@@ -1937,14 +1989,15 @@ function applyFilters() {
             // 1. Tìm theo mã CCHN trước
             let roomOfRecord = staffCodes.reduce((found, code) => {
                 if (found) return found;
-                return PHONG_KHAM_MAP.get((code || '').toLowerCase()) || null;
+                return getPhongByCodeAndDate(code, r.ngayVao);
             }, null);
             // 2. Fallback: tìm theo tên BS (từ staffNameMap)
             if (!roomOfRecord) {
                 const staffNames = staffCodes.map(c => (staffNameMap?.get(c) || '').toLowerCase());
-                for (const entry of PHONG_KHAM_NAMES) {
-                    if (staffNames.some(n => entry.keywords.some(k => n.includes(k)))) {
-                        roomOfRecord = entry.room;
+                for (const name of staffNames) {
+                    const room = getPhongByNameAndDate(name, r.ngayVao);
+                    if (room) {
+                        roomOfRecord = room;
                         break;
                     }
                 }
