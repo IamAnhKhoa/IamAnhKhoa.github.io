@@ -435,6 +435,65 @@ function handleFileUpload(event, type) {
     }
 }
 
+function finalizeRecordCosts(record) {
+    if (!record || !record.errors || record.errors.length === 0) {
+        record.denialAmount = 0;
+        return;
+    }
+
+    const criticalErrors = record.errors.filter(e => e.severity === 'critical' && e.cost > 0);
+    if (criticalErrors.length === 0) {
+        record.denialAmount = 0;
+        return;
+    }
+
+    const maxCost = record.t_bhtt || 0;
+    const recordLevelErrors = [];
+    const specificErrors = [];
+
+    criticalErrors.forEach(err => {
+        const isRecordLevel = (err.type && (err.type.startsWith('ICD_') || err.type === 'BS_KHAM_TRONG_NGAY_NGHI' || err.type === 'NGAY_TAI_KHAM_NO_XML14')) || err.cost >= maxCost;
+        if (isRecordLevel) {
+            recordLevelErrors.push(err);
+        } else {
+            specificErrors.push(err);
+        }
+    });
+
+    let sumSpecific = 0;
+    specificErrors.forEach(e => { sumSpecific += e.cost; });
+
+    if (recordLevelErrors.length > 0) {
+        const remCost = Math.max(0, maxCost - sumSpecific);
+        const costPerRecordLevel = remCost / recordLevelErrors.length;
+        recordLevelErrors.forEach(e => {
+            e.cost = costPerRecordLevel;
+        });
+        if (sumSpecific > maxCost && sumSpecific > 0) {
+            const scaleFactor = maxCost / sumSpecific;
+            specificErrors.forEach(e => {
+                e.cost = e.cost * scaleFactor;
+            });
+        }
+    } else if (sumSpecific > maxCost && sumSpecific > 0) {
+        const scaleFactor = maxCost / sumSpecific;
+        specificErrors.forEach(e => {
+            e.cost = e.cost * scaleFactor;
+        });
+    }
+
+    let totalDenial = 0;
+    criticalErrors.forEach(e => { totalDenial += e.cost; });
+    record.denialAmount = Math.min(maxCost, totalDenial);
+}
+
+function calculateRecordDenial(record) {
+    if (!record) return 0;
+    if (record.denialAmount !== undefined) return record.denialAmount;
+    finalizeRecordCosts(record);
+    return record.denialAmount || 0;
+}
+
 function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     console.log("Bắt đầu xử lý nội dung..."); // <-- DÒNG THEO DÕI SỐ 1
     const { records, drugs, services, xml4Details } = validateXmlContent(xmlContent);
@@ -475,11 +534,10 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     let totalDenialAmount = 0;
     globalData.allRecords.forEach(r => {
         if (r.errors.length > 0) {
-            // pre-warn không tính vào critical
-            if (r.errors.some(e => e.severity === 'critical')) criticalErrorRecords++;
-            r.errors.forEach(e => {
-                if (e.severity === 'critical' && e.cost > 0) totalDenialAmount += e.cost;
-            });
+            if (r.errors.some(e => e.severity === 'critical')) {
+                criticalErrorRecords++;
+                totalDenialAmount += calculateRecordDenial(r);
+            }
         }
     });
 
@@ -1804,20 +1862,11 @@ function validateSingleHoso(hoso) {
         if (validationSettings[ruleKeyIcd3]?.enabled) {
             const needsMoreSpecific = _F_S.has(key) || (is3Char && PREFIX_INDEX && PREFIX_INDEX.has(key));
             if (needsMoreSpecific) {
-                const isEnforced = record.ngayVao && record.ngayVao.substring(0, 8) >= '20260701';
-                // pre-warn = cảnh báo nhẹ, chưa áp dụng chính thức (hiện cuối, màu vàng nhạt)
-                // warning  = cảnh báo thông thường
-                // critical = lỗi nghiêm trọng (từ 01/07/2026)
-                const severity = isEnforced ? 'critical' : 'pre-warn';
-                const cost = isEnforced ? record.t_bhtt : 0;
+                const severity = validationSettings[ruleKeyIcd3].severity || 'critical';
+                const cost = record.t_bhtt || 0;
 
-                const _fsNote = isEnforced
-                    ? '⛔ Lỗi có hiệu lực từ 01/07/2026 — bị TRỪ TIỀN XML BHYT (trừ tiền công khám, thuốc, cận lâm sàng)'
-                    : '📅 Chưa áp dụng chính thức. Từ 01/07/2026 sẽ là lỗi nghiêm trọng — bị TRỪ TIỀN BHYT.';
-
-                const msg = isEnforced
-                    ? `Lỗi nghiêm trọng: Mã ICD [${code}] chưa cụ thể (cần chọn mã 4 hoặc 5 ký tự). Hiệu lực áp dụng xuất toán từ ngày 01/07/2026.`
-                    : `Sắp áp dụng: Mã ICD [${code}] chưa cụ thể (cần chọn mã 4 hoặc 5 ký tự). Từ 01/07/2026 sẽ bị trừ tiền BHYT — khuyến khích chọn mã con cụ thể hơn.`;
+                const _fsNote = '⛔ Lỗi mã ICD chưa cụ thể (3 ký tự) — bị xuất toán chi phí BHYT (cần chọn mã con 4 hoặc 5 ký tự)';
+                const msg = `Lỗi nghiêm trọng: Mã ICD [${code}] chưa cụ thể (cần chọn mã 4 hoặc 5 ký tự).`;
 
                 // Build suggestions
                 const suggestions = [];
@@ -1940,6 +1989,7 @@ function validateSingleHoso(hoso) {
         record.t_vanchuyen === 0 &&
         tongTienDVKTKhacKham === 0;
     record.isSimpleCase = isSimple;
+    finalizeRecordCosts(record);
 
     return { record, drugs: drugsForGlobalList, xml4Data };
 }
@@ -2335,7 +2385,7 @@ function showRecordDetailModal(record) {
                             <li style="margin-bottom:6px; line-height:1.5;">
                                 <strong style="color:#9b2c2c;">Cần chọn mã 4 hoặc 5 ký tự cụ thể hơn</strong>
                                 <div style="color:#4a5568; margin-top:2px; font-weight:normal;">
-                                    &rarr; Chọn mã con cụ thể hơn. 📅 Từ 01/07/2026 sẽ là lỗi nghiêm trọng &mdash; bị TRỪ TIỀN XML BHYT (trừ tiền công khám, thuốc, cận lâm sàng)
+                                    &rarr; Chọn mã con 4 hoặc 5 ký tự cụ thể hơn để tránh bị xuất toán chi phí BHYT.
                                 </div>
                                 <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px; max-height:200px; overflow-y:auto; padding-right:4px; border:1px solid #e2e8f0; border-radius:8px; padding:8px; background:#fafafa;">`;
                     s.children.forEach(c => {
@@ -3256,25 +3306,76 @@ function updateDenialProjectionTab() {
         }
 
         recordsWithErrors.add(record.maLk);
-        const countedItemsInRecord = new Set();
 
-        itemErrors.forEach(error => {
-            const itemKey = error.itemName;
+        const recordDenial = calculateRecordDenial(record);
+        totalDeniedAmount += recordDenial;
 
-            if (!deniedItems[itemKey]) {
-                deniedItems[itemKey] = { count: 0, totalCost: 0, errorTypes: new Set() };
-            }
-            deniedItems[itemKey].count++;
-            deniedItems[itemKey].errorTypes.add(ERROR_TYPES[error.type] || error.type);
+        const recordMax = record.t_bhtt || 0;
+        const recordLevelErrors = [];
+        const specificErrors = [];
 
-            if (!countedItemsInRecord.has(itemKey)) {
-                totalDeniedAmount += error.cost;
-                deniedItems[itemKey].totalCost += error.cost;
-                countedItemsInRecord.add(itemKey);
+        itemErrors.forEach(err => {
+            const isRecordLevel = (err.type && (err.type.startsWith('ICD_') || err.type === 'BS_KHAM_TRONG_NGAY_NGHI' || err.type === 'NGAY_TAI_KHAM_NO_XML14')) || err.cost >= recordMax;
+            if (isRecordLevel) {
+                recordLevelErrors.push(err);
+            } else {
+                specificErrors.push(err);
             }
         });
 
-        totalDeniedItemCount += countedItemsInRecord.size;
+        const countedKeysInRecord = new Set();
+        let sumSpecific = 0;
+        specificErrors.forEach(err => {
+            sumSpecific += err.cost;
+        });
+
+        if (recordLevelErrors.length > 0) {
+            const remCost = Math.max(0, recordMax - sumSpecific);
+            const costPerRecordLevel = remCost / recordLevelErrors.length;
+
+            specificErrors.forEach(err => {
+                const itemKey = err.itemName;
+                if (!deniedItems[itemKey]) {
+                    deniedItems[itemKey] = { count: 0, totalCost: 0, errorTypes: new Set() };
+                }
+                deniedItems[itemKey].errorTypes.add(ERROR_TYPES[err.type] || err.type);
+                if (!countedKeysInRecord.has(itemKey)) {
+                    countedKeysInRecord.add(itemKey);
+                    deniedItems[itemKey].count++;
+                }
+                deniedItems[itemKey].totalCost += err.cost;
+            });
+
+            recordLevelErrors.forEach(err => {
+                const itemKey = err.itemName;
+                if (!deniedItems[itemKey]) {
+                    deniedItems[itemKey] = { count: 0, totalCost: 0, errorTypes: new Set() };
+                }
+                deniedItems[itemKey].errorTypes.add(ERROR_TYPES[err.type] || err.type);
+                if (!countedKeysInRecord.has(itemKey)) {
+                    countedKeysInRecord.add(itemKey);
+                    deniedItems[itemKey].count++;
+                }
+                deniedItems[itemKey].totalCost += costPerRecordLevel;
+            });
+        } else {
+            const scaleFactor = (sumSpecific > recordMax && sumSpecific > 0) ? (recordMax / sumSpecific) : 1;
+
+            specificErrors.forEach(err => {
+                const itemKey = err.itemName;
+                if (!deniedItems[itemKey]) {
+                    deniedItems[itemKey] = { count: 0, totalCost: 0, errorTypes: new Set() };
+                }
+                deniedItems[itemKey].errorTypes.add(ERROR_TYPES[err.type] || err.type);
+                if (!countedKeysInRecord.has(itemKey)) {
+                    countedKeysInRecord.add(itemKey);
+                    deniedItems[itemKey].count++;
+                }
+                deniedItems[itemKey].totalCost += err.cost * scaleFactor;
+            });
+        }
+
+        totalDeniedItemCount += countedKeysInRecord.size;
     });
 
     document.getElementById('totalDeniedAmount').textContent = formatCurrency(totalDeniedAmount);
@@ -3599,16 +3700,11 @@ function initializeValidationSettings() {
         'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
         'DVKT_YL_NGOAI_GIO_HC', 'DVKT_THYL_NGOAI_GIO_HC',
         'NGAY_TAI_KHAM_NO_XML14',
-        'KQ_DVKT_SAU_YL_THUOC', // <--- ĐẢM BẢO QUY TẮC NÀY CÓ Ở ĐÂY
-        'THUOC_DVKT_THYL_TRUNG_GIO', // <-- THÊM VÀO ĐÂY
+        'KQ_DVKT_SAU_YL_THUOC',
+        'THUOC_DVKT_THYL_TRUNG_GIO',
         'BS_KHAM_VUOT_DINH_MUC', 'THUOC_CHONG_CHI_DINH_ICD',
         'TAI_KHAM_TRUOC_28_NGAY',
-        'ICD_MA_3_KY_TU',
-        'ICD_NOT_PRIMARY',
-        'ICD_NOT_RECOMMENDED',
-        'ICD_MORTALITY_ONLY',
-        'ICD_FEMALE_ONLY',
-        'ICD_MALE_ONLY'
+        'ICD_NOT_RECOMMENDED'
     ];
 
     // Rules that are always treated as 'warnings' and are NOT configurable
@@ -3621,6 +3717,11 @@ function initializeValidationSettings() {
 
     // Rules that are always treated as 'critical' errors and are NOT configurable
     const criticalErrors = [
+        'ICD_MA_3_KY_TU',
+        'ICD_NOT_PRIMARY',
+        'ICD_MORTALITY_ONLY',
+        'ICD_FEMALE_ONLY',
+        'ICD_MALE_ONLY',
         'BS_KHAM_TRONG_NGAY_NGHI',
         'NGAY_YL_THUOC_SAU_RA_VIEN', 'NGAY_YL_DVKT_SAU_RA_VIEN', 'NGAY_VAO_SAU_NGAY_RA',
         'THE_BHYT_HET_HAN', 'NGAY_THYL_TRUOC_VAOVIEN', 'NGAY_THYL_SAU_RAVIEN',
@@ -3703,8 +3804,8 @@ const notifications = [
         id: 20,
         date: '09-06-2026',
         type: 'announcement',
-        title: '📅 Sắp áp dụng: Mã ICD-10 phải dùng 4-5 ký tự từ 01/07/2026',
-        content: 'Từ ngày 01/07/2026, hồ sơ XML BHYT có mã ICD-10 chưa cụ thể (chỉ dùng 3 ký tự dạng A00, B20...) sẽ bị từ chối thanh toán — trừ tiền công khám, thuốc, cận lâm sàng. Hiện tại hệ thống đang cảnh báo TRƯỚC (màu vàng nhạt ⏳) để bạn kịp chỉnh sửa trước thời hạn. Sau 01/07/2026 sẽ chuyển thành lỗi nghiêm trọng 🔴. Hướng dẫn: Bấm vào hồ sơ có cảnh báo → xem gợi ý mã con cụ thể hơn → chọn mã 4-5 ký tự thay thế.'
+        title: '⛔ Quy định mã ICD-10: Phải dùng mã 4-5 ký tự cụ thể',
+        content: 'Hồ sơ XML BHYT có mã ICD-10 chưa cụ thể (chỉ dùng 3 ký tự dạng A00, B20...) sẽ bị xuất toán toàn bộ chi phí BHYT. Hướng dẫn: Bấm vào hồ sơ có lỗi → xem gợi ý mã con cụ thể hơn → chọn mã 4-5 ký tự thay thế.'
     },
     {
         id: 19,
@@ -4925,32 +5026,34 @@ async function sendTelegramComparisonReport(message, excelBlob) {
                 <button class="close-overlay" id="close-profile">✕</button>
                 
                 <div class="profile-sidebar">
-                    <img src="https://raw.githubusercontent.com/lqthai97/lqthai97.github.io/refs/heads/main/anhkhoa.jpg" alt="Avatar" class="profile-avatar">
+                    <img src="https://raw.githubusercontent.com/lqthai97/lqthai97.github.io/refs/heads/main/anhkhoa.jpg" alt="Trần Anh Khoa" class="profile-avatar">
                     <h2 class="profile-name">Trần Anh Khoa</h2>
-                    <p class="profile-role">IT Admin & Developer</p>
-                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Trung tâm Y tế Củ Chi</p>
+                    <p class="profile-role">Quản trị CNTT & Lập trình viên Giải pháp Y tế</p>
+                    <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Trung tâm Y tế Củ Chi — TYT Tân An Hội</p>
                     
                     <div class="social-links">
-                        <a href="https://zalo.me/0332185388" target="_blank" class="social-btn btn-zalo">Zalo</a>
-                        <a href="tel:0332185388" class="social-btn btn-call">Gọi điện</a>
+                        <a href="https://zalo.me/0332185388" target="_blank" class="social-btn btn-zalo">💬 Zalo</a>
+                        <a href="tel:0332185388" class="social-btn btn-call">📞 Gọi điện</a>
                     </div>
                 </div>
 
                 <div class="profile-content">
-                    <div class="section-title">Gioi thieu</div>
+                    <div class="section-title">GIỚI THIỆU</div>
                     <p class="profile-bio">
-                        Chao ban, toi chuyen phat trien cac giai phap <strong>Tu dong hoa quy trinh Y te</strong>.
+                        Chào bạn, tôi chuyên nghiên cứu & phát triển các giải pháp <strong>Tự động hóa quy trình Y tế số</strong> và đối chiếu dữ liệu BHYT.
                     </p>
-                    <div class="section-title">Du an noi bat</div>
+                    <div class="section-title">DỰ ÁN NỔI BẬT & ỨNG DỤNG MỚI</div>
                     <div class="project-grid">
-                        <div class="project-card"><h4>Shield Giam sat BHYT</h4><p>Phat hien loi XML, canh bao xuat toan.</p></div>
-                        <div class="project-card"><h4>Dashboard NCT</h4><p>He thong bao cao, quan ly lich kham.</p></div>
-                        <div class="project-card"><h4>Auto Utilities</h4><p>Script xu ly du lieu tu dong.</p></div>
-                        <div class="project-card"><h4>File Manager 2.0</h4><p>So hoa van ban, quan ly ho so.</p></div>
+                        <div class="project-card"><h4>🏥 Kiểm soát & Đối chiếu BHYT XML</h4><p>Phát hiện lỗi XML, gợi ý mã ICD 4-5 ký tự, cảnh báo xuất toán.</p></div>
+                        <div class="project-card"><h4>🤖 Trợ lý AI & Zalo/Telegram Bot BHYT</h4><p>Phân tích file XML/ảnh, gửi cảnh báo tự động qua Zalo/Telegram.</p></div>
+                        <div class="project-card"><h4>👥 Quản lý Nhân sự Y tế (QLNS WebApp)</h4><p>Quản lý hồ sơ viên chức, theo dõi ca trực & lịch nghỉ phép.</p></div>
+                        <div class="project-card"><h4>🖨️ Quản trị Máy in Mạng & Tiện ích PC</h4><p>Công cụ quản lý máy in mạng, xử lý sự cố & tối ưu máy tính y tế.</p></div>
+                        <div class="project-card"><h4>📊 Dashboard Người cao tuổi (NCT)</h4><p>Hệ thống báo cáo, quản lý khám sức khỏe & sức khỏe NCT.</p></div>
+                        <div class="project-card"><h4>🔗 Số hóa Văn bản & Tiện ích Y tế Số</h4><p>Rút gọn liên kết y tế, quản lý tài liệu minh chứng & báo cáo số.</p></div>
                     </div>
                     <div class="donate-box">
-                        <img src="https://i.ibb.co/Gv1p5BQj/bank.png" class="donate-qr-thumb" id="qr-thumb" title="Click de phong to">
-                        <div><strong style="color:#d97706">Ung ho tac gia</strong><p style="margin:0;font-size:0.85rem;color:#78350f">Moi su dong gop la dong luc phat trien tinh nang moi.</p></div>
+                        <img src="https://i.ibb.co/Gv1p5BQj/bank.png" class="donate-qr-thumb" id="qr-thumb" title="Click để phóng to mã QR">
+                        <div><strong style="color:#d97706">Ủng hộ tác giả</strong><p style="margin:0;font-size:0.85rem;color:#78350f">Mọi sự đóng góp của bạn là động lực phát triển các tính năng mới.</p></div>
                     </div>
                 </div>
             </div>
