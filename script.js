@@ -5457,4 +5457,3 @@ window.insertIcdToChat = function(code) {
         initCursor();
     }
 })();
-
