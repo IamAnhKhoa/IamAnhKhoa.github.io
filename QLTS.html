@@ -12,19 +12,19 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 </head>
 <body style="padding: 0px; margin: 0px; width: 100%; height: 100vh; border: none">
 
-  <!-- Khung hiển thị ứng dụng Web App -->
-  <iframe id="appIframe" style="width: 100%; height: 100%; border: none;" allow="camera; microphone; clipboard-read; clipboard-write;"></iframe>
+  <!-- iframe hiển thị ứng dụng Web Apps Script -->
+  <iframe id="appIframe" style="width: 100%; height: 100%; border: none;"></iframe>
 
   <script>
     (function() {
-      // 1. Địa chỉ Google Apps Script Web App của Anh/Chị
+      // 1. Địa chỉ Google Apps Script Web App
       var baseUrl = "https://script.google.com/macros/s/AKfycbwaKNB5tFdFWY2wquGU2eqQprwCGhlvP93Xtp21FvgFQ24P7q29jNUdx0ejo6eTtOje/exec";
       
-      // 2. Tự động lấy tham số đằng sau URL tên miền tak.id.vn (ví dụ: ?code=TB-0027 hoặc ?device=TB-0027)
+      // 2. Tự động lấy các tham số URL đằng sau (Ví dụ: ?code=TB-0027)
       var searchParams = window.location.search || '';
       var hashParams = window.location.hash || '';
 
-      // 3. Nạp URL kèm tham số mã thiết bị vào iframe
+      // 3. Ghép tham số và nạp vào iframe
       document.getElementById('appIframe').src = baseUrl + searchParams + hashParams;
     })();
   </script>
