@@ -174,7 +174,6 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
   var loader  =document.getElementById('loadingScreen');
   var modal   =document.getElementById('adminAuthModal');
   var ipBadge =document.getElementById('detectedIpBadge');
-  var _phase  =0;
 
   function hideLoader(){
     if(!loader)return;
@@ -186,32 +185,16 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     if(_dOpen)return;
     var sp=window.location.search||'',hp=window.location.hash||'';
     var finalUrl=_url+sp+hp;
-
-    var blobHtml='<!DOCTYPE html><html><head><meta charset="utf-8">'
-      +'<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0f172a;user-select:none;-webkit-user-select:none}</style>'
-      +'</head><body><scr'+'ipt>'
-      +'document.addEventListener("contextmenu",function(e){e.preventDefault();},true);'
-      +'window.addEventListener("message",function(e){'
-      +'var d=e.data;if(d&&d._t==="GO"&&d._p){window.location.replace(d._p.join(""));}'
-      +'},false);<\/scr'+'ipt></body></html>';
-
-    var bUrl=URL.createObjectURL(new Blob([blobHtml],{type:'text/html'}));
-    _phase=0;
+    _url=null;
 
     iframe.onload=function(){
-      if(_phase===0){
-        _phase=1;
-        URL.revokeObjectURL(bUrl);
-        var m=Math.floor(finalUrl.length/3);
-        try{iframe.contentWindow.postMessage({_t:'GO',_p:[finalUrl.slice(0,m),finalUrl.slice(m,m*2),finalUrl.slice(m*2)]},'*');}catch(e){}
-        finalUrl=null;
-        // Đảm bảo ẩn màn hình loading sau 1.2s nếu Zalo In-App WebView ngăn sự kiện onload 2
-        setTimeout(hideLoader, 1200);
-      } else {
-        hideLoader();
-      }
+      hideLoader();
     };
-    iframe.src=bUrl;
+
+    // Đảm bảo tự động tắt màn hình loading sau 1.8 giây nếu iframe load xong
+    setTimeout(hideLoader, 1800);
+
+    iframe.src=finalUrl;
   }
 
   function grantAccess(){modal.classList.add('hidden');loadIframeApp();}
