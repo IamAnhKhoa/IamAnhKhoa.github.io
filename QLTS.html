@@ -8,7 +8,8 @@
 <style>
 ::-webkit-scrollbar{display:none}
 html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#0f172a;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  user-select:none;-webkit-user-select:none}
 #loadingScreen{
   position:fixed;top:0;left:0;width:100%;height:100%;
   background:radial-gradient(circle at center,#1e293b 0%,#0f172a 100%);
@@ -101,17 +102,27 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
 
 <script>
 !function(){
-  // ── 1. CHẶN PHÍM TẮT SOI CODE & CHUỘT PHẢI ──────────────────────
-  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  // ── 1. CHẶN CHUỘT PHẢI & CHẶN PHÍM TẮT SOI CODE (F12, CTRL+SHIFT+I, CTRL+U...) ──
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    return false;
+  }, true);
+
   document.addEventListener('keydown', function(e){
-    if(e.key==='F12' || (e.ctrlKey && e.shiftKey && (e.key==='I'||e.key==='i'||e.key==='J'||e.key==='j'||e.key==='C'||e.key==='c')) || (e.ctrlKey && (e.key==='U'||e.key==='u'||e.key==='S'||e.key==='s'))){
+    var k = e.keyCode || e.which;
+    var isF12 = (k === 123 || e.key === 'F12');
+    var isInspect = (e.ctrlKey && e.shiftKey && (k === 73 || k === 74 || k === 67 || e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c'));
+    var isViewSource = (e.ctrlKey && (k === 85 || k === 83 || e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'));
+    
+    if(isF12 || isInspect || isViewSource){
       e.preventDefault();
+      e.stopPropagation();
       _sd();
       return false;
     }
-  });
+  }, true);
 
-  // ── 2. HÀM TỰ HỦY + ĐẾM NGƯỢC 10 GiÂY ĐỂ THỬ LẠI (AUTO-RECOVER) ──
+  // ── 2. HÀM TỰ HỦY + ĐẾM NGƯỢC 10 GiÂY ĐỂ THỬ LẠI ──
   var _dOpen=false;
   function _sd(){
     if(_dOpen)return; _dOpen=true;
@@ -177,8 +188,9 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     var finalUrl=_url+sp+hp;
 
     var blobHtml='<!DOCTYPE html><html><head><meta charset="utf-8">'
-      +'<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0f172a}</style>'
+      +'<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0f172a;user-select:none;-webkit-user-select:none}</style>'
       +'</head><body><scr'+'ipt>'
+      +'document.addEventListener("contextmenu",function(e){e.preventDefault();},true);'
       +'window.addEventListener("message",function(e){'
       +'var d=e.data;if(d&&d._t==="GO"&&d._p){window.location.replace(d._p.join(""));}'
       +'},false);<\/scr'+'ipt></body></html>';
