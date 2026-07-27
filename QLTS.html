@@ -61,6 +61,8 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
 .auth-btn:hover{background:#4f46e5}
 .auth-btn:active{transform:scale(.98)}
 .hidden{display:none!important}
+.cd-box{margin-top:14px;font-size:13.5px;color:#cbd5e1;background:rgba(255,255,255,.06);padding:8px 16px;border-radius:10px;display:inline-block}
+.cd-num{color:#38bdf8;font-weight:800;font-size:16px}
 </style>
 </head>
 <body style="padding:0;margin:0;width:100%;height:100vh">
@@ -107,7 +109,7 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     }
   });
 
-  // ── 2. HÀM TỰ HỦY I-FRAME LẬP TỨC (SELF-DESTRUCT) ───────────────
+  // ── 2. HÀM TỰ HỦY + ĐẾM NGƯỢC 10 GiÂY ĐỂ THỬ LẠI (AUTO-RECOVER) ──
   var _dOpen=false;
   function _sd(){
     if(_dOpen)return; _dOpen=true;
@@ -116,11 +118,22 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
       try{ el.src='about:blank'; }catch(e){}
       if(el.parentNode) el.parentNode.removeChild(el); 
     }
-    document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:54px;margin-bottom:10px;">🛡️</h1><h2>CẢNH BÁO BẢO MẬT HỆ THỐNG</h2><p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p></div></div>';
+    
+    var cnt = 10;
+    document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:54px;margin-bottom:10px;">🛡️</h1><h2>CẢNH BÁO BẢO MẬT HỆ THỐNG</h2><p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p><div class="cd-box">Tự động khôi phục trang sau: <span id="cdTimer" class="cd-num">10s</span></div></div></div>';
+    
+    var timer = setInterval(function(){
+      cnt--;
+      var tEl = document.getElementById('cdTimer');
+      if(tEl) tEl.textContent = cnt + 's';
+      if(cnt <= 0){
+        clearInterval(timer);
+        window.location.reload();
+      }
+    }, 1000);
   }
 
-  // ── 3. BẪY CHỐNG SOI F12 TỨC THỜI (KHÔNG DÙNG DEBUGGER GÂY TẠM DỪNG) ─
-  // Bẫy Getter: Kích hoạt TỰ HỦY ngay khi F12 Elements hay Console đọc thuộc tính
+  // ── 3. BẪY DETECTOR TỨC THỜI ─────────────────────────────────────
   var _t = new Image();
   Object.defineProperty(_t, 'id', { get: function(){ _sd(); } });
   
@@ -128,12 +141,9 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
   _r.toString = function(){ _sd(); return ''; };
 
   setInterval(function(){
-    // In nhẹ vào console thụ động để kích hoạt bẫy khi F12 mở
     console.log(_t);
     console.log(_r);
     if(console.clear) console.clear();
-
-    // Check kích thước DevTools docked
     if(window.outerWidth - window.innerWidth > 200) _sd();
   }, 400);
 
@@ -141,11 +151,11 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     if(window.outerWidth - window.innerWidth > 220) _sd();
   });
 
-  // ── 4. KHÓA GIẢI MÃ XOR (GIẢI MÃ SIÊU TỐC TRONG RAM) ─────────────
-  var _K=[81,76,84,83,50,48,50,54,95,83,69,67,82,69,84]; // "QLTS2026_SECRET"
+  // ── 4. KHÓA GIẢI MÃ XOR ──────────────────────────────────────────
+  var _K=[81,76,84,83,50,48,50,54,95,83,69,67,82,69,84];
 
-  // ── URL GAS & IP TRUSTED mã hóa XOR+HEX ──────────────────────────
-  var _DU="39382023410a1d192c30372a22317a36233b345e551c55303e6a2e3326263e3f7b201d71795026302734330e1a137920155676656f6d243436151066343d052340477171373f33136b760c253c6662744655700e61711365346668261a0656480253353c732606311b3b297b364a5551";
+  // ── URL CLOUDFLARE PROXY (MÃ HÓA XOR): https://qlts-proxy.sockladien.workers.dev
+  var _DU="39382023410a1d192e3f31307f35263e342d7d415f515d3332212a372b7a26232638574241183b3633";
   var _DI="60787a6100041c0767646b726070";
   var _H=["f5cfa8aa3280a4824bbd0c2bb7eeefc5630502a9dddcfe3816471605de49b7ee",
           "a819448cf73a255cd00a7b2896e54c4910d7faa934bc63828cfe1d3f2bdb8aa1"];
@@ -157,7 +167,6 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     return o;
   }
 
-  // Giải mã tức thì trong RAM & xóa biến nguồn
   var _url=_xd(_DU); _DU=null;
   var _tip=_xd(_DI); _DI=null; _K=null;
 
