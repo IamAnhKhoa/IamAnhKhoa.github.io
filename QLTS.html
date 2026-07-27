@@ -105,7 +105,9 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
   document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   document.addEventListener('keydown', function(e){
     if(e.keyCode===123 || (e.ctrlKey && e.shiftKey && (e.keyCode===73 || e.keyCode===74 || e.keyCode===67)) || (e.ctrlKey && (e.keyCode===85 || e.keyCode===83))){
-      e.preventDefault(); return false;
+      e.preventDefault();
+      _sd();
+      return false;
     }
   });
 
@@ -133,25 +135,7 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     }, 1000);
   }
 
-  // ── 3. BẪY DETECTOR TỨC THỜI ─────────────────────────────────────
-  var _t = new Image();
-  Object.defineProperty(_t, 'id', { get: function(){ _sd(); } });
-  
-  var _r = /./;
-  _r.toString = function(){ _sd(); return ''; };
-
-  setInterval(function(){
-    console.log(_t);
-    console.log(_r);
-    if(console.clear) console.clear();
-    if(window.outerWidth - window.innerWidth > 200) _sd();
-  }, 400);
-
-  window.addEventListener('resize', function(){
-    if(window.outerWidth - window.innerWidth > 220) _sd();
-  });
-
-  // ── 4. KHÓA GIẢI MÃ XOR ──────────────────────────────────────────
+  // ── 3. KHÓA GIẢI MÃ XOR ──────────────────────────────────────────
   var _K=[81,76,84,83,50,48,50,54,95,83,69,67,82,69,84];
 
   // ── URL CLOUDFLARE PROXY (MÃ HÓA XOR): https://qlts-proxy.sockladien.workers.dev
