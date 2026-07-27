@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,16 +12,13 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 /* 🌟 Màn hình chờ nạp dữ liệu Iframe */
 #loadingScreen {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 999999;
+  z-index: 99999;
   transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 
@@ -41,28 +38,166 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
   100% { transform: rotate(360deg); }
 }
 
-.loading-text {
-  color: #f8fafc;
-  font-size: 15px;
-  font-weight: 700;
-  margin-top: 18px;
-  letter-spacing: 0.3px;
+.loading-text { color: #f8fafc; font-size: 15px; font-weight: 700; margin-top: 18px; letter-spacing: 0.3px; }
+.loading-subtext { color: #94a3b8; font-size: 12.5px; margin-top: 6px; }
+
+/* 🔐 Popup Bảo Mật Xác Minh Admin khi truy cập Trang chính từ IP Lạ */
+#adminAuthModal {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
-.loading-subtext {
-  color: #94a3b8;
-  font-size: 12.5px;
-  margin-top: 6px;
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 22px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.2);
+  color: #fff;
+  text-align: center;
+  animation: modalFadeIn 0.3s ease;
 }
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.auth-header { margin-bottom: 22px; }
+
+.auth-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  font-size: 26px;
+}
+
+.auth-title { font-size: 19px; font-weight: 800; color: #f8fafc; margin-bottom: 6px; }
+.auth-subtitle { font-size: 13px; color: #94a3b8; line-height: 1.45; }
+
+.auth-ip-badge {
+  display: inline-block;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.auth-form-group { text-align: left; margin-bottom: 16px; }
+.auth-form-group label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.auth-input {
+  width: 100%;
+  height: 46px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14.5px;
+  color: #fff;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.auth-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.auth-error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  display: none;
+  text-align: center;
+  font-weight: 600;
+}
+
+.auth-btn {
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  transition: all 0.2s;
+}
+
+.auth-btn:hover { background: #4f46e5; }
+.auth-btn:active { transform: scale(0.98); }
+
+.hidden { display: none !important; }
 </style>
 </head>
 <body style="padding: 0px; margin: 0px; width: 100%; height: 100vh; border: none">
 
-  <!-- ⏳ Màn hình chờ tự động hiển thị trong lúc nạp iframe -->
+  <!-- ⏳ Màn hình chờ nạp iframe -->
   <div id="loadingScreen">
     <div class="spinner"></div>
     <div class="loading-text">⏳ Đang kết nối dữ liệu thiết bị...</div>
     <div class="loading-subtext">Hệ thống AI Scanner đang đồng bộ dữ liệu. Vui lòng chờ trong giây lát...</div>
+  </div>
+
+  <!-- 🔐 Popup Xác minh Admin (Chỉ hiển thị khi truy cập Trang chính từ IP lạ) -->
+  <div id="adminAuthModal" class="hidden">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-icon">🛡️</div>
+        <div class="auth-title">Xác Minh Quyền Admin</div>
+        <div class="auth-subtitle">Phát hiện truy cập vào Trang Quản lý từ địa chỉ IP lạ. Vui lòng xác minh Admin để tiếp tục.</div>
+        <div class="auth-ip-badge" id="detectedIpBadge">IP: Đang kiểm tra...</div>
+      </div>
+      <div id="authErrorMsg" class="auth-error">⚠️ Thông tin xác minh không chính xác!</div>
+      <form id="adminAuthForm" onsubmit="handleAuthSubmit(event)">
+        <div class="auth-form-group">
+          <label>Họ và tên Admin</label>
+          <input type="text" id="adminNameInput" class="auth-input" placeholder="Nhập họ và tên..." required autocomplete="off">
+        </div>
+        <div class="auth-form-group">
+          <label>Ngày tháng năm sinh</label>
+          <input type="text" id="adminDobInput" class="auth-input" placeholder="Ví dụ: 18/11/1999" required autocomplete="off">
+        </div>
+        <button type="submit" class="auth-btn">🔒 Xác Minh & Truy Cập</button>
+      </form>
+    </div>
   </div>
 
   <!-- 📲 Iframe hiển thị ứng dụng Web Apps Script -->
@@ -70,17 +205,31 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 
   <script>
     (function() {
-      // 1. Địa chỉ Google Apps Script Web App
-      var baseUrl = "https://script.google.com/macros/s/AKfycbwaKNB5tFdFWY2wquGU2eqQprwCGhlvP93Xtp21FvgFQ24P7q29jNUdx0ejo6eTtOje/exec";
-      
-      // 2. Tự động lấy các tham số URL đằng sau (Ví dụ: ?code=TB-0027)
-      var searchParams = window.location.search || '';
-      var hashParams = window.location.hash || '';
+      // 1. IP gốc được phép vào thẳng trang chính
+      var TRUSTED_IP = "14.224.187.125";
+
+      // 2. URL Google Apps Script đã mã hóa Base64
+      var encodedUrl = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3YUtOQjV0RmRGV1kyd3F1R1UyZXFRcHJ3Q0dobHZQOTNYdHAyMUZ2Z0ZRMjRQN3EyOWpOVWR4MGVqbzZlVHRPamUvZXhlYw==";
+
+      // 🔒 3. CHUỖI HASH SHA-256 BẢO MẬT (KHÔNG CHỨA CHỮ THƯỜNG / SỐ GỐC)
+      var ALLOWED_HASHES = [
+        "f5cfa8aa3280a4824bbd0c2bb7eeefc5630502a9dddcfe3816471605de49b7ee",
+        "a819448cf73a255cd00a7b2896e54c4910d7faa934bc63828cfe1d3f2bdb8aa1"
+      ];
+
+      // Hàm băm dữ liệu sang SHA-256
+      async function sha256(message) {
+        var msgBuffer = new TextEncoder().encode(message);
+        var hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        var hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      }
 
       var iframe = document.getElementById('appIframe');
       var loader = document.getElementById('loadingScreen');
+      var authModal = document.getElementById('adminAuthModal');
+      var ipBadge = document.getElementById('detectedIpBadge');
 
-      // 3. Tự động ẩn màn hình chờ ngay khi iframe tải xong dữ liệu
       iframe.onload = function() {
         if (loader) {
           loader.style.opacity = '0';
@@ -91,8 +240,93 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
         }
       };
 
-      // 4. Ghép tham số và nạp vào iframe
-      iframe.src = baseUrl + searchParams + hashParams;
+      function loadIframeApp() {
+        var searchParams = window.location.search || '';
+        var hashParams = window.location.hash || '';
+        var baseUrl = atob(encodedUrl);
+        iframe.src = baseUrl + searchParams + hashParams;
+      }
+
+      function grantAccess() {
+        authModal.classList.add('hidden');
+        loadIframeApp();
+      }
+
+      async function verifyClientIP() {
+        // 🌟 KIỂM TRA TRANG TRA CỨU: Nếu URL có chứa ?lookup.html hoặc ?tracuu -> Cho phép vào thẳng lập tức!
+        var searchParams = (window.location.search || '').toLowerCase();
+        var hashParams = (window.location.hash || '').toLowerCase();
+        var isLookupPage = searchParams.indexOf('lookup') !== -1 || 
+                           searchParams.indexOf('tracuu') !== -1 || 
+                           hashParams.indexOf('lookup') !== -1 || 
+                           hashParams.indexOf('tracuu') !== -1;
+
+        if (isLookupPage) {
+          grantAccess();
+          return;
+        }
+
+        // 🌟 TRANG CHÍNH: Kiểm tra xem phiên làm việc hiện tại đã được xác minh thành công chưa
+        if (sessionStorage.getItem('TAK_ADMIN_VERIFIED') === 'true') {
+          grantAccess();
+          return;
+        }
+
+        // Lấy địa chỉ IP của thiết bị
+        var clientIP = '';
+        try {
+          var res = await fetch('https://api.ipify.org?format=json');
+          var data = await res.json();
+          clientIP = data.ip;
+        } catch(e) {
+          try {
+            var res2 = await fetch('https://api64.ipify.org?format=json');
+            var data2 = await res2.json();
+            clientIP = data2.ip;
+          } catch(e2) {
+            clientIP = 'Không xác định';
+          }
+        }
+
+        ipBadge.textContent = 'IP của bạn: ' + clientIP;
+
+        if (clientIP === TRUSTED_IP) {
+          // IP gốc -> Cho phép vào thẳng trang chính
+          sessionStorage.setItem('TAK_ADMIN_VERIFIED', 'true');
+          grantAccess();
+        } else {
+          // IP lạ -> Chặn trang chính và yêu cầu xác minh Admin bằng SHA-256
+          if (loader) loader.classList.add('hidden');
+          authModal.classList.remove('hidden');
+        }
+      }
+
+      // Xử lý Form xác minh Admin với mã SHA-256
+      window.handleAuthSubmit = async function(e) {
+        e.preventDefault();
+        var nameVal = (document.getElementById('adminNameInput').value || '').trim();
+        var dobVal = (document.getElementById('adminDobInput').value || '').trim();
+        var errorMsg = document.getElementById('authErrorMsg');
+
+        var normName = nameVal.toLowerCase().replace(/\s+/g, ' ');
+        var normNameNoAccent = normName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        var normDob = dobVal.replace(/[\/\-\.]/g, '');
+
+        var inputHash1 = await sha256(normName + '|' + normDob);
+        var inputHash2 = await sha256(normNameNoAccent + '|' + normDob);
+
+        if (ALLOWED_HASHES.indexOf(inputHash1) !== -1 || ALLOWED_HASHES.indexOf(inputHash2) !== -1) {
+          sessionStorage.setItem('TAK_ADMIN_VERIFIED', 'true');
+          errorMsg.style.display = 'none';
+          if (loader) loader.classList.remove('hidden');
+          grantAccess();
+        } else {
+          errorMsg.style.display = 'block';
+          errorMsg.textContent = '⚠️ Xác minh thất bại! Họ tên hoặc Ngày sinh không đúng.';
+        }
+      };
+
+      verifyClientIP();
     })();
   </script>
 
