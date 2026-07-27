@@ -176,7 +176,7 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
     <div class="loading-subtext">Hệ thống AI Scanner đang đồng bộ dữ liệu. Vui lòng chờ trong giây lát...</div>
   </div>
 
-  <!-- 🔐 Popup Xác minh Admin (Chỉ hiển thị khi truy cập Trang chính từ IP lạ) -->
+  <!-- 🔐 Popup Xác minh Admin -->
   <div id="adminAuthModal" class="hidden">
     <div class="auth-card">
       <div class="auth-header">
@@ -205,19 +205,18 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 
   <script>
     (function() {
-      // 1. IP gốc được phép vào thẳng trang chính
+      // 1. IP gốc cho phép truy cập trực tiếp
       var TRUSTED_IP = "14.224.187.125";
 
-      // 2. URL Google Apps Script đã mã hóa Base64
+      // 2. Chuỗi Base64 mã hóa link Apps Script
       var encodedUrl = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3YUtOQjV0RmRGV1kyd3F1R1UyZXFRcHJ3Q0dobHZQOTNYdHAyMUZ2Z0ZRMjRQN3EyOWpOVWR4MGVqbzZlVHRPamUvZXhlYw==";
 
-      // 🔒 3. CHUỖI HASH SHA-256 BẢO MẬT (KHÔNG Bị LỘ THÔNG TIN KHI SOI F12)
+      // 3. Chuỗi băm SHA-256 bảo mật
       var ALLOWED_HASHES = [
         "f5cfa8aa3280a4824bbd0c2bb7eeefc5630502a9dddcfe3816471605de49b7ee",
         "a819448cf73a255cd00a7b2896e54c4910d7faa934bc63828cfe1d3f2bdb8aa1"
       ];
 
-      // Hàm băm dữ liệu sang SHA-256
       async function sha256(message) {
         var msgBuffer = new TextEncoder().encode(message);
         var hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -240,11 +239,22 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
         }
       };
 
+      // 🛡️ NẠP QUA BLOB URL: Che thuộc tính src="..." trên thẻ <iframe id="appIframe"> khi soi F12
       function loadIframeApp() {
         var searchParams = window.location.search || '';
         var hashParams = window.location.hash || '';
-        var baseUrl = atob(encodedUrl);
-        iframe.src = baseUrl + searchParams + hashParams;
+        var rawUrl = atob(encodedUrl) + searchParams + hashParams;
+
+        // Tạo nội dung trang động trong bộ nhớ đệm Blob
+        var blobCode = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body,iframe{width:100%;height:100%;margin:0;padding:0;border:none;overflow:hidden;}</style></head><body>' +
+          '<iframe src="' + rawUrl + '" allow="clipboard-read; clipboard-write;" style="width:100%;height:100%;border:none;"></iframe>' +
+          '</body></html>';
+
+        var blob = new Blob([blobCode], { type: 'text/html' });
+        var blobUrl = URL.createObjectURL(blob);
+
+        // Gán Blob URL vào iframe chính (F12 soi sẽ chỉ thấy src="blob:https://tak.id.vn/...")
+        iframe.src = blobUrl;
       }
 
       function grantAccess() {
@@ -253,7 +263,6 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
       }
 
       async function verifyClientIP() {
-        // Trang tra cứu (?lookup.html hoặc ?tracuu) -> Cho phép mở ngay
         var searchParams = (window.location.search || '').toLowerCase();
         var hashParams = (window.location.hash || '').toLowerCase();
         var isLookupPage = searchParams.indexOf('lookup') !== -1 || 
@@ -266,13 +275,11 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
           return;
         }
 
-        // Trang chính: Đã xác minh trong phiên làm việc
         if (sessionStorage.getItem('TAK_ADMIN_VERIFIED') === 'true') {
           grantAccess();
           return;
         }
 
-        // Lấy địa chỉ IP thiết bị
         var clientIP = '';
         try {
           var res = await fetch('https://api.ipify.org?format=json');
@@ -299,7 +306,6 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
         }
       }
 
-      // Xử lý Form xác minh với mã SHA-256
       window.handleAuthSubmit = async function(e) {
         e.preventDefault();
         var nameVal = (document.getElementById('adminNameInput').value || '').trim();
