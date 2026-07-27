@@ -5,342 +5,243 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/1454/1454827.png"/>
 <title>Kiểm tra & Hồ sơ thiết bị Tin học</title>
-<style type="text/css">
-::-webkit-scrollbar { display: none; }
-html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-
-/* 🌟 Màn hình chờ nạp dữ liệu Iframe */
-#loadingScreen {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-  transition: opacity 0.4s ease, visibility 0.4s ease;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid rgba(99, 102, 241, 0.2);
-  border-top: 4px solid #6366f1;
-  border-right: 4px solid #10b981;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  box-shadow: 0 0 25px rgba(99, 102, 241, 0.3);
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading-text { color: #f8fafc; font-size: 15px; font-weight: 700; margin-top: 18px; letter-spacing: 0.3px; }
-.loading-subtext { color: #94a3b8; font-size: 12.5px; margin-top: 6px; }
-
-/* 🔐 Popup Bảo Mật Xác Minh Admin khi truy cập Trang chính từ IP Lạ */
-#adminAuthModal {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999999;
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  background: rgba(30, 41, 59, 0.95);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 22px;
-  padding: 28px 24px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.2);
-  color: #fff;
-  text-align: center;
-  animation: modalFadeIn 0.3s ease;
-}
-
-@keyframes modalFadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.auth-header { margin-bottom: 22px; }
-
-.auth-icon {
-  width: 56px;
-  height: 56px;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.4);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 14px;
-  font-size: 26px;
-}
-
-.auth-title { font-size: 19px; font-weight: 800; color: #f8fafc; margin-bottom: 6px; }
-.auth-subtitle { font-size: 13px; color: #94a3b8; line-height: 1.45; }
-
-.auth-ip-badge {
-  display: inline-block;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-.auth-form-group { text-align: left; margin-bottom: 16px; }
-.auth-form-group label {
-  display: block;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #cbd5e1;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.auth-input {
-  width: 100%;
-  height: 46px;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 0 14px;
-  font-size: 14.5px;
-  color: #fff;
-  outline: none;
-  box-sizing: border-box;
-  transition: all 0.2s;
-}
-
-.auth-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
-}
-
-.auth-error {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #f87171;
-  font-size: 13px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-  display: none;
-  text-align: center;
-  font-weight: 600;
-}
-
-.auth-btn {
-  width: 100%;
-  height: 48px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-  border: none;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-  transition: all 0.2s;
-}
-
-.auth-btn:hover { background: #4f46e5; }
-.auth-btn:active { transform: scale(0.98); }
-
-.hidden { display: none !important; }
+<style>
+::-webkit-scrollbar{display:none}
+html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#0f172a;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+#loadingScreen{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(circle at center,#1e293b 0%,#0f172a 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:99999;transition:opacity .4s ease,visibility .4s ease}
+.spinner{width:48px;height:48px;
+  border:4px solid rgba(99,102,241,.2);
+  border-top:4px solid #6366f1;border-right:4px solid #10b981;
+  border-radius:50%;animation:spin .8s linear infinite;
+  box-shadow:0 0 25px rgba(99,102,241,.3)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:#f8fafc;font-size:15px;font-weight:700;margin-top:18px}
+.loading-subtext{color:#94a3b8;font-size:12.5px;margin-top:6px}
+#adminAuthModal{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(15,23,42,.92);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:999999;padding:16px;box-sizing:border-box}
+.auth-card{
+  width:100%;max-width:420px;background:rgba(30,41,59,.95);
+  border:1px solid rgba(99,102,241,.3);border-radius:22px;padding:28px 24px;
+  box-shadow:0 20px 50px rgba(0,0,0,.6),0 0 30px rgba(99,102,241,.2);
+  color:#fff;text-align:center;animation:mIn .3s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.auth-icon{width:56px;height:56px;background:rgba(99,102,241,.15);
+  border:1px solid rgba(99,102,241,.4);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;font-size:26px}
+.auth-title{font-size:19px;font-weight:800;color:#f8fafc;margin-bottom:6px}
+.auth-subtitle{font-size:13px;color:#94a3b8;line-height:1.45}
+.auth-ip-badge{display:inline-block;background:rgba(239,68,68,.15);
+  border:1px solid rgba(239,68,68,.3);color:#fca5a5;
+  font-size:12px;font-weight:700;padding:3px 10px;border-radius:8px;margin-top:10px}
+.auth-header{margin-bottom:22px}
+.auth-form-group{text-align:left;margin-bottom:16px}
+.auth-form-group label{display:block;font-size:12.5px;font-weight:700;color:#cbd5e1;
+  margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.auth-input{width:100%;height:46px;background:rgba(15,23,42,.8);
+  border:1px solid rgba(255,255,255,.15);border-radius:12px;
+  padding:0 14px;font-size:14.5px;color:#fff;
+  outline:none;box-sizing:border-box;transition:all .2s}
+.auth-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.25)}
+.auth-error{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);
+  color:#f87171;font-size:13px;padding:10px 12px;border-radius:10px;
+  margin-bottom:16px;display:none;text-align:center;font-weight:600}
+.auth-btn{width:100%;height:48px;background:linear-gradient(135deg,#6366f1,#4f46e5);
+  border:none;border-radius:12px;color:#fff;font-size:15px;
+  font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(99,102,241,.4);transition:all .2s}
+.auth-btn:hover{background:#4f46e5}
+.auth-btn:active{transform:scale(.98)}
+.hidden{display:none!important}
 </style>
 </head>
-<body style="padding: 0px; margin: 0px; width: 100%; height: 100vh; border: none">
+<body style="padding:0;margin:0;width:100%;height:100vh">
 
-  <!-- ⏳ Màn hình chờ nạp iframe -->
-  <div id="loadingScreen">
-    <div class="spinner"></div>
-    <div class="loading-text">⏳ Đang kết nối dữ liệu thiết bị...</div>
-    <div class="loading-subtext">Hệ thống AI Scanner đang đồng bộ dữ liệu. Vui lòng chờ trong giây lát...</div>
-  </div>
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">⏳ Đang kết nối dữ liệu thiết bị...</div>
+  <div class="loading-subtext">Hệ thống AI Scanner đang đồng bộ. Vui lòng chờ...</div>
+</div>
 
-  <!-- 🔐 Popup Xác minh Admin (Chỉ hiển thị khi truy cập Trang quản lý chính từ IP lạ) -->
-  <div id="adminAuthModal" class="hidden">
-    <div class="auth-card">
-      <div class="auth-header">
-        <div class="auth-icon">🛡️</div>
-        <div class="auth-title">Xác Minh Quyền Admin</div>
-        <div class="auth-subtitle">Phát hiện truy cập vào Trang Quản lý từ địa chỉ IP lạ. Vui lòng xác minh Admin để tiếp tục.</div>
-        <div class="auth-ip-badge" id="detectedIpBadge">IP: Đang kiểm tra...</div>
-      </div>
-      <div id="authErrorMsg" class="auth-error">⚠️ Thông tin xác minh không chính xác!</div>
-      <form id="adminAuthForm" onsubmit="handleAuthSubmit(event)">
-        <div class="auth-form-group">
-          <label>Họ và tên Admin</label>
-          <input type="text" id="adminNameInput" class="auth-input" placeholder="Nhập họ và tên..." required autocomplete="off">
-        </div>
-        <div class="auth-form-group">
-          <label>Ngày tháng năm sinh</label>
-          <input type="text" id="adminDobInput" class="auth-input" placeholder="Nhập ngày tháng năm sinh (dd/mm/yyyy)..." required autocomplete="off">
-        </div>
-        <button type="submit" class="auth-btn">🔒 Xác Minh & Truy Cập</button>
-      </form>
+<div id="adminAuthModal" class="hidden">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">🛡️</div>
+      <div class="auth-title">Xác Minh Quyền Admin</div>
+      <div class="auth-subtitle">Phát hiện truy cập từ IP lạ. Vui lòng xác minh để tiếp tục.</div>
+      <div class="auth-ip-badge" id="detectedIpBadge">IP: Đang kiểm tra...</div>
     </div>
+    <div id="authErrorMsg" class="auth-error"></div>
+    <form id="adminAuthForm" onsubmit="handleAuthSubmit(event)">
+      <div class="auth-form-group">
+        <label>Họ và tên Admin</label>
+        <input type="text" id="adminNameInput" class="auth-input" placeholder="Nhập họ và tên..." required autocomplete="off">
+      </div>
+      <div class="auth-form-group">
+        <label>Ngày tháng năm sinh</label>
+        <input type="text" id="adminDobInput" class="auth-input" placeholder="dd/mm/yyyy" required autocomplete="off">
+      </div>
+      <button type="submit" class="auth-btn">🔒 Xác Minh & Truy Cập</button>
+    </form>
   </div>
+</div>
 
-  <!-- 📲 Iframe hiển thị ứng dụng Web Apps Script -->
-  <iframe id="appIframe" allow="clipboard-read; clipboard-write;" style="width: 100%; height: 100%; border: none;"></iframe>
+<iframe id="appIframe" allow="clipboard-read; clipboard-write;"
+        style="width:100%;height:100%;border:none;display:block;"></iframe>
 
-  <script>
-    (function() {
-      // 1. IP gốc được phép truy cập trực tiếp
-      var TRUSTED_IP = "14.224.187.125";
+<script>
+!function(){
+  // ── KHÓA GIẢI MÃ XOR (dùng chung cho cả URL & IP) ──────────────
+  var _K=[81,76,84,83,50,48,50,54,95,83,69,67,82,69,84]; // "QLTS2026_SECRET"
 
-      // 2. Chuỗi Base64 mã hóa link Apps Script
-      var encodedUrl = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3YUtOQjV0RmRGV1kyd3F1R1UyZXFRcHJ3Q0dobHZQOTNYdHAyMUZ2Z0ZRMjRQN3EyOWpOVWR4MGVqbzZlVHRPamUvZXhlYw==";
+  // ── URL GAS: mã hóa XOR+HEX (không thể đọc trực tiếp) ──────────
+  var _DU="39382023410a1d192c30372a22317a36233b345e551c55303e6a2e3326263e3f7b201d71795026302734330e1a137920155676656f6d243436151066343d052340477171373f33136b760c253c6662744655700e61711365346668261a0656480253353c732606311b3b297b364a5551";
 
-      // 🔒 3. CHUỖI HASH SHA-256 BẢO MẬT (KHÔNG CÓ CHỮ/SỐ GỐC)
-      var ALLOWED_HASHES = [
-        "f5cfa8aa3280a4824bbd0c2bb7eeefc5630502a9dddcfe3816471605de49b7ee",
-        "a819448cf73a255cd00a7b2896e54c4910d7faa934bc63828cfe1d3f2bdb8aa1"
-      ];
+  // ── IP TRUSTED: mã hóa XOR+HEX ("14.224.187.125") ───────────────
+  var _DI="60787a6100041c0767646b726070";
 
-      async function sha256(message) {
-        var msgBuffer = new TextEncoder().encode(message);
-        var hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        var hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  // ── HASH SHA-256 Admin (không lưu tên/ngày sinh gốc) ────────────
+  var _H=["f5cfa8aa3280a4824bbd0c2bb7eeefc5630502a9dddcfe3816471605de49b7ee",
+          "a819448cf73a255cd00a7b2896e54c4910d7faa934bc63828cfe1d3f2bdb8aa1"];
+
+  // ── Hàm giải mã XOR (chạy trong RAM, không in ra DOM) ───────────
+  function _xd(h){
+    var o="",K=_K;
+    for(var i=0;i<h.length;i+=2)
+      o+=String.fromCharCode(parseInt(h.substr(i,2),16)^K[(i/2)%K.length]);
+    return o;
+  }
+
+  // Giải mã sẵn vào closure kín, xóa biến nguồn ngay lập tức
+  var _url=_xd(_DU); _DU=null;
+  var _tip=_xd(_DI); _DI=null; _K=null;
+
+  // ── SHA-256 ──────────────────────────────────────────────────────
+  async function sha256(m){
+    var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(m));
+    return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+
+  var iframe  =document.getElementById('appIframe');
+  var loader  =document.getElementById('loadingScreen');
+  var modal   =document.getElementById('adminAuthModal');
+  var ipBadge =document.getElementById('detectedIpBadge');
+  var _phase  =0; // 0=blob chưa load, 1=blob đã load (chờ GAS)
+
+  // ── Ẩn loader ────────────────────────────────────────────────────
+  function hideLoader(){
+    if(!loader)return;
+    loader.style.opacity='0';loader.style.visibility='hidden';
+    setTimeout(function(){if(loader&&loader.parentNode)loader.parentNode.removeChild(loader);},420);
+  }
+
+  // ── Tạo blob chỉ chứa message-listener, KHÔNG chứa URL ──────────
+  //    Sau đó gửi URL qua postMessage (tách 3 mảnh để tránh string đầy đủ)
+  function loadIframeApp(){
+    var sp=window.location.search||'',hp=window.location.hash||'';
+    var finalUrl=_url+sp+hp;
+
+    // Blob HTML: chỉ có listener, không có URL
+    var blobHtml='<!DOCTYPE html><html><head><meta charset="utf-8">'
+      +'<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0f172a}</style>'
+      +'</head><body><scr'+'ipt>'
+      +'window.addEventListener("message",function(e){'
+      +'var d=e.data;if(d&&d._t==="GO"&&d._p){window.location.replace(d._p.join(""));}'
+      +'},false);<\/scr'+'ipt></body></html>';
+
+    var bUrl=URL.createObjectURL(new Blob([blobHtml],{type:'text/html'}));
+    _phase=0;
+
+    iframe.onload=function(){
+      if(_phase===0){
+        // Lần 1: blob load xong → gửi URL tách 3 mảnh, thu hồi blob
+        _phase=1;
+        URL.revokeObjectURL(bUrl);
+        var m=Math.floor(finalUrl.length/3);
+        try{iframe.contentWindow.postMessage({_t:'GO',_p:[finalUrl.slice(0,m),finalUrl.slice(m,m*2),finalUrl.slice(m*2)]},'*');}catch(e){}
+        finalUrl=null; // xóa khỏi closure
+      } else {
+        // Lần 2: GAS page thật load xong → ẩn loader
+        hideLoader();
       }
+    };
+    iframe.src=bUrl;
+  }
 
-      var iframe = document.getElementById('appIframe');
-      var loader = document.getElementById('loadingScreen');
-      var authModal = document.getElementById('adminAuthModal');
-      var ipBadge = document.getElementById('detectedIpBadge');
+  function grantAccess(){modal.classList.add('hidden');loadIframeApp();}
 
-      iframe.onload = function() {
-        if (loader) {
-          loader.style.opacity = '0';
-          loader.style.visibility = 'hidden';
-          setTimeout(function() {
-            if (loader.parentNode) loader.parentNode.removeChild(loader);
-          }, 450);
-        }
-      };
+  // ── Lấy IP với timeout 2.5 giây (Promise.race) ──────────────────
+  function fetchIP(){
+    var t=new Promise(function(_,rej){setTimeout(function(){rej('timeout');},2500);});
+    var f=fetch('https://api.ipify.org?format=json')
+      .then(function(r){return r.json();}).then(function(d){return d.ip;});
+    var f2=fetch('https://api64.ipify.org?format=json')
+      .then(function(r){return r.json();}).then(function(d){return d.ip;});
+    return Promise.race([f,t]).catch(function(){return Promise.race([f2,t]);}).catch(function(){return '';});
+  }
 
-      // Nạp Iframe qua Blob URL để ẩn src="https://script.google.com/..." khi bấm F12
-      function loadIframeApp() {
-        var searchParams = window.location.search || '';
-        var hashParams = window.location.hash || '';
-        var rawUrl = atob(encodedUrl) + searchParams + hashParams;
+  // ── Kiểm tra Public Access & IP (chạy song song) ─────────────────
+  async function init(){
+    var sp=(window.location.search||'').toLowerCase();
+    var hp=(window.location.hash||'').toLowerCase();
 
-        var blobCode = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body,iframe{width:100%;height:100%;margin:0;padding:0;border:none;overflow:hidden;}</style></head><body>' +
-          '<iframe src="' + rawUrl + '" allow="clipboard-read; clipboard-write;" style="width:100%;height:100%;border:none;"></iframe>' +
-          '</body></html>';
+    // Trang công khai → load ngay, không check IP
+    var pub=sp.indexOf('lookup')!==-1||sp.indexOf('tracuu')!==-1||
+            sp.indexOf('code=')!==-1||sp.indexOf('device=')!==-1||
+            sp.indexOf('id=')!==-1||sp.indexOf('qr=')!==-1||
+            sp.indexOf('tb=')!==-1||hp.indexOf('lookup')!==-1||
+            hp.indexOf('tracuu')!==-1||hp.indexOf('code=')!==-1;
+    if(pub){grantAccess();return;}
 
-        var blob = new Blob([blobCode], { type: 'text/html' });
-        var blobUrl = URL.createObjectURL(blob);
-        iframe.src = blobUrl;
-      }
+    // Phiên Admin đã xác minh trong session
+    if(sessionStorage.getItem('TAK_ADMIN_VERIFIED')==='true'){grantAccess();return;}
 
-      function grantAccess() {
-        authModal.classList.add('hidden');
-        loadIframeApp();
-      }
+    // Fetch IP song song (không block)
+    var ip=await fetchIP();
+    ipBadge.textContent='IP của bạn: '+(ip||'Không xác định');
 
-      async function verifyClientIP() {
-        var searchParams = (window.location.search || '').toLowerCase();
-        var hashParams = (window.location.hash || '').toLowerCase();
+    if(ip===_tip){
+      sessionStorage.setItem('TAK_ADMIN_VERIFIED','true');
+      grantAccess();
+    } else {
+      if(loader)loader.classList.add('hidden');
+      modal.classList.remove('hidden');
+    }
+    _tip=null; // xóa IP khỏi bộ nhớ sau khi đã dùng
+  }
 
-        // 🌐 DANH SÁCH TRANG MỞ CÔNG KHAI:
-        // - Trang tra cứu: ?lookup.html hoặc ?tracuu
-        // - Trang xem thiết bị qua QR code: ?code=TB-0097, ?id=..., ?qr=...
-        var isPublicAccess = searchParams.indexOf('lookup') !== -1 || 
-                             searchParams.indexOf('tracuu') !== -1 || 
-                             searchParams.indexOf('code=') !== -1 || 
-                             searchParams.indexOf('device=') !== -1 || 
-                             searchParams.indexOf('id=') !== -1 || 
-                             searchParams.indexOf('qr=') !== -1 || 
-                             searchParams.indexOf('tb=') !== -1 || 
-                             hashParams.indexOf('lookup') !== -1 || 
-                             hashParams.indexOf('tracuu') !== -1 || 
-                             hashParams.indexOf('code=') !== -1;
+  // ── Xác minh Admin form ──────────────────────────────────────────
+  window.handleAuthSubmit=async function(e){
+    e.preventDefault();
+    var name=(document.getElementById('adminNameInput').value||'').trim();
+    var dob =(document.getElementById('adminDobInput').value||'').trim();
+    var err =document.getElementById('authErrorMsg');
+    var norm=name.toLowerCase().replace(/\s+/g,' ');
+    var nacc=norm.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    var ndob=dob.replace(/[\/\-\.]/g,'');
+    var h1=await sha256(norm+'|'+ndob);
+    var h2=await sha256(nacc+'|'+ndob);
+    if(_H.indexOf(h1)!==-1||_H.indexOf(h2)!==-1){
+      sessionStorage.setItem('TAK_ADMIN_VERIFIED','true');
+      err.style.display='none';
+      if(loader)loader.classList.remove('hidden');
+      grantAccess();
+    } else {
+      err.style.display='block';
+      err.textContent='⚠️ Xác minh thất bại! Họ tên hoặc Ngày sinh không đúng.';
+    }
+  };
 
-        if (isPublicAccess) {
-          grantAccess();
-          return;
-        }
-
-        // TRANG QUẢN LÝ CHÍNH: Kiểm tra phiên xác minh
-        if (sessionStorage.getItem('TAK_ADMIN_VERIFIED') === 'true') {
-          grantAccess();
-          return;
-        }
-
-        var clientIP = '';
-        try {
-          var res = await fetch('https://api.ipify.org?format=json');
-          var data = await res.json();
-          clientIP = data.ip;
-        } catch(e) {
-          try {
-            var res2 = await fetch('https://api64.ipify.org?format=json');
-            var data2 = await res2.json();
-            clientIP = data2.ip;
-          } catch(e2) {
-            clientIP = 'Không xác định';
-          }
-        }
-
-        ipBadge.textContent = 'IP của bạn: ' + clientIP;
-
-        if (clientIP === TRUSTED_IP) {
-          sessionStorage.setItem('TAK_ADMIN_VERIFIED', 'true');
-          grantAccess();
-        } else {
-          if (loader) loader.classList.add('hidden');
-          authModal.classList.remove('hidden');
-        }
-      }
-
-      window.handleAuthSubmit = async function(e) {
-        e.preventDefault();
-        var nameVal = (document.getElementById('adminNameInput').value || '').trim();
-        var dobVal = (document.getElementById('adminDobInput').value || '').trim();
-        var errorMsg = document.getElementById('authErrorMsg');
-
-        var normName = nameVal.toLowerCase().replace(/\s+/g, ' ');
-        var normNameNoAccent = normName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        var normDob = dobVal.replace(/[\/\-\.]/g, '');
-
-        var inputHash1 = await sha256(normName + '|' + normDob);
-        var inputHash2 = await sha256(normNameNoAccent + '|' + normDob);
-
-        if (ALLOWED_HASHES.indexOf(inputHash1) !== -1 || ALLOWED_HASHES.indexOf(inputHash2) !== -1) {
-          sessionStorage.setItem('TAK_ADMIN_VERIFIED', 'true');
-          errorMsg.style.display = 'none';
-          if (loader) loader.classList.remove('hidden');
-          grantAccess();
-        } else {
-          errorMsg.style.display = 'block';
-          errorMsg.textContent = '⚠️ Xác minh thất bại! Họ tên hoặc Ngày sinh không đúng.';
-        }
-      };
-
-      verifyClientIP();
-    })();
-  </script>
-
+  init();
+}();
+</script>
 </body>
 </html>
