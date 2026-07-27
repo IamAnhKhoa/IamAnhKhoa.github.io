@@ -107,7 +107,7 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     }
   });
 
-  // ── 2. HÀM TỰ HỦY I-FRAME KHỎI DOM (SELF-DESTRUCT) ───────────────
+  // ── 2. HÀM TỰ HỦY I-FRAME LẬP TỨC (SELF-DESTRUCT) ───────────────
   var _dOpen=false;
   function _sd(){
     if(_dOpen)return; _dOpen=true;
@@ -119,16 +119,27 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:54px;margin-bottom:10px;">🛡️</h1><h2>CẢNH BÁO BẢO MẬT HỆ THỐNG</h2><p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p></div></div>';
   }
 
-  // ── 3. BẪY DETECTOR CHUẨN XÁC (KHÔNG BỊ BÁO NHẦM TRÌNH DUYỆT THƯỜNG) ─
+  // ── 3. BẪY CHỐNG SOI F12 TỨC THỜI (KHÔNG DÙNG DEBUGGER GÂY TẠM DỪNG) ─
+  // Bẫy Getter: Kích hoạt TỰ HỦY ngay khi F12 Elements hay Console đọc thuộc tính
+  var _t = new Image();
+  Object.defineProperty(_t, 'id', { get: function(){ _sd(); } });
+  
+  var _r = /./;
+  _r.toString = function(){ _sd(); return ''; };
+
   setInterval(function(){
-    // Kiểm tra chênh lệch chiều rộng (chỉ kích hoạt khi F12 mở dọc ở bên cạnh > 220px)
+    // In nhẹ vào console thụ động để kích hoạt bẫy khi F12 mở
+    console.log(_t);
+    console.log(_r);
+    if(console.clear) console.clear();
+
+    // Check kích thước DevTools docked
+    if(window.outerWidth - window.innerWidth > 200) _sd();
+  }, 400);
+
+  window.addEventListener('resize', function(){
     if(window.outerWidth - window.innerWidth > 220) _sd();
-    
-    // Kiểm tra Debugger Timing (Chỉ kích hoạt khi người dùng thực sự mở F12 & dừng ở câu lệnh)
-    var t0 = performance.now();
-    (function(){})['constructor']('debugger')();
-    if(performance.now() - t0 > 100) _sd();
-  }, 800);
+  });
 
   // ── 4. KHÓA GIẢI MÃ XOR (GIẢI MÃ SIÊU TỐC TRONG RAM) ─────────────
   var _K=[81,76,84,83,50,48,50,54,95,83,69,67,82,69,84]; // "QLTS2026_SECRET"
