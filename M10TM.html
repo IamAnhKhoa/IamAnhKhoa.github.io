@@ -40,38 +40,28 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
 
 <script>
 !function(){
-  // ── 1. CHẶN CHUỘT PHẢI & CHẶN PHÍM TẮT SOI CODE (F12, CTRL+SHIFT+I, CTRL+U...) ──
-  document.addEventListener('contextmenu', function(e){
-    e.preventDefault();
-    return false;
-  }, true);
+  var _dOpen = false;
 
-  document.addEventListener('keydown', function(e){
-    var k = e.keyCode || e.which;
-    var isF12 = (k === 123 || e.key === 'F12');
-    var isInspect = (e.ctrlKey && e.shiftKey && (k === 73 || k === 74 || k === 67 || e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c'));
-    var isViewSource = (e.ctrlKey && (k === 85 || k === 83 || e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'));
-    
-    if(isF12 || isInspect || isViewSource){
-      e.preventDefault();
-      e.stopPropagation();
-      _sd();
-      return false;
-    }
-  }, true);
-
-  // ── 2. HÀM TỰ HỦY + ĐẾM NGƯỜC 10 GIÂY ĐỂ THỬ LẠI ──
-  var _dOpen=false;
+  // ── 1. HÀM TỰ HỦY + THÔNG BÁO CẢNH BÁO KHI SOI CODE / CONSOLE ──
   function _sd(){
-    if(_dOpen)return; _dOpen=true;
-    var el=document.getElementById('appIframe');
+    if(_dOpen) return; 
+    _dOpen = true;
+    
+    var el = document.getElementById('appIframe');
     if(el){ 
-      try{ el.src='about:blank'; }catch(e){}
+      try { el.src = 'about:blank'; } catch(e){}
       if(el.parentNode) el.parentNode.removeChild(el); 
     }
     
     var cnt = 10;
-    document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:54px;margin-bottom:10px;">🛡️</h1><h2>CẢNH BÁO BẢO MẬT HỆ THỐNG</h2><p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p><div class="cd-box">Tự động khôi phục trang sau: <span id="cdTimer" class="cd-num">10s</span></div></div></div>';
+    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;">' +
+      '<div>' +
+        '<h1 style="font-size:54px;margin-bottom:10px;">🛡️</h1>' +
+        '<h2>CẢNH BÁO BẢO MẬT HỆ THỐNG</h2>' +
+        '<p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Mở Console soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p>' +
+        '<div class="cd-box">Tự động khôi phục trang sau: <span id="cdTimer" class="cd-num">10s</span></div>' +
+      '</div>' +
+    '</div>';
     
     var timer = setInterval(function(){
       cnt--;
@@ -84,37 +74,83 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     }, 1000);
   }
 
+  // ── 2. CHẶN CHUỘT PHẢI & PHÍM TẮT SOI CODE (F12, CTRL+SHIFT+I/J/C, CTRL+U...) ──
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    return false;
+  }, true);
+
+  document.addEventListener('keydown', function(e){
+    var k = e.keyCode || e.which;
+    var isF12 = (k === 123 || e.key === 'F12');
+    var isInspect = (e.ctrlKey || e.metaKey) && (e.shiftKey) && (k === 73 || k === 74 || k === 67 || e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c');
+    var isViewSource = (e.ctrlKey || e.metaKey) && (k === 85 || k === 83 || e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's');
+    
+    if(isF12 || isInspect || isViewSource){
+      e.preventDefault();
+      e.stopPropagation();
+      _sd();
+      return false;
+    }
+  }, true);
+
+  // ── 3. BẪY CONSOLE CONSOLE & DEVTOOLS DETECTOR ──
+  try {
+    var element = new Image();
+    Object.defineProperty(element, 'id', {
+      get: function () {
+        _sd();
+      }
+    });
+    setInterval(function () {
+      console.dir(element);
+    }, 1000);
+  } catch(err){}
+
+  // ── 4. KIỂM TRA THAY ĐỔI KÍCH THƯỚC DEVTOOLS WINDOW ──
+  setInterval(function(){
+    var widthThreshold = window.outerWidth - window.innerWidth > 160;
+    var heightThreshold = window.outerHeight - window.innerHeight > 160;
+    if(widthThreshold || heightThreshold){
+      _sd();
+    }
+  }, 1000);
+
+  // ── 5. TẢI ỨNG DỤNG VÀO IFRAME ──
   var iframe  = document.getElementById('appIframe');
   var loader  = document.getElementById('loadingScreen');
 
   function hideLoader(){
-    if(!loader)return;
-    loader.style.opacity='0';loader.style.visibility='hidden';
-    setTimeout(function(){if(loader&&loader.parentNode)loader.parentNode.removeChild(loader);},300);
+    if(!loader) return;
+    loader.style.opacity = '0';
+    loader.style.visibility = 'hidden';
+    setTimeout(function(){
+      if(loader && loader.parentNode) loader.parentNode.removeChild(loader);
+    }, 300);
   }
 
   function loadIframeApp(){
-    if(_dOpen)return;
-    var sp=window.location.search||'',hp=window.location.hash||'';
-    // Đặt đường dẫn URL Google Apps Script Web App hoặc trang Index tại đây
-    var targetUrl = 'Index.html' + sp + hp;
+    if(_dOpen) return;
+    var sp = window.location.search || '', hp = window.location.hash || '';
+    
+    // Đặt tên trang hoặc URL Google Apps Script Web App tại đây
+    var appPath = 'Index.html';
+    var fullUrl = appPath + sp + hp;
 
-    var blobHtml='<!DOCTYPE html><html><head><meta charset="utf-8">'
-      +'<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0f172a;user-select:none;-webkit-user-select:none}</style>'
-      +'</head><body><scr'+'ipt>'
-      +'document.addEventListener("contextmenu",function(e){e.preventDefault();},true);'
-      +'window.location.replace('+JSON.stringify(targetUrl)+');'
-      +'<\/scr'+'ipt></body></html>';
+    try {
+      if (!appPath.startsWith('http://') && !appPath.startsWith('https://')) {
+        fullUrl = new URL(appPath + sp + hp, window.location.href).href;
+      }
+    } catch(e){}
 
-    var bUrl=URL.createObjectURL(new Blob([blobHtml],{type:'text/html'}));
-
-    iframe.onload=function(){
+    iframe.onload = function(){
       hideLoader();
     };
 
-    setTimeout(hideLoader, 1500);
+    // Tự động ẩn màn hình chờ sau 800ms
+    setTimeout(hideLoader, 800);
 
-    iframe.src=bUrl;
+    iframe.src = fullUrl;
   }
 
   loadIframeApp();
