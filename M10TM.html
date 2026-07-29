@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/2966/2966327.png"/>
+<title>Phiếu M10 - Trạm Y tế xã Thái Mỹ</title>
+<style>
+::-webkit-scrollbar{display:none}
+html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#0f172a;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  user-select:none;-webkit-user-select:none}
+#loadingScreen{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(circle at center,#1e293b 0%,#0f172a 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:99999;transition:opacity .4s ease,visibility .4s ease}
+.spinner{width:48px;height:48px;
+  border:4px solid rgba(13,110,253,.2);
+  border-top:4px solid #0d6efd;border-right:4px solid #10b981;
+  border-radius:50%;animation:spin .8s linear infinite;
+  box-shadow:0 0 25px rgba(13,110,253,.3)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:#f8fafc;font-size:15px;font-weight:700;margin-top:18px}
+.loading-subtext{color:#94a3b8;font-size:12.5px;margin-top:6px}
+.cd-box{margin-top:14px;font-size:13.5px;color:#cbd5e1;background:rgba(255,255,255,.06);padding:8px 16px;border-radius:10px;display:inline-block}
+.cd-num{color:#38bdf8;font-weight:800;font-size:16px}
+</style>
+</head>
+<body style="padding:0;margin:0;width:100%;height:100vh">
+
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">⏳ Đang kết nối dữ liệu phiếu khám M10...</div>
+  <div class="loading-subtext">Hệ thống Trạm Y tế xã Thái Mỹ đang khởi tạo. Vui lòng chờ...</div>
+</div>
+
+<iframe id="appIframe" allow="clipboard-read; clipboard-write;"
+        style="width:100%;height:100%;border:none;display:block;"></iframe>
+
+<script>
+!function(){
+  // ── 1. CHẶN CHUỘT PHẢI & CHẶN PHÍM TẮT SOI CODE (F12, CTRL+SHIFT+I, CTRL+U...) ──
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    return false;
+  }, true);
+
+  document.addEventListener('keydown', function(e){
+    var k = e.keyCode || e.which;
+    var isF12 = (k === 123 || e.key === 'F12');
+    var isInspect = (e.ctrlKey && e.shiftKey && (k === 73 || k === 74 || k === 67 || e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c'));
+    var isViewSource = (e.ctrlKey && (k === 85 || k === 83 || e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'));
+    
+    if(isF12 || isInspect || isViewSource){
+      e.preventDefault();
+      e.stopPropagation();
+      _sd();
+      return false;
+    }
+  }, true);
+
+  // ── 2. HÀM TỰ HỦY + ĐẾM NGƯỜC 10 GIÂY ĐỂ THỬ LẠI ──
+  var _dOpen=false;
+  function _sd(){
+    if(_dOpen)return; _dOpen=true;
+    var el=document.getElementById('appIframe');
+    if(el){ 
+      try{ el.src='about:blank'; }catch(e){}
+      if(el.parentNode) el.parentNode.removeChild(el); 
+    }
+    
+    var cnt = 10;
+    document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:54px;margin-bottom:10px;">🛡️</h1><h2>CẢNH BÁO BẢO MẬT HỆ THỐNG</h2><p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p><div class="cd-box">Tự động khôi phục trang sau: <span id="cdTimer" class="cd-num">10s</span></div></div></div>';
+    
+    var timer = setInterval(function(){
+      cnt--;
+      var tEl = document.getElementById('cdTimer');
+      if(tEl) tEl.textContent = cnt + 's';
+      if(cnt <= 0){
+        clearInterval(timer);
+        window.location.reload();
+      }
+    }, 1000);
+  }
+
+  var iframe  = document.getElementById('appIframe');
+  var loader  = document.getElementById('loadingScreen');
+
+  function hideLoader(){
+    if(!loader)return;
+    loader.style.opacity='0';loader.style.visibility='hidden';
+    setTimeout(function(){if(loader&&loader.parentNode)loader.parentNode.removeChild(loader);},300);
+  }
+
+  function loadIframeApp(){
+    if(_dOpen)return;
+    var sp=window.location.search||'',hp=window.location.hash||'';
+    // Đặt đường dẫn URL Google Apps Script Web App hoặc trang Index tại đây
+    var targetUrl = 'Index.html' + sp + hp;
+
+    var blobHtml='<!DOCTYPE html><html><head><meta charset="utf-8">'
+      +'<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0f172a;user-select:none;-webkit-user-select:none}</style>'
+      +'</head><body><scr'+'ipt>'
+      +'document.addEventListener("contextmenu",function(e){e.preventDefault();},true);'
+      +'window.location.replace('+JSON.stringify(targetUrl)+');'
+      +'<\/scr'+'ipt></body></html>';
+
+    var bUrl=URL.createObjectURL(new Blob([blobHtml],{type:'text/html'}));
+
+    iframe.onload=function(){
+      hideLoader();
+    };
+
+    setTimeout(hideLoader, 1500);
+
+    iframe.src=bUrl;
+  }
+
+  loadIframeApp();
+}();
+</script>
+</body>
+</html>
