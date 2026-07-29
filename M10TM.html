@@ -42,7 +42,7 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
 !function(){
   var _dOpen = false;
 
-  // ── 1. HÀM TỰ HỦY + THÔNG BÁO CẢNH BÁO KHI SOI CODE / CONSOLE ──
+  // ── 1. HÀM TỰ HỦY + THÔNG BÁO CẢNH BÁO KHI PHÁT HIỆN THAO TÁC SOI CODE ──
   function _sd(){
     if(_dOpen) return; 
     _dOpen = true;
@@ -58,7 +58,7 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
       '<div>' +
         '<h1 style="font-size:54px;margin-bottom:10px;">🛡️</h1>' +
         '<h2>CẢNH BÁO BẢO MẬT HỆ THỐNG</h2>' +
-        '<p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Mở Console soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p>' +
+        '<p style="color:#94a3b8;margin-top:10px;font-size:14px;">Phát hiện thao tác F12 / Soi mã nguồn. Thẻ ứng dụng đã tự hủy!</p>' +
         '<div class="cd-box">Tự động khôi phục trang sau: <span id="cdTimer" class="cd-num">10s</span></div>' +
       '</div>' +
     '</div>';
@@ -94,29 +94,7 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     }
   }, true);
 
-  // ── 3. BẪY CONSOLE CONSOLE & DEVTOOLS DETECTOR ──
-  try {
-    var element = new Image();
-    Object.defineProperty(element, 'id', {
-      get: function () {
-        _sd();
-      }
-    });
-    setInterval(function () {
-      console.dir(element);
-    }, 1000);
-  } catch(err){}
-
-  // ── 4. KIỂM TRA THAY ĐỔI KÍCH THƯỚC DEVTOOLS WINDOW ──
-  setInterval(function(){
-    var widthThreshold = window.outerWidth - window.innerWidth > 160;
-    var heightThreshold = window.outerHeight - window.innerHeight > 160;
-    if(widthThreshold || heightThreshold){
-      _sd();
-    }
-  }, 1000);
-
-  // ── 5. TẢI ỨNG DỤNG VÀO IFRAME ──
+  // ── 3. TẢI ỨNG DỤNG VÀO IFRAME CHÍNH XÁC ──
   var iframe  = document.getElementById('appIframe');
   var loader  = document.getElementById('loadingScreen');
 
@@ -133,22 +111,23 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#
     if(_dOpen) return;
     var sp = window.location.search || '', hp = window.location.hash || '';
     
-    // Đặt tên trang hoặc URL Google Apps Script Web App tại đây
-    var appPath = 'Index.html';
-    var fullUrl = appPath + sp + hp;
-
-    try {
-      if (!appPath.startsWith('http://') && !appPath.startsWith('https://')) {
-        fullUrl = new URL(appPath + sp + hp, window.location.href).href;
-      }
-    } catch(e){}
+    // URL Google Apps Script Web App chính thức của hệ thống
+    var appPath = 'https://script.google.com/macros/s/AKfycbwNnqwETQu5RsByuoK5ZVB0clYez-643-VLGqmAYb1xt_8SNyYbRj-4cNflWurbjfwD2Q/exec';
+    
+    var fullUrl = appPath;
+    if (sp) {
+      fullUrl += (appPath.indexOf('?') !== -1 ? '&' + sp.substring(1) : sp);
+    }
+    if (hp) {
+      fullUrl += hp;
+    }
 
     iframe.onload = function(){
       hideLoader();
     };
 
-    // Tự động ẩn màn hình chờ sau 800ms
-    setTimeout(hideLoader, 800);
+    // Tự động ẩn màn hình chờ sau tối đa 600ms
+    setTimeout(hideLoader, 600);
 
     iframe.src = fullUrl;
   }
