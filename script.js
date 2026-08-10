@@ -4163,17 +4163,17 @@ async function sendZaloMessageFromModal() {
     sendBtn.disabled = true;
     sendBtn.textContent = '⏳ Đang gửi...';
     
-    // Gửi riêng cho ID Chat Anh Khoa (mã hóa là 'AVgbQXMDCVcCUQxKTCEKVFYHAVo=')
-    const userChatId = _xd('AVgbQXMDCVcCUQxKTCEKVFYHAVo=', _k);
+    // Gửi riêng cho ID Chat (nếu có cấu hình trong localStorage hoặc mặc định cá nhân)
+    const userChatId = localStorage.getItem('zalo_chat_id') || _xd('AVgbQXMDCVcCUQxKTCEKVFYHAVo=', _k);
     const success = await sendZaloMessage(text, userChatId);
     
     sendBtn.disabled = false;
     sendBtn.textContent = originalText;
     if (success) {
-        alert('Đã gửi tin nhắn riêng cho Anh Khoa thành công!');
+        alert('Đã gửi tin nhắn Zalo thành công!');
         closeZaloModal();
     } else {
-        alert('Gửi tin nhắn riêng thất bại. Vui lòng kiểm tra cấu hình hoặc Console.');
+        alert('Gửi tin nhắn Zalo thất bại. Vui lòng kiểm tra lại cấu hình Zalo Chat ID.');
     }
 }
 function exportDashboardToExcel() {
@@ -4469,33 +4469,9 @@ function formatZaloMessage(htmlText) {
 }
 
 async function sendZaloMessage(text, customChatId = null) {
-    const zaloBotToken = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3', _k);
-    const chatId = customChatId || localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
-
-    // Cách 1: Gửi trực tiếp qua Zalo Bot Platform API
-    try {
-        const zaloApiUrl = `https://bot-api.zaloplatforms.com/bot${zaloBotToken}/sendMessage`;
-        const response = await window.fetch(zaloApiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: text,
-                parse_mode: 'HTML'
-            })
-        });
-        const data = await response.json();
-        if (data.ok || data.status === 'ok') {
-            console.log("Đã gửi thông báo Zalo Bot Platform thành công.");
-            return true;
-        }
-    } catch (e) {
-        console.warn("Thử gửi Zalo Bot Platform thất bại, chuyển sang Webhook Proxy...", e);
-    }
-
-    // Cách 2: Dự phòng qua Webhook Proxy cũ
     const proxyUrl = _xd('ChwNBDMIHx1XCgkNFi9GHV5dDgkaWSJXRFMaFA0LFyVeHlNEEkcYBCkdR1dWCgcWH29IUV5b', _k);
     const secretKey = _xd('AQAYACJdRAAEUF4KESNAVUY=', _k);
+    const chatId = customChatId || localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
 
     const params = {
         action: 'send',
@@ -4516,7 +4492,7 @@ async function sendZaloMessage(text, customChatId = null) {
             body: JSON.stringify(params)
         });
         const data = await response.json();
-        if (data.status === 'ok') {
+        if (data.status === 'ok' || data.ok) {
             console.log("Đã gửi thông báo Zalo qua Webhook Proxy thành công.");
             return true;
         } else {
