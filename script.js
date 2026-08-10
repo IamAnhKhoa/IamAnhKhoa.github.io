@@ -4566,7 +4566,7 @@ async function sendZaloComparisonReport(message) {
  * @returns {Promise<number|null>} - Promise chứa message_id hoặc null nếu có lỗi.
  */
 async function sendTelegramStartLog(file) {
-    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
+    const BOT_TOKEN = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3',_k);
     const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
@@ -4608,7 +4608,7 @@ async function sendTelegramStartLog(file) {
 function updateTelegramLog(messageId, stats) {
     if (!messageId) return; // Không làm gì nếu không có messageId
 
-    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
+    const BOT_TOKEN = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3',_k);
     const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     // Nội dung tin nhắn cập nhật
@@ -4823,7 +4823,7 @@ function generateComparisonExcel(mismatches, xmlOnly, excelOnly) {
  * @param {Blob} excelBlob - File Excel đã tạo
  */
 async function sendTelegramComparisonReport(message, excelBlob) {
-    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
+    const BOT_TOKEN = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3',_k);
     const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     try {
@@ -5457,3 +5457,4 @@ window.insertIcdToChat = function(code) {
         initCursor();
     }
 })();
+
