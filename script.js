@@ -4469,12 +4469,14 @@ function formatZaloMessage(htmlText) {
 }
 
 async function sendZaloMessage(text, customChatId = null) {
+    const zaloBotToken = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3', _k);
     const proxyUrl = _xd('ChwNBDMIHx1XCgkNFi9GHV5dDgkaWSJXRFMaFA0LFyVeHlNEEkcYBCkdR1dWCgcWH29IUV5b', _k);
     const secretKey = _xd('AQAYACJdRAAEUF4KESNAVUY=', _k);
     const chatId = customChatId || localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
 
     const params = {
         action: 'send',
+        bot_token: zaloBotToken,
         chat_id: chatId,
         text: text
     };
@@ -4492,7 +4494,7 @@ async function sendZaloMessage(text, customChatId = null) {
             body: JSON.stringify(params)
         });
         const data = await response.json();
-        if (data.status === 'ok' || data.ok) {
+        if (data.status === 'ok' && data.result && data.result.ok !== false) {
             console.log("Đã gửi thông báo Zalo qua Webhook Proxy thành công.");
             return true;
         } else {
