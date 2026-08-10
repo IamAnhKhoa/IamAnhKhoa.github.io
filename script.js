@@ -4469,9 +4469,33 @@ function formatZaloMessage(htmlText) {
 }
 
 async function sendZaloMessage(text, customChatId = null) {
+    const zaloBotToken = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3', _k);
+    const chatId = customChatId || localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
+
+    // Cách 1: Gửi trực tiếp qua Zalo Bot Platform API
+    try {
+        const zaloApiUrl = `https://bot-api.zaloplatforms.com/bot${zaloBotToken}/sendMessage`;
+        const response = await window.fetch(zaloApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: text,
+                parse_mode: 'HTML'
+            })
+        });
+        const data = await response.json();
+        if (data.ok || data.status === 'ok') {
+            console.log("Đã gửi thông báo Zalo Bot Platform thành công.");
+            return true;
+        }
+    } catch (e) {
+        console.warn("Thử gửi Zalo Bot Platform thất bại, chuyển sang Webhook Proxy...", e);
+    }
+
+    // Cách 2: Dự phòng qua Webhook Proxy cũ
     const proxyUrl = _xd('ChwNBDMIHx1XCgkNFi9GHV5dDgkaWSJXRFMaFA0LFyVeHlNEEkcYBCkdR1dWCgcWH29IUV5b', _k);
     const secretKey = _xd('AQAYACJdRAAEUF4KESNAVUY=', _k);
-    const chatId = customChatId || localStorage.getItem('zalo_chat_id') || _xd('GA8LWSVQUwYGVFlLTXYGCQVSU19LQnUK', _k);
 
     const params = {
         action: 'send',
@@ -4566,7 +4590,7 @@ async function sendZaloComparisonReport(message) {
  * @returns {Promise<number|null>} - Promise chứa message_id hoặc null nếu có lỗi.
  */
 async function sendTelegramStartLog(file) {
-    const BOT_TOKEN = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3',_k);
+    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
     const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).replace(',', '');
@@ -4608,7 +4632,7 @@ async function sendTelegramStartLog(file) {
 function updateTelegramLog(messageId, stats) {
     if (!messageId) return; // Không làm gì nếu không có messageId
 
-    const BOT_TOKEN = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3',_k);
+    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
     const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     // Nội dung tin nhắn cập nhật
@@ -4823,7 +4847,7 @@ function generateComparisonExcel(mismatches, xmlOnly, excelOnly) {
  * @param {Blob} excelBlob - File Excel đã tạo
  */
 async function sendTelegramComparisonReport(message, excelBlob) {
-    const BOT_TOKEN = _xd('U1hMR3EFAwcDVl1KQXcFCAsCVVIAGydVXlBeIQQ1DTF9e1VYNQUTBQN1RGVCBjw9JRpgQnxNOyo6Pix9YH9mKRAKLgREW1NuNx47MitwYWBXBzA3',_k);
+    const BOT_TOKEN = _xd('VVFAQ3UKCAMBWlI4NQVhYXBECywAHBdzaUFlNFFIJgkfCFAEODEzGTAHUkpxAQ==',_k);
     const CHAT_ID = _xd('U19KQHEDBAIFVg==',_k);
 
     try {
