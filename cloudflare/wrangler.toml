@@ -1,0 +1,6 @@
+name = "doi-chieu-mcct-proxy"
+main = "mcct-worker.js"
+compatibility_date = "2026-08-19"
+
+[vars]
+ALLOWED_ORIGINS = "https://doi-chieu-bhyt.pages.dev,https://5b197a76.doi-chieu-bhyt.pages.dev"

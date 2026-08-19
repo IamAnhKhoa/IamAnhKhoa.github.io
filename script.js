@@ -7,6 +7,7 @@ if (typeof ERROR_TYPES === 'undefined') window.ERROR_TYPES = {};
 if (typeof globalData === 'undefined') window.globalData = { allRecords: [], filteredRecords: [], currentPage: 1, pageSize: 10, charts: {} };
 globalData.lastZaloLog = globalData.lastZaloLog || { timestamp: 0, fileName: '', totalError: 0, criticalError: 0 };
 globalData.lastZaloCompareLog = globalData.lastZaloCompareLog || { timestamp: 0, hash: '' };
+globalData.mcctLookup = globalData.mcctLookup || { history: [], lastResult: null, lastRequest: null };
 if (typeof staffNameMap === 'undefined') window.staffNameMap = new Map();
 if (typeof PHONG_KHAM_MAP === 'undefined') window.PHONG_KHAM_MAP = new Map();
 if (typeof PHONG_KHAM_NAMES === 'undefined') window.PHONG_KHAM_NAMES = [];
@@ -544,6 +545,8 @@ function processXmlContent(xmlContent, messageId) { // Nhận thêm "messageId"
     // === ĐỌC THÔNG TIN TỪ XML ROOT ===
     const xmlRootDoc = new DOMParser().parseFromString(xmlContent, 'text/xml');
     const maCskcb = getText(xmlRootDoc, 'MACSKCB', 'MA_CSKCB');
+    globalData.maCskcb = maCskcb || globalData.maCskcb || '';
+    populateMcctRecordSelect();
     if (maCskcb && !['79764', '79343', '79342'].includes(maCskcb)) {
         alert("Bản quyền thuộc về Anh Khoa - TYT Tân An Hội . Nhận dịch vụ kiểm soát hồ sơ XML của TYT cơ sở có chi phí, liên hệ qua zalo");
         if (!document.getElementById('copyright-banner')) {
@@ -2335,6 +2338,12 @@ function showRecordDetailModal(record) {
         </div>
     </div>
 
+    <div class="rdetail-section" style="text-align:center;">
+        <button class="btn btn-primary" onclick="lookupMcctFromRecord('${encodeURIComponent(record.maLk || '')}')">
+            🔎 Tra cứu hồ sơ MCCT trên Cổng BHYT
+        </button>
+    </div>
+
     <div class="rdetail-section">
         <h4 class="rdetail-section-title">🏥 Thời gian điều trị</h4>
         <div class="rdetail-grid">
@@ -2594,6 +2603,761 @@ function displayXml4Details(maLk) {
 
 function closeXml4Modal() {
     document.getElementById('xml4Modal').style.display = 'none';
+}
+
+// ============================= MCCT LOOKUP FUNCTIONALITY =============================
+const MCCT_LOOKUP_ENDPOINTS = {
+    production: 'http://egw.baohiemxahoi.gov.vn/api/TraCuuCCT/TraCuuTienMCCT',
+    training: 'http://daotaoegw.baohiemxahoi.gov.vn/api/TraCuuCCT/TraCuuTienMCCT'
+};
+const MCCT_TOKEN_ENDPOINTS = {
+    production: 'https://egw.baohiemxahoi.gov.vn/api/token/take',
+    training: 'https://daotaoegw.baohiemxahoi.gov.vn/api/token/take'
+};
+const MCCT_PROXY_BASE_URL = 'https://doi-chieu-mcct-proxy.sockladien.workers.dev';
+const MCCT_LOOKUP_SETTINGS_KEY = 'mcctLookupSettings';
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function mcctValue(obj, keys, fallback = '') {
+    if (!obj) return fallback;
+    for (const key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
+    }
+    return fallback;
+}
+
+function formatMcctMoney(value) {
+    if (value === undefined || value === null || value === '') return '';
+    const num = Number(value);
+    return Number.isFinite(num) ? formatCurrency(num) : escapeHtml(value);
+}
+
+function normalizeMcctMaThe(value) {
+    return String(value || '').replace(/\s+/g, '').toUpperCase();
+}
+
+function normalizeMcctBirthDate(value) {
+    const raw = String(value || '').trim();
+    if (/^\d{8,}$/.test(raw)) return formatDateTimeForDisplay(raw).split(' ')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        const [year, month, day] = raw.split('-');
+        return `${day}/${month}/${year}`;
+    }
+    return raw;
+}
+
+function md5Upper(input) {
+    const source = String(input || '');
+    const bytes = (typeof TextEncoder !== 'undefined')
+        ? new TextEncoder().encode(source)
+        : Uint8Array.from(unescape(encodeURIComponent(source)), c => c.charCodeAt(0));
+    const bitLength = bytes.length * 8;
+    const paddedLength = (((bytes.length + 8) >> 6) + 1) << 6;
+    const padded = new Uint8Array(paddedLength);
+    padded.set(bytes);
+    padded[bytes.length] = 0x80;
+
+    const view = new DataView(padded.buffer);
+    view.setUint32(paddedLength - 8, bitLength >>> 0, true);
+    view.setUint32(paddedLength - 4, Math.floor(bitLength / 0x100000000), true);
+
+    let a0 = 0x67452301;
+    let b0 = 0xefcdab89;
+    let c0 = 0x98badcfe;
+    let d0 = 0x10325476;
+    const shifts = [
+        7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+        5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+        4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+        6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+    ];
+    const constants = Array.from({ length: 64 }, (_, i) =>
+        Math.floor(Math.abs(Math.sin(i + 1)) * 0x100000000) >>> 0
+    );
+    const rotateLeft = (value, shift) => (value << shift) | (value >>> (32 - shift));
+
+    for (let offset = 0; offset < paddedLength; offset += 64) {
+        const words = Array.from({ length: 16 }, (_, i) => view.getUint32(offset + i * 4, true));
+        let a = a0;
+        let b = b0;
+        let c = c0;
+        let d = d0;
+
+        for (let i = 0; i < 64; i++) {
+            let f;
+            let g;
+            if (i < 16) {
+                f = (b & c) | ((~b) & d);
+                g = i;
+            } else if (i < 32) {
+                f = (d & b) | ((~d) & c);
+                g = (5 * i + 1) % 16;
+            } else if (i < 48) {
+                f = b ^ c ^ d;
+                g = (3 * i + 5) % 16;
+            } else {
+                f = c ^ (b | (~d));
+                g = (7 * i) % 16;
+            }
+
+            const next = d;
+            d = c;
+            c = b;
+            b = (b + rotateLeft((a + f + constants[i] + words[g]) >>> 0, shifts[i])) >>> 0;
+            a = next;
+        }
+
+        a0 = (a0 + a) >>> 0;
+        b0 = (b0 + b) >>> 0;
+        c0 = (c0 + c) >>> 0;
+        d0 = (d0 + d) >>> 0;
+    }
+
+    const output = new DataView(new ArrayBuffer(16));
+    [a0, b0, c0, d0].forEach((word, index) => output.setUint32(index * 4, word, true));
+    return Array.from(new Uint8Array(output.buffer))
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('')
+        .toUpperCase();
+}
+
+function getMcctPasswordHashFromInput(password) {
+    const value = String(password || '').trim();
+    if (!value) return '';
+    return /^[a-f0-9]{32}$/i.test(value) ? value.toUpperCase() : md5Upper(value);
+}
+
+async function fetchMcctProxy(path, payload) {
+    try {
+        return await fetch(`${MCCT_PROXY_BASE_URL}${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (error) {
+        throw new Error('Không kết nối được proxy Cloudflare. Kiểm tra mạng hoặc trạng thái Worker rồi thử lại.');
+    }
+}
+
+async function readMcctJsonResponse(response, contextLabel) {
+    const rawText = await response.text();
+    let data = null;
+    if (rawText) {
+        try {
+            data = JSON.parse(rawText);
+        } catch (parseError) {
+            throw new Error(`${contextLabel} trả về dữ liệu không phải JSON: ${rawText.slice(0, 160)}`);
+        }
+    }
+
+    if (!response.ok) {
+        const message = mcctValue(data, ['error', 'message', 'Message', 'thongDiep', 'ThongDiep', 'ghiChu', 'GhiChu'], '');
+        throw new Error(message || `${contextLabel} trả về HTTP ${response.status}.`);
+    }
+
+    return data;
+}
+
+function initializeMcctLookup() {
+    const form = document.getElementById('mcctLookupForm');
+    if (!form) return;
+
+    loadMcctLookupSettings();
+    populateMcctRecordSelect();
+
+    form.addEventListener('submit', runMcctLookup);
+
+    const loginButton = document.getElementById('mcctLoginButton');
+    if (loginButton) loginButton.addEventListener('click', loginMcctGateway);
+
+    const clearSessionButton = document.getElementById('mcctClearSessionButton');
+    if (clearSessionButton) clearSessionButton.addEventListener('click', clearMcctSession);
+
+    const passwordInput = document.getElementById('mcctLoginPassword');
+    if (passwordInput) {
+        passwordInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loginMcctGateway();
+            }
+        });
+        passwordInput.addEventListener('blur', updateMcctPasswordHashFromLoginPassword);
+    }
+
+    const recordSelect = document.getElementById('mcctRecordSelect');
+    if (recordSelect) {
+        recordSelect.addEventListener('change', () => {
+            const record = globalData.allRecords.find(r => r.maLk === recordSelect.value);
+            if (record) fillMcctLookupFromRecord(record, false);
+        });
+    }
+
+    ['mcctEnvironment', 'mcctMaCskcbLogin', 'mcctUsername', 'mcctAccessToken', 'mcctTokenId', 'mcctPasswordHash', 'mcctRememberHeaders']
+        .forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener(el.type === 'checkbox' ? 'change' : 'blur', saveMcctLookupSettings);
+        });
+}
+
+function updateMcctPasswordHashFromLoginPassword() {
+    const password = document.getElementById('mcctLoginPassword')?.value || '';
+    const passwordHash = getMcctPasswordHashFromInput(password);
+    const hashInput = document.getElementById('mcctPasswordHash');
+    if (hashInput && passwordHash) hashInput.value = passwordHash;
+}
+
+function showMcctConnectionStatus(message, type = 'warning') {
+    const status = document.getElementById('mcctConnectionStatus');
+    if (!status) return;
+    status.className = `mcct-status show ${type}`;
+    status.textContent = message;
+}
+
+async function loginMcctGateway() {
+    const environment = document.getElementById('mcctEnvironment')?.value || 'production';
+    const username = document.getElementById('mcctUsername')?.value.trim() || '';
+    const password = document.getElementById('mcctLoginPassword')?.value || '';
+    const passwordHash = getMcctPasswordHashFromInput(password);
+
+    if (!username) {
+        showMcctConnectionStatus('Vui lòng nhập tài khoản đăng nhập / username API.', 'error');
+        return;
+    }
+    if (!passwordHash) {
+        showMcctConnectionStatus('Vui lòng nhập mật khẩu đăng nhập để lấy token.', 'error');
+        return;
+    }
+
+    const hashInput = document.getElementById('mcctPasswordHash');
+    if (hashInput) hashInput.value = passwordHash;
+
+    const button = document.getElementById('mcctLoginButton');
+    const originalText = button?.textContent || '';
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Đang đăng nhập...';
+    }
+    showMcctConnectionStatus('Đang lấy phiên làm việc từ Cổng giám định BHYT...', 'warning');
+
+    try {
+        const response = await fetchMcctProxy('/mcct/token', { environment, username, passwordHash });
+        const data = await readMcctJsonResponse(response, 'Cổng BHXH');
+
+        const apiKey = mcctValue(data, ['APIKey', 'apiKey', 'ApiKey', 'ResultObject', 'resultObject'], null);
+        const accessToken = mcctValue(apiKey, ['access_token', 'accessToken', 'token'], '');
+        const tokenId = mcctValue(apiKey, ['id_token', 'idToken', 'tokenId'], '');
+        const maKetQua = String(mcctValue(data, ['maKetQua', 'MaKetQua'], response.status));
+
+        if (!response.ok || !accessToken || !tokenId) {
+            const message = mcctValue(data, ['thongDiep', 'ThongDiep', 'ghiChu', 'GhiChu'], '');
+            if (response.status === 401 || maKetQua === '401') {
+                throw new Error('Không lấy được token (401). Kiểm tra tài khoản Webservice/API, mật khẩu, đúng Cổng chính thức/đào tạo, hoặc quyền API của tài khoản.');
+            }
+            if (maKetQua === '500' && apiKey === null) {
+                throw new Error('Cổng BHXH trả maKetQua 500 và không cấp APIKey. Thường gặp khi dùng tài khoản đăng nhập web thường thay vì tài khoản Webservice/API, hoặc tài khoản chưa được cấp quyền API.');
+            }
+            throw new Error(message || `Không lấy được token. Mã phản hồi: ${maKetQua || response.status}.`);
+        }
+
+        document.getElementById('mcctAccessToken').value = accessToken;
+        document.getElementById('mcctTokenId').value = tokenId;
+        document.getElementById('mcctPasswordHash').value = passwordHash;
+        const passwordInput = document.getElementById('mcctLoginPassword');
+        if (passwordInput) passwordInput.value = '';
+        saveMcctLookupSettings();
+
+        const expiresIn = mcctValue(apiKey, ['expires_in', 'expiresIn'], '');
+        showMcctConnectionStatus(
+            `Đăng nhập thành công. Token đã sẵn sàng${expiresIn ? `, hết hạn: ${expiresIn}` : ''}.`,
+            'success'
+        );
+    } catch (err) {
+        console.error('Lỗi đăng nhập Cổng BHYT:', err);
+        const message = err.message || String(err);
+        const proxyHint = /failed to fetch|networkerror|cors|load failed/i.test(message)
+            ? ' Kiểm tra lại mạng hoặc trạng thái Worker Cloudflare.'
+            : '';
+        const punctuation = /[.!?]$/.test(message) ? '' : '.';
+        showMcctConnectionStatus(`${message}${punctuation}${proxyHint}`, 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    }
+}
+
+function clearMcctSession() {
+    ['mcctAccessToken', 'mcctTokenId', 'mcctPasswordHash', 'mcctLoginPassword'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    saveMcctLookupSettings();
+    showMcctConnectionStatus('Đã xóa thông tin phiên đăng nhập trên form.', 'warning');
+}
+
+function loadMcctLookupSettings() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(MCCT_LOOKUP_SETTINGS_KEY) || '{}');
+        const setValue = (id, value) => {
+            const el = document.getElementById(id);
+            if (el && value !== undefined && value !== null) el.value = value;
+        };
+        setValue('mcctEnvironment', saved.environment || 'production');
+        setValue('mcctMaCskcbLogin', saved.maCskcb || '');
+        setValue('mcctUsername', saved.username || '');
+        const remember = !!saved.rememberHeaders;
+        const rememberEl = document.getElementById('mcctRememberHeaders');
+        if (rememberEl) rememberEl.checked = remember;
+        if (remember) {
+            setValue('mcctAccessToken', saved.accessToken || '');
+            setValue('mcctTokenId', saved.tokenId || '');
+            setValue('mcctPasswordHash', saved.passwordHash || '');
+        }
+    } catch (e) {
+        console.warn('Không thể đọc cấu hình tra cứu MCCT:', e);
+    }
+}
+
+function saveMcctLookupSettings() {
+    try {
+        const remember = !!document.getElementById('mcctRememberHeaders')?.checked;
+        const settings = {
+            environment: document.getElementById('mcctEnvironment')?.value || 'production',
+            maCskcb: document.getElementById('mcctMaCskcbLogin')?.value.trim() || '',
+            username: document.getElementById('mcctUsername')?.value.trim() || '',
+            rememberHeaders: remember
+        };
+        if (remember) {
+            settings.accessToken = document.getElementById('mcctAccessToken')?.value || '';
+            settings.tokenId = document.getElementById('mcctTokenId')?.value || '';
+            settings.passwordHash = document.getElementById('mcctPasswordHash')?.value || '';
+        }
+        localStorage.setItem(MCCT_LOOKUP_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+        console.warn('Không thể lưu cấu hình tra cứu MCCT:', e);
+    }
+}
+
+function populateMcctRecordSelect() {
+    const select = document.getElementById('mcctRecordSelect');
+    if (!select) return;
+
+    const current = select.value;
+    select.innerHTML = '';
+    if (!globalData.allRecords || globalData.allRecords.length === 0) {
+        select.add(new Option('Chưa có hồ sơ XML', ''));
+        select.disabled = true;
+        return;
+    }
+
+    select.disabled = false;
+    select.add(new Option('Chọn hồ sơ từ file XML...', ''));
+    globalData.allRecords.forEach(record => {
+        const labelParts = [
+            record.hoTen || 'Không tên',
+            record.maThe || record.soCccd || record.maBn || record.maLk,
+            record.ngaySinh ? formatDateTimeForDisplay(record.ngaySinh).split(' ')[0] : ''
+        ].filter(Boolean);
+        select.add(new Option(labelParts.join(' - '), record.maLk || ''));
+    });
+    if (current && Array.from(select.options).some(opt => opt.value === current)) {
+        select.value = current;
+    }
+}
+
+function openMcctLookupTab() {
+    const tabButton = document.querySelector("button[onclick*=\"'mcctLookupTab'\"]");
+    if (tabButton && typeof openTab === 'function') {
+        openTab({ currentTarget: tabButton }, 'mcctLookupTab');
+        return;
+    }
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    tabButton?.classList.add('active');
+    document.getElementById('mcctLookupTab')?.classList.add('active');
+}
+
+function fillMcctLookupFromRecord(record, shouldOpenTab = true) {
+    if (!record) return;
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    };
+
+    const maCskcbEl = document.getElementById('mcctMaCskcbLogin');
+    if (maCskcbEl && !maCskcbEl.value.trim() && globalData.maCskcb) {
+        maCskcbEl.value = globalData.maCskcb;
+    }
+
+    setValue('mcctMaThe', normalizeMcctMaThe(record.maThe || record.soCccd || ''));
+    setValue('mcctHoTen', record.hoTen || '');
+    setValue('mcctNgaySinh', normalizeMcctBirthDate(record.ngaySinh || ''));
+
+    const select = document.getElementById('mcctRecordSelect');
+    if (select && record.maLk) select.value = record.maLk;
+
+    if (shouldOpenTab) openMcctLookupTab();
+    showMcctStatus(`Đã lấy thông tin từ hồ sơ ${record.maLk || ''}.`, 'success');
+}
+
+function lookupMcctFromRecord(encodedMaLk) {
+    const maLk = decodeURIComponent(encodedMaLk || '');
+    const record = globalData.allRecords.find(r => r.maLk === maLk);
+    if (!record) {
+        alert('Không tìm thấy hồ sơ XML để đưa sang form tra cứu.');
+        return;
+    }
+    closeRecordDetailModal();
+    fillMcctLookupFromRecord(record, true);
+}
+
+function clearMcctPatientForm() {
+    ['mcctMaThe', 'mcctHoTen', 'mcctNgaySinh'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const select = document.getElementById('mcctRecordSelect');
+    if (select) select.value = '';
+    document.getElementById('mcctLookupResults').style.display = 'none';
+    const exportBtn = document.getElementById('mcctExportButton');
+    if (exportBtn) exportBtn.disabled = true;
+    globalData.mcctLookup.lastResult = null;
+    globalData.mcctLookup.lastRequest = null;
+    showMcctStatus('Đã xóa thông tin người bệnh.', 'warning');
+}
+
+function getMcctLookupRequest() {
+    const environment = document.getElementById('mcctEnvironment')?.value || 'production';
+    const endpoint = MCCT_LOOKUP_ENDPOINTS[environment] || MCCT_LOOKUP_ENDPOINTS.production;
+    const maCskcb = document.getElementById('mcctMaCskcbLogin')?.value.trim() || '';
+    const username = document.getElementById('mcctUsername')?.value.trim() || '';
+    const accessToken = document.getElementById('mcctAccessToken')?.value.trim() || '';
+    const tokenId = document.getElementById('mcctTokenId')?.value.trim() || '';
+    const passwordHash = document.getElementById('mcctPasswordHash')?.value.trim() || '';
+    const maThe = normalizeMcctMaThe(document.getElementById('mcctMaThe')?.value || '');
+    const hoTen = document.getElementById('mcctHoTen')?.value.trim().replace(/\s+/g, ' ') || '';
+    const ngaySinh = normalizeMcctBirthDate(document.getElementById('mcctNgaySinh')?.value || '');
+
+    return {
+        endpoint,
+        environment,
+        maCskcb,
+        headers: { accessToken, tokenId, passwordHash },
+        body: { username, maThe, hoTen, ngaySinh }
+    };
+}
+
+function validateMcctLookupRequest(request) {
+    const missing = [];
+    if (!request.headers.accessToken) missing.push('accessToken');
+    if (!request.headers.tokenId) missing.push('tokenId');
+    if (!request.headers.passwordHash) missing.push('passwordHash');
+    if (!request.body.username) missing.push('username');
+    if (!request.body.maThe) missing.push('maThe');
+    if (!request.body.hoTen) missing.push('hoTen');
+    if (!request.body.ngaySinh) missing.push('ngaySinh');
+    if (missing.length > 0) {
+        const hint = missing.some(item => ['accessToken', 'tokenId', 'passwordHash'].includes(item))
+            ? ' Bấm "Đăng nhập lấy token" trước khi tra cứu, hoặc nhập thông tin phiên thủ công.'
+            : '';
+        return `Thiếu thông tin bắt buộc: ${missing.join(', ')}.${hint}`;
+    }
+
+    if (![10, 12, 15].includes(request.body.maThe.length)) {
+        return 'Mã thẻ BHYT / mã số BHXH phải dài 10, 12 hoặc 15 ký tự sau khi bỏ khoảng trắng.';
+    }
+
+    const validBirthDate = /^(\d{2}\/\d{2}\/\d{4}|\d{2}\/\d{4}|\d{4})$/.test(request.body.ngaySinh);
+    if (!validBirthDate) {
+        return 'Ngày sinh phải theo định dạng dd/MM/yyyy, MM/yyyy hoặc yyyy.';
+    }
+
+    return null;
+}
+
+async function runMcctLookup(event) {
+    event.preventDefault();
+    const request = getMcctLookupRequest();
+    const error = validateMcctLookupRequest(request);
+    if (error) {
+        showMcctStatus(error, 'error');
+        return;
+    }
+
+    saveMcctLookupSettings();
+    const button = document.getElementById('mcctLookupButton');
+    const originalText = button?.textContent || '';
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Đang tra cứu...';
+    }
+    showMcctStatus('Đang gửi yêu cầu tra cứu lên Cổng giám định BHYT...', 'warning');
+
+    try {
+        const response = await fetchMcctProxy('/mcct/lookup', {
+            environment: request.environment,
+            headers: request.headers,
+            body: request.body
+        });
+        const data = await readMcctJsonResponse(response, 'Cổng BHXH');
+
+        if (!data) {
+            if (response.status === 401) {
+                throw new Error('401 Unauthorized: token không hợp lệ, hết hạn, hoặc IP gọi API khác IP đã lấy token.');
+            }
+            throw new Error(`HTTP ${response.status}: Cổng không trả về nội dung phản hồi.`);
+        }
+
+        renderMcctLookupResult(data, request, true);
+    } catch (err) {
+        console.error('Lỗi tra cứu MCCT:', err);
+        const message = err.message || String(err);
+        const punctuation = /[.!?]$/.test(message) ? '' : '.';
+        showMcctStatus(`${message}${punctuation}`, 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    }
+}
+
+function showMcctStatus(message, type = 'warning') {
+    const status = document.getElementById('mcctLookupStatus');
+    if (!status) return;
+    status.className = `mcct-status show ${type}`;
+    status.textContent = message;
+}
+
+function renderMcctLookupResult(data, request, addToHistory = false) {
+    const maKetQua = String(mcctValue(data, ['MaKetQua', 'maKetQua'], ''));
+    const ghiChu = mcctValue(data, ['GhiChu', 'ghiChu'], '');
+    const dataCct = Array.isArray(mcctValue(data, ['DataCCT', 'dataCCT'], []))
+        ? mcctValue(data, ['DataCCT', 'dataCCT'], [])
+        : [];
+    const thongTinSoThe = mcctValue(data, ['ThongTinSoThe', 'thongTinSoThe'], null);
+
+    globalData.mcctLookup.lastResult = data;
+    globalData.mcctLookup.lastRequest = request;
+
+    const results = document.getElementById('mcctLookupResults');
+    if (results) results.style.display = 'block';
+
+    const statusType = maKetQua === '200' ? 'success' : (maKetQua === '204' ? 'warning' : 'error');
+    const statusMessage = maKetQua === '200'
+        ? `Tra cứu thành công: ${dataCct.length} hồ sơ cùng chi trả.`
+        : (ghiChu || `Tra cứu trả về mã ${maKetQua || 'không xác định'}.`);
+    showMcctStatus(statusMessage, statusType);
+
+    const exportBtn = document.getElementById('mcctExportButton');
+    if (exportBtn) exportBtn.disabled = dataCct.length === 0;
+
+    renderMcctSummary(maKetQua, ghiChu, dataCct, thongTinSoThe);
+    renderMcctDataTable(dataCct);
+
+    if (addToHistory) addMcctHistoryEntry(request, data);
+}
+
+function renderMcctSummary(maKetQua, ghiChu, dataCct, thongTinSoThe) {
+    const latestLuyKe = dataCct.reduce((max, row) => Math.max(max, Number(mcctValue(row, ['tBNCCTLuyKe'], 0)) || 0), 0);
+    const totalMcct = dataCct.reduce((sum, row) => sum + (Number(mcctValue(row, ['tBNCCTMCCT'], 0)) || 0), 0);
+    const cardName = mcctValue(thongTinSoThe, ['hoTen'], '');
+    const cardBirth = mcctValue(thongTinSoThe, ['ngaySinh'], '');
+    const cardEndDate = mcctValue(thongTinSoThe, ['ngayKetThuc'], '');
+    const maBhxh = mcctValue(thongTinSoThe, ['maBhxh'], '');
+
+    const summary = document.getElementById('mcctResultSummary');
+    if (summary) {
+        summary.innerHTML = `
+            <div class="mcct-mini-stat"><span>Mã kết quả</span><strong>${escapeHtml(maKetQua || 'N/A')}</strong></div>
+            <div class="mcct-mini-stat"><span>Số hồ sơ</span><strong>${dataCct.length.toLocaleString('vi-VN')}</strong></div>
+            <div class="mcct-mini-stat"><span>CCT MCCT</span><strong>${formatCurrency(totalMcct)}</strong></div>
+            <div class="mcct-mini-stat"><span>CCT lũy kế</span><strong>${formatCurrency(latestLuyKe)}</strong></div>
+        `;
+    }
+
+    const info = document.getElementById('mcctResultsInfo');
+    if (info) info.textContent = ghiChu || '';
+
+    const card = document.getElementById('mcctCardInfo');
+    if (!card) return;
+    if (!thongTinSoThe) {
+        card.innerHTML = `<div class="mcct-status show warning">Không có thông tin thẻ BHYT trả về.</div>`;
+        return;
+    }
+    card.innerHTML = `
+        <div class="rdetail-section">
+            <h4 class="rdetail-section-title">Thông tin thẻ BHYT</h4>
+            <div class="rdetail-grid">
+                <div class="rdetail-item"><span class="rdetail-label">Họ tên</span><span class="rdetail-value"><strong>${escapeHtml(cardName)}</strong></span></div>
+                <div class="rdetail-item"><span class="rdetail-label">Ngày sinh</span><span class="rdetail-value">${escapeHtml(cardBirth)}</span></div>
+                <div class="rdetail-item"><span class="rdetail-label">Ngày hết hạn</span><span class="rdetail-value">${escapeHtml(cardEndDate || 'N/A')}</span></div>
+                <div class="rdetail-item"><span class="rdetail-label">Mã BHXH</span><span class="rdetail-value">${escapeHtml(maBhxh || 'N/A')}</span></div>
+            </div>
+        </div>
+    `;
+}
+
+function renderMcctDataTable(rows) {
+    const wrapper = document.getElementById('mcctResultsTableWrapper');
+    if (!wrapper) return;
+
+    if (!rows || rows.length === 0) {
+        wrapper.innerHTML = `<div class="mcct-status show warning">Không có dữ liệu chi phí cùng chi trả.</div>`;
+        return;
+    }
+
+    const tableRows = rows.map((row, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(mcctValue(row, ['Id', 'id'], ''))}</td>
+            <td>${escapeHtml(mcctValue(row, ['ngayTraCuu'], ''))}</td>
+            <td>${escapeHtml(mcctValue(row, ['maThe'], ''))}</td>
+            <td>${escapeHtml(mcctValue(row, ['maCskcb'], ''))}</td>
+            <td>${escapeHtml(mcctValue(row, ['ngayVao'], ''))}</td>
+            <td>${escapeHtml(mcctValue(row, ['ngayRa'], ''))}</td>
+            <td>${escapeHtml(mcctValue(row, ['maDoiTuongKCB'], ''))}</td>
+            <td><strong>${formatMcctMoney(mcctValue(row, ['tBNCCTMCCT'], ''))}</strong></td>
+            <td><strong>${formatMcctMoney(mcctValue(row, ['tBNCCTLuyKe'], ''))}</strong></td>
+            <td>${escapeHtml(mcctValue(row, ['ngayNhanCong'], ''))}</td>
+            <td>${escapeHtml(mcctValue(row, ['ngayNhan'], ''))}</td>
+        </tr>
+    `).join('');
+
+    wrapper.innerHTML = `
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>ID</th>
+                    <th>Ngày tra cứu</th>
+                    <th>Mã thẻ</th>
+                    <th>Mã CSKCB</th>
+                    <th>Ngày vào</th>
+                    <th>Ngày ra</th>
+                    <th>Đối tượng</th>
+                    <th>CCT MCCT</th>
+                    <th>CCT lũy kế</th>
+                    <th>Ngày nhận Cổng</th>
+                    <th>Ngày nhận</th>
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </table>
+    `;
+}
+
+function addMcctHistoryEntry(request, data) {
+    const maKetQua = mcctValue(data, ['MaKetQua', 'maKetQua'], '');
+    const entry = {
+        id: Date.now(),
+        time: new Date().toLocaleString('vi-VN'),
+        request,
+        data,
+        maKetQua,
+        ghiChu: mcctValue(data, ['GhiChu', 'ghiChu'], '')
+    };
+    globalData.mcctLookup.history.unshift(entry);
+    globalData.mcctLookup.history = globalData.mcctLookup.history.slice(0, 12);
+    renderMcctHistory();
+}
+
+function renderMcctHistory() {
+    const list = document.getElementById('mcctHistoryList');
+    if (!list) return;
+    const history = globalData.mcctLookup.history || [];
+    if (history.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-secondary);font-size:0.9em;">Chưa có truy vấn trong phiên này.</p>';
+        return;
+    }
+
+    list.innerHTML = '';
+    history.forEach(entry => {
+        const item = document.createElement('div');
+        item.className = 'mcct-history-item';
+        item.innerHTML = `
+            <div style="font-weight:700;color:var(--text-primary);">${escapeHtml(entry.request.body.hoTen || 'Không tên')}</div>
+            <div style="font-size:0.84em;color:var(--text-secondary);">${escapeHtml(entry.request.body.maThe)} • ${escapeHtml(entry.request.body.ngaySinh)} • ${escapeHtml(entry.time)}</div>
+            <div style="font-size:0.84em;color:var(--text-secondary);">Mã kết quả: <strong>${escapeHtml(entry.maKetQua || 'N/A')}</strong></div>
+        `;
+        item.addEventListener('click', () => {
+            document.getElementById('mcctEnvironment').value = entry.request.environment || 'production';
+            document.getElementById('mcctMaCskcbLogin').value = entry.request.maCskcb || '';
+            document.getElementById('mcctUsername').value = entry.request.body.username || '';
+            document.getElementById('mcctMaThe').value = entry.request.body.maThe || '';
+            document.getElementById('mcctHoTen').value = entry.request.body.hoTen || '';
+            document.getElementById('mcctNgaySinh').value = entry.request.body.ngaySinh || '';
+            renderMcctLookupResult(entry.data, entry.request, false);
+        });
+        list.appendChild(item);
+    });
+}
+
+function exportMcctLookupResult() {
+    const data = globalData.mcctLookup.lastResult;
+    const request = globalData.mcctLookup.lastRequest;
+    if (!data || !request) {
+        alert('Chưa có kết quả tra cứu để xuất.');
+        return;
+    }
+    if (typeof XLSX === 'undefined') {
+        alert('Thư viện xuất Excel chưa sẵn sàng.');
+        return;
+    }
+
+    const dataCct = Array.isArray(mcctValue(data, ['DataCCT', 'dataCCT'], []))
+        ? mcctValue(data, ['DataCCT', 'dataCCT'], [])
+        : [];
+    const thongTinSoThe = mcctValue(data, ['ThongTinSoThe', 'thongTinSoThe'], {});
+
+    const wb = XLSX.utils.book_new();
+    const summary = [
+        ['KẾT QUẢ TRA CỨU HỒ SƠ MCCT'],
+        ['Thời gian xuất', new Date().toLocaleString('vi-VN')],
+        ['Endpoint', request.endpoint],
+        ['Mã CSKCB', request.maCskcb || ''],
+        ['Username', request.body.username],
+        ['Mã thẻ / BHXH', request.body.maThe],
+        ['Họ tên tra cứu', request.body.hoTen],
+        ['Ngày sinh tra cứu', request.body.ngaySinh],
+        ['Mã kết quả', mcctValue(data, ['MaKetQua', 'maKetQua'], '')],
+        ['Ghi chú', mcctValue(data, ['GhiChu', 'ghiChu'], '')],
+        [],
+        ['THÔNG TIN THẺ'],
+        ['Họ tên', mcctValue(thongTinSoThe, ['hoTen'], '')],
+        ['Ngày sinh', mcctValue(thongTinSoThe, ['ngaySinh'], '')],
+        ['Ngày hết hạn', mcctValue(thongTinSoThe, ['ngayKetThuc'], '')],
+        ['Mã BHXH', mcctValue(thongTinSoThe, ['maBhxh'], '')]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), 'Tong_Quan');
+
+    const detailRows = dataCct.map((row, index) => ({
+        STT: index + 1,
+        ID: mcctValue(row, ['Id', 'id'], ''),
+        'Ngày tra cứu': mcctValue(row, ['ngayTraCuu'], ''),
+        'Mã thẻ': mcctValue(row, ['maThe'], ''),
+        'Mã CSKCB': mcctValue(row, ['maCskcb'], ''),
+        'Ngày vào': mcctValue(row, ['ngayVao'], ''),
+        'Ngày ra': mcctValue(row, ['ngayRa'], ''),
+        'Mã đối tượng KCB': mcctValue(row, ['maDoiTuongKCB'], ''),
+        'T BN CCT MCCT': mcctValue(row, ['tBNCCTMCCT'], ''),
+        'T BN CCT lũy kế': mcctValue(row, ['tBNCCTLuyKe'], ''),
+        'Ngày nhận Cổng': mcctValue(row, ['ngayNhanCong'], ''),
+        'Ngày nhận': mcctValue(row, ['ngayNhan'], '')
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), 'DataCCT');
+    XLSX.writeFile(wb, `TraCuuHoSo_MCCT_${request.body.maThe || 'ket_qua'}.xlsx`);
 }
 
 // ============================= SUMMARY POPUP =============================
@@ -3815,6 +4579,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeValidationSettings();
     initializeValidator();
     initializeComparator();
+    initializeMcctLookup();
 
     document.querySelectorAll('.filter-content').forEach(el => {
         const parent = el.parentElement;

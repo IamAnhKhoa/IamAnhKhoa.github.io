@@ -1123,6 +1123,204 @@
             padding: 16px;
         }
 
+        .mcct-lookup-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .mcct-top-grid {
+            display: grid;
+            grid-template-columns: minmax(340px, 440px) minmax(420px, 1fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .mcct-side-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .mcct-lookup-results {
+            margin-top: 2px;
+        }
+
+        .mcct-history-section {
+            margin-bottom: 0;
+        }
+
+        .mcct-form-section {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            background: var(--surface);
+            margin-bottom: 16px;
+        }
+
+        .mcct-form-section h3 {
+            font-size: 1em;
+            color: var(--text-primary);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mcct-form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .mcct-inline-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        #mcctLookupForm .mcct-inline-actions {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+        }
+
+        .mcct-login-actions {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+        }
+
+        .mcct-login-actions .btn {
+            min-height: 38px;
+            white-space: nowrap;
+        }
+
+        .mcct-advanced-session {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .mcct-advanced-session summary {
+            cursor: pointer;
+            padding: 14px 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            background: var(--surface-hover);
+            border-bottom: 1px solid transparent;
+            user-select: none;
+        }
+
+        .mcct-advanced-session[open] summary {
+            border-bottom-color: var(--border);
+        }
+
+        .mcct-advanced-body {
+            padding: 18px;
+        }
+
+        .mcct-token-input {
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 0.86em;
+        }
+
+        .mcct-status {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            line-height: 1.5;
+        }
+
+        .mcct-status.show {
+            display: block;
+        }
+
+        .mcct-status.success {
+            color: #166534;
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .mcct-status.warning {
+            color: #92400e;
+            background: #fffbeb;
+            border-color: #fde68a;
+        }
+
+        .mcct-status.error {
+            color: #991b1b;
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .mcct-result-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .mcct-mini-stat {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background: var(--surface-hover);
+        }
+
+        .mcct-mini-stat span {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.78em;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .mcct-mini-stat strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 1.08em;
+            margin-top: 4px;
+            word-break: break-word;
+        }
+
+        .mcct-history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .mcct-history-item {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: var(--surface);
+            cursor: pointer;
+        }
+
+        .mcct-history-item:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        @media (max-width: 980px) {
+            .mcct-top-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mcct-login-actions,
+            #mcctLookupForm .mcct-inline-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* ======================================================= */
         /* CSS ĐỂ DANH SÁCH NGÀY NGHỈ CÓ THỂ CUỘN VÀ ĐẸP HƠN */
         /* ======================================================= */
@@ -1570,6 +1768,7 @@
             <button class="tab-button" onclick="openTab(event, 'comparatorTab')">🔄 Đối chiếu</button>
             <button class="tab-button" onclick="openTab(event, 'denialTab')">💸 Dự kiến Xuất toán</button>
             <button class="tab-button" onclick="openTab(event, 'reportsTab')">📈 Báo cáo</button>
+            <button class="tab-button" onclick="openTab(event, 'mcctLookupTab')">🔎 Tra cứu hồ sơ</button>
 
             <button class="tab-button" onclick="openTab(event, 'scheduleTab')">🗓️ Lịch nghỉ</button>
         </nav>
@@ -1948,6 +2147,116 @@
             <div class="dashboard-grid">
                 <div class="chart-container" id="reportChart1Container"><canvas id="reportChart1"></canvas></div>
                 <div class="chart-container" id="reportChart2Container"><canvas id="reportChart2"></canvas></div>
+            </div>
+        </div>
+
+        <div id="mcctLookupTab" class="tab-content">
+            <div class="mcct-lookup-grid">
+                <div class="mcct-top-grid">
+                    <div class="mcct-side-stack">
+                        <div class="mcct-form-section">
+                            <h3>🔐 Đăng nhập Cổng BHYT</h3>
+                            <div class="mcct-form-grid">
+                                <div class="filter-group">
+                                    <label for="mcctEnvironment">Cổng tra cứu</label>
+                                    <select id="mcctEnvironment" class="filter-select">
+                                        <option value="production">Cổng chính thức</option>
+                                        <option value="training">Cổng đào tạo</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="mcctMaCskcbLogin">Mã CSKCB</label>
+                                    <input type="text" id="mcctMaCskcbLogin" class="filter-input" placeholder="Ví dụ: 79764">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="mcctUsername">Tài khoản Webservice / username API</label>
+                                    <input type="text" id="mcctUsername" class="filter-input" placeholder="Thường là tài khoản API có hậu tố _BV">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="mcctLoginPassword">Mật khẩu đăng nhập</label>
+                                    <input type="password" id="mcctLoginPassword" class="filter-input" autocomplete="off" placeholder="Không lưu mật khẩu">
+                                </div>
+                                <div class="mcct-login-actions">
+                                    <button type="button" class="btn btn-primary" id="mcctLoginButton">🔐 Đăng nhập lấy token</button>
+                                    <button type="button" class="btn btn-warning" id="mcctClearSessionButton">↺ Xóa phiên</button>
+                                </div>
+                                <div id="mcctConnectionStatus" class="mcct-status"></div>
+                            </div>
+                        </div>
+
+                        <details class="mcct-advanced-session">
+                            <summary>Thông tin phiên nâng cao</summary>
+                            <div class="mcct-advanced-body">
+                                <div class="mcct-form-grid">
+                                    <div class="filter-group">
+                                        <label for="mcctAccessToken">accessToken</label>
+                                        <input type="password" id="mcctAccessToken" class="filter-input mcct-token-input" autocomplete="off">
+                                    </div>
+                                    <div class="filter-group">
+                                        <label for="mcctTokenId">tokenId</label>
+                                        <input type="text" id="mcctTokenId" class="filter-input mcct-token-input" autocomplete="off">
+                                    </div>
+                                    <div class="filter-group">
+                                        <label for="mcctPasswordHash">passwordHash</label>
+                                        <input type="password" id="mcctPasswordHash" class="filter-input mcct-token-input" autocomplete="off">
+                                    </div>
+                                    <label style="display:flex;align-items:center;gap:8px;font-size:0.9em;color:var(--text-secondary);">
+                                        <input type="checkbox" id="mcctRememberHeaders" style="width:16px;height:16px;accent-color:var(--accent);">
+                                        Lưu thông tin kết nối trên máy này
+                                    </label>
+                                </div>
+                            </div>
+                        </details>
+
+                    </div>
+
+                    <form id="mcctLookupForm" class="mcct-form-section">
+                        <h3>🔎 Thông tin người bệnh</h3>
+                        <div class="mcct-form-grid">
+                            <div class="filter-group">
+                                <label for="mcctRecordSelect">Lấy nhanh từ file XML đã kiểm tra</label>
+                                <select id="mcctRecordSelect" class="filter-select">
+                                    <option value="">Chưa có hồ sơ XML</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="mcctMaThe">Mã thẻ BHYT / Mã số BHXH</label>
+                                <input type="text" id="mcctMaThe" class="filter-input" placeholder="10, 12 hoặc 15 ký tự" required>
+                            </div>
+                            <div class="filter-group">
+                                <label for="mcctHoTen">Họ tên</label>
+                                <input type="text" id="mcctHoTen" class="filter-input" required>
+                            </div>
+                            <div class="filter-group">
+                                <label for="mcctNgaySinh">Ngày sinh</label>
+                                <input type="text" id="mcctNgaySinh" class="filter-input" placeholder="dd/MM/yyyy, MM/yyyy hoặc yyyy" required>
+                            </div>
+                            <div class="mcct-inline-actions">
+                                <button type="submit" class="btn btn-primary" id="mcctLookupButton">🔎 Tra cứu</button>
+                                <button type="button" class="btn btn-warning" onclick="clearMcctPatientForm()">↺ Xóa người bệnh</button>
+                                <button type="button" class="btn btn-success" id="mcctExportButton" onclick="exportMcctLookupResult()" disabled>📊 Xuất Excel</button>
+                            </div>
+                        </div>
+                        <div id="mcctLookupStatus" class="mcct-status"></div>
+                    </form>
+                </div>
+
+                <div class="results-container mcct-lookup-results" id="mcctLookupResults" style="display:none;">
+                    <div class="table-header">
+                        <h3>Kết quả tra cứu hồ sơ MCCT</h3>
+                        <div id="mcctResultsInfo"></div>
+                    </div>
+                    <div id="mcctResultSummary" class="mcct-result-summary"></div>
+                    <div id="mcctCardInfo" style="margin-bottom:16px;"></div>
+                    <div style="overflow-x:auto; max-height:600px;" id="mcctResultsTableWrapper"></div>
+                </div>
+
+                <div class="mcct-form-section mcct-history-section">
+                    <h3>Truy vấn gần đây</h3>
+                    <div id="mcctHistoryList" class="mcct-history-list">
+                        <p style="color:var(--text-secondary);font-size:0.9em;">Chưa có truy vấn trong phiên này.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
