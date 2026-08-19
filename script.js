@@ -2824,6 +2824,8 @@ function showMcctConnectionStatus(message, type = 'warning') {
 }
 
 async function loginMcctGateway() {
+    if (loginMcctGateway.isRunning) return;
+
     const environment = document.getElementById('mcctEnvironment')?.value || 'production';
     const username = document.getElementById('mcctUsername')?.value.trim() || '';
     const password = document.getElementById('mcctLoginPassword')?.value || '';
@@ -2848,6 +2850,7 @@ async function loginMcctGateway() {
         button.textContent = 'Đang đăng nhập...';
     }
     showMcctConnectionStatus('Đang lấy phiên làm việc từ Cổng giám định BHYT...', 'warning');
+    loginMcctGateway.isRunning = true;
 
     try {
         const response = await fetchMcctProxy('/mcct/token', { environment, username, passwordHash });
@@ -2890,6 +2893,7 @@ async function loginMcctGateway() {
         const punctuation = /[.!?]$/.test(message) ? '' : '.';
         showMcctConnectionStatus(`${message}${punctuation}${proxyHint}`, 'error');
     } finally {
+        loginMcctGateway.isRunning = false;
         if (button) {
             button.disabled = false;
             button.textContent = originalText;
@@ -4575,11 +4579,19 @@ function initializeValidationSettings() {
         };
     });
 }
+function runStartupStep(name, initializer) {
+    try {
+        initializer();
+    } catch (error) {
+        console.error(`Startup step failed: ${name}`, error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    initializeValidationSettings();
-    initializeValidator();
-    initializeComparator();
-    initializeMcctLookup();
+    runStartupStep('validation settings', initializeValidationSettings);
+    runStartupStep('validator', initializeValidator);
+    runStartupStep('comparator', initializeComparator);
+    runStartupStep('mcct lookup', initializeMcctLookup);
 
     document.querySelectorAll('.filter-content').forEach(el => {
         const parent = el.parentElement;
