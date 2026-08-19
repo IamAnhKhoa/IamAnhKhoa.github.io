@@ -48,12 +48,31 @@ async function readJson(request) {
 }
 
 async function forwardGateway(request, env, gatewayUrl, init) {
-    const response = await fetch(gatewayUrl, init);
-    return new Response(response.body, {
+    let response;
+    try {
+        response = await fetch(gatewayUrl, init);
+    } catch (error) {
+        return jsonResponse(request, env, 502, {
+            error: `Không kết nối được Cổng BHXH: ${error.message || String(error)}`
+        });
+    }
+
+    const contentType = response.headers.get('Content-Type') || '';
+    const text = await response.text();
+    const looksLikeJson = /^\s*[\[{]/.test(text);
+
+    if (!looksLikeJson && !contentType.toLowerCase().includes('json')) {
+        return jsonResponse(request, env, response.ok ? 502 : response.status, {
+            error: `Cổng BHXH trả HTTP ${response.status} nhưng không phải JSON.`,
+            gatewayBody: text.slice(0, 300)
+        });
+    }
+
+    return new Response(text, {
         status: response.status,
         headers: {
             ...corsHeaders(request, env),
-            'Content-Type': response.headers.get('Content-Type') || 'application/json; charset=utf-8'
+            'Content-Type': contentType || 'application/json; charset=utf-8'
         }
     });
 }
@@ -106,11 +125,11 @@ export default {
             }
 
             if (request.method === 'POST' && url.pathname === '/mcct/token') {
-                return handleToken(request, env);
+                return await handleToken(request, env);
             }
 
             if (request.method === 'POST' && url.pathname === '/mcct/lookup') {
-                return handleLookup(request, env);
+                return await handleLookup(request, env);
             }
 
             return jsonResponse(request, env, 404, { error: 'Không tìm thấy endpoint proxy.' });
