@@ -2638,8 +2638,21 @@ function mcctValue(obj, keys, fallback = '') {
 
 function formatMcctMoney(value) {
     if (value === undefined || value === null || value === '') return '';
-    const num = Number(value);
+    const num = parseMcctMoney(value);
     return Number.isFinite(num) ? formatCurrency(num) : escapeHtml(value);
+}
+
+function parseMcctMoney(value) {
+    if (value === undefined || value === null || value === '') return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+
+    const normalized = String(value)
+        .trim()
+        .replace(/[^\d-]/g, '');
+
+    if (!normalized || normalized === '-') return 0;
+    const num = Number(normalized);
+    return Number.isFinite(num) ? num : 0;
 }
 
 function normalizeMcctMaThe(value) {
@@ -3228,8 +3241,8 @@ function renderMcctLookupResult(data, request, addToHistory = false) {
 }
 
 function renderMcctSummary(maKetQua, ghiChu, dataCct, thongTinSoThe) {
-    const latestLuyKe = dataCct.reduce((max, row) => Math.max(max, Number(mcctValue(row, ['tBNCCTLuyKe'], 0)) || 0), 0);
-    const totalMcct = dataCct.reduce((sum, row) => sum + (Number(mcctValue(row, ['tBNCCTMCCT'], 0)) || 0), 0);
+    const latestLuyKe = dataCct.reduce((max, row) => Math.max(max, parseMcctMoney(mcctValue(row, ['tBNCCTLuyKe'], 0))), 0);
+    const totalMcct = dataCct.reduce((sum, row) => sum + parseMcctMoney(mcctValue(row, ['tBNCCTMCCT'], 0)), 0);
     const cardName = mcctValue(thongTinSoThe, ['hoTen'], '');
     const cardBirth = mcctValue(thongTinSoThe, ['ngaySinh'], '');
     const cardEndDate = mcctValue(thongTinSoThe, ['ngayKetThuc'], '');
