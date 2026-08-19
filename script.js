@@ -2614,7 +2614,7 @@ const MCCT_TOKEN_ENDPOINTS = {
     production: 'https://egw.baohiemxahoi.gov.vn/api/token/take',
     training: 'https://daotaoegw.baohiemxahoi.gov.vn/api/token/take'
 };
-const MCCT_PROXY_BASE_URL = 'https://doi-chieu-mcct-proxy.sockladien.workers.dev';
+const MCCT_LOCAL_PROXY_BASE_URL = 'http://127.0.0.1:7979';
 const MCCT_LOOKUP_SETTINGS_KEY = 'mcctLookupSettings';
 
 function escapeHtml(value) {
@@ -2738,13 +2738,13 @@ function getMcctPasswordHashFromInput(password) {
 
 async function fetchMcctProxy(path, payload) {
     try {
-        return await fetch(`${MCCT_PROXY_BASE_URL}${path}`, {
+        return await fetch(`${MCCT_LOCAL_PROXY_BASE_URL}${path}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
     } catch (error) {
-        throw new Error('Không kết nối được proxy Cloudflare. Kiểm tra mạng hoặc trạng thái Worker rồi thử lại.');
+        throw new Error(`Không kết nối được proxy tra cứu trên máy local. Mở file ChayProxyTraCuuMCCT.bat rồi thử lại. Chi tiết: ${error.message || error}`);
     }
 }
 
