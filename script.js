@@ -1835,6 +1835,62 @@ function validateSingleHoso(hoso) {
         }
     }
     // =================================================================
+    // BẮT ĐẦU: CẢNH BÁO BÁC SĨ A KHÁM (XML3) KHÁC BÁC SĨ B CHO THUỐC (XML2)
+    // =================================================================
+    const ruleKeyBsKhamKhacThuoc = 'BS_KHAM_KHAC_BS_CHO_THUOC';
+    if (validationSettings[ruleKeyBsKhamKhacThuoc]?.enabled && record.drugs.length > 0 && record.services.length > 0) {
+        const khamServices = record.services.filter(s => s.ma_bac_si && (s.ten_dich_vu || '').toLowerCase().includes('khám'));
+        const targetServices = khamServices.length > 0 ? khamServices : record.services.filter(s => s.ma_bac_si);
+
+        const xml3DoctorCodes = new Set();
+        targetServices.forEach(s => {
+            if (s.ma_bac_si) {
+                s.ma_bac_si.split(/[,;]/).forEach(c => {
+                    const clean = c.trim();
+                    if (clean) xml3DoctorCodes.add(clean);
+                });
+            }
+        });
+
+        const xml2DoctorCodes = new Set();
+        record.drugs.forEach(d => {
+            if (d.ma_bac_si) {
+                d.ma_bac_si.split(/[,;]/).forEach(c => {
+                    const clean = c.trim();
+                    if (clean) xml2DoctorCodes.add(clean);
+                });
+            }
+        });
+
+        if (xml3DoctorCodes.size > 0 && xml2DoctorCodes.size > 0) {
+            const xml3Upper = Array.from(xml3DoctorCodes).map(c => c.toUpperCase());
+            const xml2Upper = Array.from(xml2DoctorCodes).map(c => c.toUpperCase());
+            const hasOverlap = xml3Upper.some(c => xml2Upper.includes(c));
+
+            if (!hasOverlap) {
+                const formatBsList = (codeSet) => Array.from(codeSet).map(code => {
+                    const name = staffNameMap.get(code) || staffNameMap.get(code.toUpperCase()) || code;
+                    return name !== code ? `${name} (${code})` : code;
+                }).join(', ');
+
+                const bsKhamStr = formatBsList(xml3DoctorCodes);
+                const bsThuocStr = formatBsList(xml2DoctorCodes);
+                const totalDrugCost = record.drugs.reduce((sum, d) => sum + (d.thanh_tien_bh || 0), 0);
+
+                record.errors.push({
+                    type: ruleKeyBsKhamKhacThuoc,
+                    severity: validationSettings[ruleKeyBsKhamKhacThuoc].severity,
+                    message: `Bác sĩ khám (XML 3: ${bsKhamStr}) khác bác sĩ cho thuốc (XML 2: ${bsThuocStr}).`,
+                    cost: costIfCritical(ruleKeyBsKhamKhacThuoc, totalDrugCost),
+                    itemName: 'Bác sĩ kê toa'
+                });
+            }
+        }
+    }
+    // =================================================================
+    // KẾT THÚC: CẢNH BÁO BÁC SĨ A KHÁM KHÁC BÁC SĨ B CHO THUỐC
+    // =================================================================
+    // =================================================================
     // BẮT ĐẦU: KIỂM TRA TOÀN DIỆN MÃ ICD VÀ GỢI Ý MÃ CON
     // =================================================================
     initIcdPrefixIndex();
@@ -3689,12 +3745,14 @@ function initializeValidationSettings() {
         ERROR_TYPES['ICD_MORTALITY_ONLY'] = 'Mã ICD chỉ dùng cho tử vong';
         ERROR_TYPES['ICD_FEMALE_ONLY'] = 'Mã ICD chỉ dành cho Nữ giới';
         ERROR_TYPES['ICD_MALE_ONLY'] = 'Mã ICD chỉ dành cho Nam giới';
+        ERROR_TYPES['BS_KHAM_KHAC_BS_CHO_THUOC'] = 'Bác sĩ A khám (XML 3) khác bác sĩ B cho thuốc (XML 2)';
     }
 
     // Rules that users can configure (enable/disable, change severity)
     const configurableRules = [
         'BS_TRUNG_THOI_GIAN',
         'BS_KHAM_CHONG_LAN',
+        'BS_KHAM_KHAC_BS_CHO_THUOC',
         'DVKT_YL_TRUNG_NGAY_VAO', 'DVKT_YL_TRUNG_NGAY_RA',
         'DVKT_THYL_TRUNG_NGAY_VAO', 'DVKT_THYL_TRUNG_NGAY_RA',
         'THUOC_YL_NGOAI_GIO_HC', 'THUOC_THYL_NGOAI_GIO_HC',
