@@ -2942,7 +2942,7 @@ async function loginMcctGateway() {
         console.error('Lỗi đăng nhập Cổng BHYT:', err);
         const message = err.message || String(err);
         const proxyHint = /failed to fetch|networkerror|cors|load failed/i.test(message)
-            ? ' Kiểm tra lại mạng hoặc trạng thái Worker Cloudflare.'
+            ? ' Máy này cần cài/bật bộ hỗ trợ tra cứu local. Bấm "Tải bộ cài hỗ trợ", chạy file vừa tải, rồi bấm kiểm tra lại.'
             : '';
         const punctuation = /[.!?]$/.test(message) ? '' : '.';
         showMcctConnectionStatus(`${message}${punctuation}${proxyHint}`, 'error');
