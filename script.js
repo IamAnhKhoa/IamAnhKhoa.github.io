@@ -2615,6 +2615,7 @@ const MCCT_TOKEN_ENDPOINTS = {
     training: 'https://daotaoegw.baohiemxahoi.gov.vn/api/token/take'
 };
 const MCCT_LOCAL_PROXY_BASE_URL = 'http://127.0.0.1:7979';
+const MCCT_QUICK_INSTALLER_URL = 'CaiNhanhProxyMCCT.bat';
 const MCCT_LOOKUP_SETTINGS_KEY = 'mcctLookupSettings';
 
 function escapeHtml(value) {
@@ -2744,7 +2745,59 @@ async function fetchMcctProxy(path, payload) {
             body: JSON.stringify(payload)
         });
     } catch (error) {
-        throw new Error(`Không kết nối được proxy tra cứu trên máy local. Mở file ChayProxyTraCuuMCCT.bat rồi thử lại. Chi tiết: ${error.message || error}`);
+        renderMcctProxyInstallHelp();
+        throw new Error(`Máy này chưa bật bộ hỗ trợ tra cứu. Bấm "Tải bộ cài hỗ trợ" trong khung trạng thái, chạy file vừa tải, rồi thử lại.`);
+    }
+}
+
+function setMcctProxyHelp(message, type = 'warning') {
+    const help = document.getElementById('mcctProxyHelp');
+    if (!help) return;
+    help.className = `mcct-status show ${type}`;
+    help.textContent = message;
+}
+
+function renderMcctProxyInstallHelp() {
+    const help = document.getElementById('mcctProxyHelp');
+    if (!help) return;
+
+    help.className = 'mcct-status show warning';
+    help.innerHTML = `
+        <div><strong>Máy này chưa bật bộ hỗ trợ tra cứu.</strong></div>
+        <div style="margin-top:8px;">Tải file cài nhanh, mở file vừa tải, sau đó bấm kiểm tra lại.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+            <a class="btn btn-primary" href="${MCCT_QUICK_INSTALLER_URL}" download>⬇️ Tải bộ cài hỗ trợ</a>
+            <button type="button" class="btn btn-info" id="mcctProxyRetryButton">🔄 Kiểm tra lại</button>
+        </div>
+    `;
+
+    document.getElementById('mcctProxyRetryButton')?.addEventListener('click', () => {
+        checkMcctLocalProxyStatus(true);
+    });
+}
+
+async function checkMcctLocalProxyStatus(showSuccess = true) {
+    const help = document.getElementById('mcctProxyHelp');
+    if (!help) return false;
+
+    help.className = 'mcct-status show warning';
+    help.textContent = 'Đang kiểm tra bộ hỗ trợ tra cứu trên máy này...';
+
+    try {
+        const response = await fetch(`${MCCT_LOCAL_PROXY_BASE_URL}/health`, { cache: 'no-store' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.ok !== true) throw new Error('Proxy local chưa sẵn sàng.');
+
+        if (showSuccess) {
+            setMcctProxyHelp('Bộ hỗ trợ tra cứu đã sẵn sàng trên máy này.', 'success');
+        } else {
+            help.className = 'mcct-status';
+            help.textContent = '';
+        }
+        return true;
+    } catch (error) {
+        renderMcctProxyInstallHelp();
+        return false;
     }
 }
 
@@ -2773,6 +2826,7 @@ function initializeMcctLookup() {
 
     loadMcctLookupSettings();
     populateMcctRecordSelect();
+    checkMcctLocalProxyStatus(false);
 
     form.addEventListener('submit', runMcctLookup);
 
